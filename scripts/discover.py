@@ -5,6 +5,7 @@ Three strategies → mechanical checks → agent-friendly JSON.
 
 Usage:
     python discover.py [--keyword] [--direct] [--max-candidates 5]
+    python discover.py --focus agent --focus harness --repos-only
 """
 
 import argparse
@@ -294,14 +295,19 @@ def clone_repo_shallow(repo_full_name):
 # Strategy A: Trending repos
 # ═══════════════════════════════════════════════════════════════════════
 
+REPO_FIELDS_JQ = (
+    "[.items[] | {full_name, url: .html_url, description, stars: .stargazers_count, "
+    "pushed_at, language, topics, has_issues, license: .license.spdx_id}]"
+)
+
+
 def get_trending_repos(min_stars=100, max_days=7, count=10):
     since = (datetime.now(timezone.utc) - timedelta(days=max_days)).strftime("%Y-%m-%d")
-    query = f"pushed:>{since} stars:>{min_stars}"
-    jq = "[.items[] | {full_name, stars: .stargazers_count, pushed_at, language, has_issues, license: .license.key}]"
+    query = f"pushed:>{since} stars:>={min_stars} archived:false fork:false"
     result = run_json(
         ["gh", "api", "-X", "GET", "search/repositories",
          "-f", f"q={query}", "-f", "sort=stars", "-f", "order=desc", "-f", f"per_page={count}",
-         "--jq", jq], timeout=15,
+         "--jq", REPO_FIELDS_JQ], timeout=15,
     )
     if not result:
         return []
@@ -312,18 +318,17 @@ def get_trending_repos(min_stars=100, max_days=7, count=10):
 # Strategy B: Domain keyword → repos
 # ═══════════════════════════════════════════════════════════════════════
 
-def get_keyword_repos(min_stars=10, max_stars=0, max_days=14, count=10):
-    keyword = random.choice(DOMAIN_KEYWORDS)
+def get_keyword_repos(min_stars=10, max_days=14, count=10, keyword=None):
+    keyword = (keyword or random.choice(DOMAIN_KEYWORDS)).strip()
     since = (datetime.now(timezone.utc) - timedelta(days=max_days)).strftime("%Y-%m-%d")
-    if max_stars and max_stars > 0:
-        query = f"{keyword} stars:{min_stars}..{max_stars} pushed:>{since}"
-    else:
-        query = f"{keyword} stars:>={min_stars} pushed:>{since}"
-    jq = "[.items[] | {full_name, stars: .stargazers_count, pushed_at, language, has_issues, license: .license.key}]"
+    query = (
+        f"{keyword} in:name,description stars:>={min_stars} "
+        f"pushed:>{since} archived:false fork:false"
+    )
     result = run_json(
         ["gh", "api", "-X", "GET", "search/repositories",
-         "-f", f"q={query}", "-f", "sort=updated", "-f", "order=desc", "-f", f"per_page={count}",
-         "--jq", jq], timeout=15,
+         "-f", f"q={query}", "-f", "sort=stars", "-f", "order=desc", "-f", f"per_page={count}",
+         "--jq", REPO_FIELDS_JQ], timeout=15,
     )
     if not result:
         return []
@@ -333,9 +338,58 @@ def get_keyword_repos(min_stars=10, max_stars=0, max_days=14, count=10):
         and (r.get("stars", 0) or 0) >= min_stars
         and not is_list_repo(r["full_name"])
     ]
-    label = f"≤{max_stars}" if max_stars else "no max"
-    log(f"  [kw] '{keyword}' → {len(result)} total, {len(filtered)} stars ≥{min_stars} {label}")
+    log(f"  [focus] '{keyword}' → {len(result)} total, {len(filtered)} stars ≥{min_stars}, no maximum")
     return filtered
+
+
+def merge_repositories(*groups, count=10):
+    """Keep each query represented, then rank the selected repositories by stars."""
+    selected = {}
+    remaining = {}
+
+    # Seed the shortlist with the best result from each directional query so a
+    # broad, extremely popular term cannot crowd out every adjacent term.
+    for group in groups:
+        if group:
+            repo = group[0]
+            name = repo.get("full_name")
+            if name and len(selected) < count:
+                selected.setdefault(name, repo)
+                remaining.pop(name, None)
+        for repo in group:
+            name = repo.get("full_name")
+            if name and name not in selected:
+                remaining.setdefault(name, repo)
+
+    ranked_remaining = sorted(
+        remaining.values(), key=lambda repo: repo.get("stars", 0) or 0, reverse=True
+    )
+    for repo in ranked_remaining:
+        if len(selected) >= count:
+            break
+        if repo["full_name"] not in selected:
+            selected[repo["full_name"]] = repo
+
+    return sorted(
+        selected.values(), key=lambda repo: repo.get("stars", 0) or 0, reverse=True
+    )
+
+
+def discover_repositories(min_stars=100, max_days=7, repo_count=10,
+                          use_keyword=False, use_direct=False, kw_min_stars=10,
+                          focus_terms=()):
+    """Find active repositories, optionally constrained to user-selected directions."""
+    focus_terms = tuple(term.strip() for term in focus_terms if term.strip())
+    groups = []
+
+    if not use_direct and not focus_terms:
+        groups.append(get_trending_repos(min_stars, max_days, repo_count))
+    if use_keyword and not focus_terms:
+        groups.append(get_keyword_repos(kw_min_stars, max_days, repo_count))
+    for term in focus_terms:
+        groups.append(get_keyword_repos(min_stars, max_days, repo_count, keyword=term))
+
+    return merge_repositories(*groups, count=repo_count)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -482,24 +536,24 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
 
 def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
                         max_candidates=5, use_keyword=False, use_direct=False,
-                        kw_min_stars=10, kw_max_stars=0):
+                        kw_min_stars=10, focus_terms=()):
     candidates = []
 
     # ── Collect repos ──
-    repos = []
-
-    if not use_direct:
-        repos = get_trending_repos(min_stars, max_days, repo_count)
-    if use_keyword:
-        kw_repos = get_keyword_repos(kw_min_stars, kw_max_stars, max_days, repo_count)
-        seen = {r["full_name"] for r in repos}
-        for r in kw_repos:
-            if r["full_name"] not in seen:
-                repos.append(r)
-                seen.add(r["full_name"])
+    repos = discover_repositories(
+        min_stars=min_stars,
+        max_days=max_days,
+        repo_count=repo_count,
+        use_keyword=use_keyword,
+        use_direct=use_direct,
+        kw_min_stars=kw_min_stars,
+        focus_terms=focus_terms,
+    )
 
     # ── Strategy C: Direct issue search ──
-    if use_direct:
+    # Focus terms constrain discovery to matching repositories. Broad direct
+    # issue search is intentionally skipped when a direction is supplied.
+    if use_direct and not focus_terms:
         log("[direct] Searching issues directly...")
         direct_issues = get_direct_issues(count=30)
         log(f"[direct] Found {len(direct_issues)} raw issues")
@@ -536,7 +590,7 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
         if len(candidates) >= max_candidates:
             return candidates
 
-    if not use_direct and not repos:
+    if (not use_direct or focus_terms) and not repos:
         log("ERROR: No repos found.")
         return []
 
@@ -602,18 +656,50 @@ def main():
     p.add_argument("--keyword", action="store_true")
     p.add_argument("--direct", action="store_true", help="Use Strategy C: direct issue search")
     p.add_argument("--kw-min-stars", type=int, default=10)
-    p.add_argument("--kw-max-stars", type=int, default=0)
+    p.add_argument(
+        "--focus",
+        action="append",
+        default=[],
+        metavar="TERM",
+        help="Search an active, high-star direction; repeat for related terms",
+    )
+    p.add_argument(
+        "--repos-only",
+        action="store_true",
+        help="Return the ranked repository shortlist without scanning issues",
+    )
     p.add_argument("--json-only", action="store_true")
     args = p.parse_args()
 
+    if args.min_stars < 0 or args.kw_min_stars < 0:
+        p.error("minimum star counts cannot be negative")
+    if args.max_days < 1 or args.repo_count < 1 or args.issue_limit < 1 or args.max_candidates < 1:
+        p.error("max-days, repo-count, issue-limit, and max-candidates must be positive")
+
     QUIET = args.json_only
+
+    if args.repos_only:
+        repositories = discover_repositories(
+            min_stars=args.min_stars,
+            max_days=args.max_days,
+            repo_count=args.repo_count,
+            use_keyword=args.keyword,
+            use_direct=False,
+            kw_min_stars=args.kw_min_stars,
+            focus_terms=args.focus,
+        )
+        payload = {"repositories": repositories}
+        if not repositories:
+            payload["message"] = "no repositories found"
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
 
     candidates = discover_candidates(
         min_stars=args.min_stars, max_days=args.max_days,
         repo_count=args.repo_count, issue_limit=args.issue_limit,
         max_candidates=args.max_candidates,
         use_keyword=args.keyword, use_direct=args.direct,
-        kw_min_stars=args.kw_min_stars, kw_max_stars=args.kw_max_stars,
+        kw_min_stars=args.kw_min_stars, focus_terms=args.focus,
     )
 
     payload = {"candidates": candidates}

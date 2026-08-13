@@ -29,6 +29,68 @@ class StateTests(unittest.TestCase):
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_keyword_search_has_no_maximum_star_qualifier(self):
+        repository = {
+            "full_name": "owner/agent-runtime",
+            "stars": 42000,
+            "has_issues": True,
+            "license": "MIT",
+        }
+        with mock.patch.object(discover, "run_json", return_value=[repository]) as run_json:
+            result = discover.get_keyword_repos(
+                min_stars=100,
+                max_days=30,
+                count=10,
+                keyword="agent harness",
+            )
+
+        command = run_json.call_args.args[0]
+        query = command[command.index("-f") + 1]
+        self.assertIn("agent harness in:name,description", query)
+        self.assertIn("stars:>=100", query)
+        self.assertNotIn("..", query)
+        self.assertIn("sort=stars", command)
+        self.assertEqual(result, [repository])
+
+    def test_focus_search_is_ranked_deduplicated_and_skips_generic_trending(self):
+        agent_repos = [
+            {"full_name": "owner/shared", "stars": 200},
+            {"full_name": "owner/agent", "stars": 100},
+        ]
+        harness_repos = [
+            {"full_name": "owner/harness", "stars": 300},
+            {"full_name": "owner/shared", "stars": 200},
+        ]
+        with (
+            mock.patch.object(discover, "get_trending_repos") as trending,
+            mock.patch.object(discover, "get_keyword_repos", side_effect=[agent_repos, harness_repos]) as keyword,
+        ):
+            result = discover.discover_repositories(
+                min_stars=50,
+                max_days=30,
+                repo_count=2,
+                focus_terms=["agent", "harness"],
+            )
+
+        trending.assert_not_called()
+        self.assertEqual([call.kwargs["keyword"] for call in keyword.call_args_list], ["agent", "harness"])
+        self.assertEqual([repo["full_name"] for repo in result], ["owner/harness", "owner/shared"])
+
+    def test_focus_constrains_candidate_discovery_to_matching_repositories(self):
+        repository = {"full_name": "owner/agent", "stars": 100, "license": "MIT"}
+        with (
+            mock.patch.object(discover, "discover_repositories", return_value=[repository]),
+            mock.patch.object(discover, "get_direct_issues") as direct,
+            mock.patch.object(discover, "run_json", return_value=[]),
+        ):
+            candidates = discover.discover_candidates(
+                use_direct=True,
+                focus_terms=["agent"],
+            )
+
+        direct.assert_not_called()
+        self.assertEqual(candidates, [])
+
     def test_evaluate_issue_returns_agent_neutral_governance_files(self):
         issue = {
             "number": 7,
@@ -107,6 +169,12 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(first[first.index("--kw-min-stars") + 1], "5")
         self.assertEqual(third[third.index("--kw-min-stars") + 1], "1")
         self.assertEqual(third[third.index("--max-days") + 1], "365")
+
+    def test_discovery_command_repeats_focus_terms(self):
+        command = loop.discovery_command(1, 5, ["agent", "harness"])
+        self.assertEqual(command[-4:], ["--focus", "agent", "--focus", "harness"])
+        self.assertEqual(command[command.index("--min-stars") + 1], "5")
+        self.assertNotIn("--direct", command)
 
 
 class DispatcherTests(unittest.TestCase):

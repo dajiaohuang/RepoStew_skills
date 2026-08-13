@@ -4,7 +4,8 @@ description: >-
   Steward GitHub repositories end to end: find and assess actionable issues,
   audit repositories, implement focused fixes, test changes, open and maintain
   pull requests, or draft evidence-backed issues. Use when the user asks to fix
-  a GitHub issue, scan a repository, find open-source work, audit a repo,
+  a GitHub issue, scan a repository, find open-source work or active high-star
+  repositories in a technical direction, audit a repo,
   contribute a patch, maintain PRs, or invokes RepoStew/repostew.
   Apply before cloning, editing, commenting, filing issues, or opening PRs
   because this skill defines authority, safety, verification, and contribution
@@ -112,6 +113,15 @@ Do not clone until a candidate survives remote checks.
 
 ## Discover candidates across GitHub
 
+For a user-selected technical direction, first translate the direction into two to five concise, overlapping search terms. Include a representative project name when the user provides one; it anchors the search without becoming a permanent allowlist. Return active repositories ranked by stars before choosing where to inspect issues. Repeat `--focus` to search related terms; `--min-stars` is only a lower bound and RepoStew never imposes a maximum star count.
+
+```bash
+python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
+  --focus agentic --focus "agent framework" --focus "agent harness" --focus nanobot
+```
+
+Use the returned descriptions, topics, activity dates, licenses, and repository instructions to remove false positives. Do not assume a keyword match makes a repository relevant or contribution-friendly. When focus terms are supplied, keep discovery inside matching repositories rather than mixing in the broad direct-issue stream.
+
 Run the bundled discovery script from the skill directory:
 
 ```bash
@@ -124,6 +134,7 @@ For broadened bounded discovery:
 
 ```bash
 python scripts/loop.py --dry-rounds 3 --max-candidates 5
+python scripts/loop.py --focus agent --focus harness --dry-rounds 3
 ```
 
 Mutable state is stored under `~/.repostew` by default. Set `REPOSTEW_HOME` to use another directory.

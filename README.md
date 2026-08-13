@@ -203,7 +203,7 @@ Scripts use only the Python standard library and external `git`/`gh` commands.
 
 | Script | Purpose |
 |---|---|
-| `scripts/discover.py` | Discover candidates through recent repositories, domain sampling, and direct issue search |
+| `scripts/discover.py` | Rank active repositories or discover issue candidates through global, directional, and direct search |
 | `scripts/scan_known_repos.py` | Revisit repositories already present in the PR tracker |
 | `scripts/pr_tracker.py` | Add, list, and refresh pull-request status |
 | `scripts/loop.py` | Run bounded, progressively broader discovery rounds |
@@ -216,6 +216,10 @@ Scripts use only the Python standard library and external `git`/`gh` commands.
 # Recently active repositories
 python scripts/discover.py --min-stars 100 --max-days 7 --repo-count 10
 
+# Active high-star repositories in a technical direction
+python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
+  --focus agentic --focus "agent framework" --focus "agent harness" --focus nanobot
+
 # All discovery strategies
 python scripts/discover.py \
   --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates 5
@@ -224,7 +228,9 @@ python scripts/discover.py \
 python scripts/discover.py --direct --json-only
 ```
 
-Discovery output is a shortlist, not an automatic approval. The agent must still read and judge each issue.
+`--focus` is repeatable, so a broad direction can be represented by several related search terms and an optional representative project name. Each query contributes its best match before the combined shortlist is ranked by stars, preventing the broadest term from crowding out adjacent niches. Focused results are filtered by recent pushes and include descriptions and topics. `--min-stars` and `--kw-min-stars` are lower bounds only; RepoStew does not impose a maximum star count.
+
+Use `--repos-only` to locate repositories before looking for issues. Omit it to scan the selected repositories for issue candidates. When `--focus` is present, it constrains discovery to matching repositories and suppresses the unrelated broad direct-issue strategy. Discovery output is a shortlist, not an automatic approval: the agent must still verify topical relevance, repository health, contribution policy, and each issue.
 
 ### PR tracking
 
