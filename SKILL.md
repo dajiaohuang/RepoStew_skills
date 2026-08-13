@@ -81,6 +81,8 @@ Classify the work after read-only verification and before cloning or editing.
 - **Simple issue:** requirements and acceptance criteria are clear; the change is localized to one subsystem; existing patterns and tests cover the behavior; no architecture, dependency, service, permission, security-policy, or public-API decision is needed. Keep it in the current conversation and complete the normal confirm/autonomous workflow directly.
 - **Complex issue:** the work spans subsystems or repositories, requires substantial design discovery, has ambiguous requirements, changes architecture or public behavior, needs a long repository-wide audit, involves many issues, or is intended for persistent monitoring and maintenance. Use the host platform's user-visible new-task or handover capability when available. Do not substitute a hidden subagent for a requested handover.
 
+Complexity is never, by itself, a reason to reject, skip, or stop work. Separate the contribution decision from the execution route: clear, permitted, valuable, testable work is `ACCEPT` regardless of size, then simple work stays here and complex work is handed over. Use `ASK_MAINTAINER` only for a real unresolved product, architecture, dependency, compatibility, security, or authority decision; after approval, continue through the appropriate route. Use `SKIP` only for substantive blockers such as duplication, existing ownership or fixes, repository prohibition, lack of evidence, or unavailable required access.
+
 When handing over, include the repository and issue links, verified current state, applicable instructions, operating mode and authority, evidence collected, acceptance criteria, risks, expected validation, workspace/state locations, and explicit prohibited actions. Tell the new task to revalidate time-sensitive GitHub state rather than trusting the handoff summary. Keep simple follow-up fixes in the original task unless they independently meet the complex criteria.
 
 If the host cannot create a user-visible task, explain the limitation and continue in the current conversation only when the context and workspace remain safe; otherwise ask the user to start the isolated task.
@@ -117,11 +119,11 @@ Do not clone until a candidate survives remote checks.
 
 1. Fetch open issues and sort newest first. Request enough JSON fields to judge assignment, engagement, and content.
 2. Walk at most 50 issues, stopping earlier when any condition holds:
-   - five actionable trivial/small candidates found;
+   - five actionable candidates found;
    - issues are older than 90 days and at least one candidate exists;
    - autonomous mode finds one actionable candidate.
 3. For each issue, perform assignment, linked-PR, PR-search, staleness, policy, and taste checks.
-4. In confirm mode, present candidates with issue link, type, effort, likely files, verification, and why each passed.
+4. In confirm mode, present candidates with issue link, type, effort, likely files, verification, why each passed, and whether it should run here or in a handed-over task.
 5. If none pass, summarize skip reasons and offer a broader scan.
 
 ## Discover candidates across GitHub

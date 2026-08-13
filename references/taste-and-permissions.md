@@ -14,15 +14,16 @@ Classify each candidate before implementation.
 
 ### ACCEPT
 
-Accept work that is clear, localized, testable, compatible, and aligned with the repository:
+Accept work that is clear, testable, compatible, valuable, and aligned with the repository. Size and complexity do not affect this decision; they determine whether execution stays in the current conversation or is handed over:
 
 - reproducible bugs with bounded impact;
 - regression tests for confirmed behavior;
 - documentation errors, dead links, and example corrections;
 - small accessibility, error-handling, configuration, or reliability improvements;
 - small enhancements that use existing architecture and preserve defaults.
+- approved multi-module features, migrations, refactors, and sustained maintenance work with bounded acceptance criteria and a credible validation plan.
 
-Record evidence: reproduction or source proof, expected behavior, likely affected files, validation path, and why the work is appropriately sized.
+Record evidence: reproduction or source proof, expected behavior, likely affected files, validation path, contributor authority, and whether execution should stay here or move to a user-visible task.
 
 ### ASK_MAINTAINER
 
@@ -31,11 +32,11 @@ Seek maintainer direction before implementing:
 - unclear requirements or missing acceptance criteria;
 - public API, CLI, configuration, schema, or behavior changes;
 - new dependencies, services, tools, actions, permissions, or infrastructure;
-- architecture changes, broad refactors, migrations, or performance work without a benchmark;
+- architecture changes, broad refactors, migrations, or performance work whose direction or success criteria have not been approved;
 - security-sensitive behavior or compatibility tradeoffs;
 - features that add ongoing maintenance obligations.
 
-In contributor mode, frame this as a question or tradeoff, not a project decision.
+In contributor mode, frame this as a question or tradeoff, not a project decision. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
 
 ### SKIP
 
@@ -46,8 +47,10 @@ Skip as a contributor:
 - speculative rewrites or promotional integrations;
 - tasks requiring unavailable secrets, paid accounts, or privileged access;
 - changes prohibited by repository policy or licensing;
-- unverifiable claims or unbounded maintenance work;
-- issues too large for a focused contribution unless the user explicitly selected them and maintainers approved the direction.
+- unverifiable claims;
+- maintenance requests with no authorized scope, stopping condition, or safe way to persist state.
+
+Never use `SKIP` merely because an issue is large, difficult, cross-module, long-running, or likely to require many commits. Route such work to a user-visible task. If it needs maintainer direction, use `ASK_MAINTAINER`, then continue after approval.
 
 Do not announce that maintainers have rejected a skipped issue.
 
@@ -117,7 +120,9 @@ Do not file speculative security reports publicly. Follow `SECURITY.md` or the r
 
 Prefer, in order:
 
-`bug fix > regression test > docs correction > small compatible enhancement > approved feature > large proposal`
+`confirmed value and correctness > validation quality > repository fit > reviewer clarity`
+
+Prefer smaller complete increments within any accepted issue, but do not confuse incremental delivery with refusing the larger objective. Complex work may use milestones or multiple reviewable commits inside its handed-over task.
 
 For every patch:
 

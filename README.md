@@ -7,7 +7,7 @@ The skill is agent-neutral and operating-system-neutral. Its core workflow lives
 ## What RepoStew does
 
 - Fix a specific GitHub issue after checking that it is still actionable.
-- Scan one repository for small, high-value contribution candidates.
+- Scan one repository for high-value contribution candidates of any complexity.
 - Discover suitable issues across GitHub with mechanical duplicate and assignment checks.
 - Audit a repository and draft evidence-backed, non-duplicate issues.
 - Create minimal, tested changes that follow the target repository's own rules.
@@ -180,13 +180,13 @@ RepoStew uses three internal decisions:
 
 | Decision | Meaning |
 |---|---|
-| `ACCEPT` | clear, localized, compatible, testable, and aligned with the repository |
+| `ACCEPT` | clear, permitted, compatible, testable, valuable, and aligned with the repository; complexity only determines routing |
 | `ASK_MAINTAINER` | requirements, API, architecture, dependency, service, security, or compatibility direction needs approval |
-| `SKIP` | duplicate, assigned, already fixed, prohibited, speculative, unverifiable, or inappropriate for a focused external contribution |
+| `SKIP` | duplicate, assigned, already fixed, prohibited, speculative, unverifiable, or blocked by unavailable required access |
 
 Labels are discovery signals, not permission. Every candidate is checked against the issue thread, commits, open/closed PRs, linked closing PRs, repository instructions, contribution policy, and expected maintenance cost.
 
-After verification, RepoStew also routes by execution complexity. A clear, localized change with established tests stays in the current conversation. Cross-subsystem work, ambiguous design, repository-wide audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task or handover when the agent platform provides one. The handoff carries evidence and authority boundaries, but the destination task must recheck current GitHub state.
+After verification, RepoStew separately routes by execution complexity. A clear, localized change with established tests stays in the current conversation. Cross-subsystem work, repository-wide audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task or handover when the agent platform provides one. Complexity alone never causes rejection. Ambiguous design or architecture may require `ASK_MAINTAINER`, but approved work then continues through the appropriate route. The handoff carries evidence and authority boundaries, while the destination task rechecks current GitHub state.
 
 ## Repository audit workflow
 

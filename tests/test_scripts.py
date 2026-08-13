@@ -33,6 +33,16 @@ class StateTests(unittest.TestCase):
                 self.assertEqual(path.parent, Path(directory))
 
 
+class PolicyTests(unittest.TestCase):
+    def test_complexity_routes_work_instead_of_skipping_it(self):
+        root = Path(__file__).resolve().parents[1]
+        skill = (root / "SKILL.md").read_text(encoding="utf-8")
+        taste = (root / "references" / "taste-and-permissions.md").read_text(encoding="utf-8")
+        self.assertIn("Complexity is never, by itself, a reason to reject, skip, or stop work", skill)
+        self.assertIn("Never use `SKIP` merely because an issue is large", taste)
+        self.assertNotIn("issues too large for a focused contribution", taste)
+
+
 class DiscoveryTests(unittest.TestCase):
     def test_keyword_search_has_no_maximum_star_qualifier(self):
         repository = {
