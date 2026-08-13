@@ -44,8 +44,10 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("standing authority to post one focused clarification comment", taste)
         self.assertIn("Route permission-gated pull requests", skill)
         self.assertIn("do **not** open an upstream PR, including a Draft PR", skill)
+        self.assertIn("An unresolved implementation choice is not, by itself, a reason to stay design-only", skill)
         self.assertIn("I did not open an upstream PR because", taste)
         self.assertIn("A Draft PR is evidence for review, not approval", taste)
+        self.assertIn("Solution uncertainty alone is not a technical approval gate", taste)
         self.assertNotIn("issues too large for a focused contribution", taste)
 
 
@@ -392,7 +394,7 @@ class DispatcherTests(unittest.TestCase):
     def test_dispatcher_prompt_preserves_invitation_only_policy(self):
         self.assertIn("do not open an upstream PR", auto_fix.FIX_PROMPT)
         self.assertIn("fork-only Draft PR", auto_fix.FIX_PROMPT)
-        self.assertIn("Draft status never overrides technical approval gates", auto_fix.FIX_PROMPT)
+        self.assertIn("Solution uncertainty alone is not such a gate", auto_fix.FIX_PROMPT)
 
     def test_pr_url_protocol_is_strict(self):
         output = "done\nPR_URL=https://github.com/owner/repo/pull/9\n"

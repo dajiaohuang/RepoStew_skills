@@ -192,13 +192,13 @@ For a verified `ASK_MAINTAINER` decision, RepoStew has standing authority to pos
 
 ### Permission-gated Draft PRs
 
-RepoStew separates permission to submit a PR from approval of its technical direction:
+RepoStew separates permission to submit a PR from approval of its technical direction. When several implementation directions remain, RepoStew selects the strongest evidence-backed, smallest, reversible option and uses the Draft to expose assumptions and alternatives; solution confirmation alone does not force design-only work.
 
 | Policy | RepoStew action |
 |---|---|
 | Unsolicited PRs or early Draft PRs are accepted | Open one focused upstream Draft PR, mark the unresolved decision, omit closing keywords, and wait for direction. |
-| External PRs are invitation-only or require approval before submission | Do not use Draft status to bypass the rule. Push a fork branch and open a fork-only Draft PR; if unsupported, persist the tested branch and complete draft title/body. Request an invitation once on the existing thread. |
-| Dependencies, services, permissions, public APIs, or architecture require prior approval | Keep the draft design-only or local until approval. |
+| External PRs are invitation-only, require approval before submission, or ask contributors to agree on a solution before upstream submission | Do not use Draft status to bypass upstream submission policy. Push a fork branch and open a fork-only Draft PR; if unsupported, persist the tested branch and complete draft title/body. Request an invitation once on the existing thread. |
+| Policy explicitly prohibits implementation/public prototypes in the current state, or the implementation crosses a separately gated security, dependency, service, credential, privileged-permission, or public-API boundary | Keep the draft design-only or local and cite the exact prohibition. |
 
 For an invitation-only project, the public note can say:
 

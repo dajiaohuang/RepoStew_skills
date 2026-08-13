@@ -40,15 +40,15 @@ In contributor mode, frame this as a question or tradeoff, not a project decisio
 
 ### Permission-gated draft route
 
-Treat submission permission and technical approval as separate gates.
+Treat submission permission and technical approval as separate gates. Do not leave an item design-only merely because maintainers have not selected among reasonable implementations. Choose the smallest reversible option supported by repository evidence, validate it, and make its assumptions and alternatives explicit in the Draft.
 
 | Repository policy | Allowed draft action |
 |---|---|
 | Unsolicited PRs or early Draft PRs are allowed | Open one upstream Draft PR, clearly identify the unresolved decision, and avoid closing keywords or ownership claims. |
-| External PRs are invitation-only or require approval before submission | Do not open an upstream PR. Push a fork branch and open a Draft PR only inside the fork; if unsupported, persist the tested branch and complete draft title/body. Link the draft from one existing public thread and request the invitation. |
-| Implementation itself requires prior approval | Keep the draft design-only or local; do not implement gated dependencies, services, permissions, public APIs, or architecture. |
+| External PRs are invitation-only, require approval before submission, or ask contributors to agree on a solution before upstream submission | Do not open an upstream PR. Push a fork branch and open a Draft PR only inside the fork; if unsupported, persist the tested branch and complete draft title/body. Link the draft from one existing public thread and request the invitation. |
+| Policy explicitly prohibits implementation or public prototypes in the current state, or the implementation crosses a separately gated security/dependency/service/credential/privileged-permission/public-API boundary | Keep the draft design-only or local and report the exact prohibition. |
 
-A Draft PR is evidence for review, not approval. It must still be focused, validated to the extent possible, non-competitive, and compliant with disclosure rules. Never use Draft status to bypass an assignment rule, invitation requirement, dependency gate, security channel, or explicit request not to submit code.
+A Draft PR is evidence for review, not approval. It must still be focused, validated to the extent possible, non-competitive, and compliant with disclosure rules. Solution uncertainty alone is not a technical approval gate. Never use Draft status to bypass an assignment rule, invitation requirement, dependency gate, security channel, or explicit prohibition on implementation or public prototypes.
 
 For an invitation-only repository, use language like:
 

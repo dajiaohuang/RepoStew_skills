@@ -31,15 +31,20 @@ Before editing, read the complete issue thread and every applicable repository i
 including AGENTS.md, CONTRIBUTING.md, tool-specific instruction files, development guides,
 the pull-request template, and CI/linter configuration. Confirm the issue is open, unassigned,
 not already fixed, and has no competing pull request. Apply the taste gate; stop without a PR
-if requirements are unclear, architecture-impacting, security-sensitive, or require a new
-dependency/service without maintainer approval.
+if the issue is security-sensitive, has a competing implementation, or requires a new
+dependency/service/credential/privileged permission/public API without the required approval.
+Do not stop merely because maintainers have not selected among reasonable solutions. Choose
+the smallest reversible option supported by repository evidence, test it, and document its
+assumptions and alternatives in the Draft.
 
 If the candidate is sound but submission needs maintainer permission, follow RepoStew's draft
 route. Open an upstream Draft PR only when repository policy allows unsolicited early drafts.
-For invitation-only or approval-before-submission repositories, do not open an upstream PR;
+For invitation-only, approval-before-submission, or agree-before-upstream-submission repositories, do not open an upstream PR;
 push a focused fork branch, create a fork-only Draft PR (or persist a complete draft when that
 is unsupported), and request an invitation once on the existing public thread.
-Draft status never overrides technical approval gates.
+Use design-only only for an explicit prohibition on implementation/public prototypes or a
+separately gated security, dependency, service, credential, privileged-permission, or public-API
+boundary. Solution uncertainty alone is not such a gate.
 
 If actionable, fork with the currently authenticated GitHub account, create a focused branch,
 make the smallest conforming fix, add or update tests, run relevant validation, commit, push,
