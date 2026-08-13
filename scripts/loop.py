@@ -1,60 +1,85 @@
 #!/usr/bin/env python3
-"""Continuous autonomous issue-fixing loop. Never stops."""
-import subprocess, sys, os, time, json
+"""Run bounded RepoStew discovery rounds without invoking a specific AI client."""
 
-SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DISCOVER = os.path.join(SKILL_DIR, "scripts", "discover.py")
-SEEN = os.path.join(SKILL_DIR, "seen_issues.json")
+from __future__ import annotations
 
-def run(cmd, timeout=300):
+import argparse
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DISCOVER = SCRIPT_DIR / "discover.py"
+
+
+def discovery_command(round_number: int, max_candidates: int) -> list[str]:
+    """Broaden search parameters after each empty round."""
+
+    min_stars = (5, 3, 1)[min(round_number - 1, 2)]
+    max_days = (120, 180, 365)[min(round_number - 1, 2)]
+    return [
+        sys.executable,
+        str(DISCOVER),
+        "--direct",
+        "--keyword",
+        "--kw-min-stars",
+        str(min_stars),
+        "--max-days",
+        str(max_days),
+        "--max-candidates",
+        str(max_candidates),
+        "--json-only",
+    ]
+
+
+def discover_round(round_number: int, max_candidates: int) -> list[dict]:
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=True)
-        return r.stdout.strip(), r.stderr.strip(), r.returncode
-    except:
-        return "", "", 1
-
-def discover_round():
-    """Run discovery. Returns list of candidates."""
-    stdout, stderr, rc = run(f"{sys.executable} {DISCOVER} --direct --keyword --kw-min-stars 5 --max-days 90 --max-candidates 5", timeout=300)
-    if rc != 0:
+        result = subprocess.run(
+            discovery_command(round_number, max_candidates),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=300,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != 0:
         return []
     try:
-        data = json.loads(stdout)
-        return data.get("candidates", [])
-    except:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
         return []
+    candidates = payload.get("candidates", [])
+    return candidates if isinstance(candidates, list) else []
 
-def seen_count():
-    if not os.path.exists(SEEN):
-        return 0
-    with open(SEEN) as f:
-        return len(json.load(f))
 
-dry = 0
-round_num = 0
-while True:
-    round_num += 1
-    sc = seen_count()
-    print(f"\n{'='*40} ROUND {round_num} (seen: {sc}) dry: {dry} {'='*40}", flush=True)
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Repeat RepoStew discovery until candidates are found or the dry-round limit is reached"
+    )
+    parser.add_argument("--dry-rounds", type=int, default=3)
+    parser.add_argument("--max-candidates", type=int, default=5)
+    parser.add_argument("--interval", type=float, default=0)
+    args = parser.parse_args()
+    if args.dry_rounds < 1 or args.max_candidates < 1 or args.interval < 0:
+        parser.error("dry-rounds and max-candidates must be positive; interval cannot be negative")
 
-    candidates = discover_round()
-    if not candidates:
-        dry += 1
-        print(f"  No candidates. dry={dry}/3", flush=True)
-        if dry >= 3:
-            print("  Expanding: lowering kw-min-stars to 3, max-days to 120", flush=True)
-            # Modify search params in-place for next run via env
-            os.environ["IFX_MIN_STARS"] = "3"
-            os.environ["IFX_MAX_DAYS"] = "120"
-        time.sleep(30)
-        continue
+    for round_number in range(1, args.dry_rounds + 1):
+        candidates = discover_round(round_number, args.max_candidates)
+        if candidates:
+            print(json.dumps({"round": round_number, "candidates": candidates}, indent=2, ensure_ascii=False))
+            return 0
+        print(f"Discovery round {round_number}/{args.dry_rounds}: no candidates", file=sys.stderr)
+        if round_number < args.dry_rounds and args.interval:
+            time.sleep(args.interval)
 
-    dry = 0
-    for c in candidates:
-        print(f"  {c['repo']}#{c['issue_number']} — {c['issue_title'][:100]}", flush=True)
+    print(json.dumps({"rounds": args.dry_rounds, "candidates": [], "message": "dry-round limit reached"}))
+    return 1
 
-    print(f"  Found {len(candidates)} — fix manually or re-run", flush=True)
-    time.sleep(30)
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

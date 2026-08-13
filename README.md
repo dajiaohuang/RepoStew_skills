@@ -1,182 +1,302 @@
 # RepoStew
 
-Repository Steward with Engineering Taste — a [Claude Code](https://claude.ai/code) skill that turns Claude into an autonomous open-source contributor. Point it at a specific issue, or let it discover trending repos with low-effort, unaddressed issues — it handles the full lifecycle from discovery to PR submission.
+RepoStew is a portable [Agent Skill](https://agentskills.io/) for responsible GitHub repository stewardship. It helps a coding agent discover and assess issues, audit repositories, implement focused fixes, validate changes, open pull requests, and maintain them through review.
 
-## Quick Install
+The skill is agent-neutral and operating-system-neutral. Its core workflow lives in `SKILL.md`; Python scripts provide optional deterministic discovery and PR tracking. Nothing in the skill requires a specific model vendor, GitHub username, workspace path, or shell.
 
-```bash
-# Install from the Claude skills registry
-claude skills install dajiaohuang/issue-fixer
-```
+## What RepoStew does
 
-Or manually:
+- Fix a specific GitHub issue after checking that it is still actionable.
+- Scan one repository for small, high-value contribution candidates.
+- Discover suitable issues across GitHub with mechanical duplicate and assignment checks.
+- Audit a repository and draft evidence-backed, non-duplicate issues.
+- Create minimal, tested changes that follow the target repository's own rules.
+- Open and track pull requests in confirm or autonomous mode.
+- Triage reviews, CI failures, conflicts, and follow-up work without acting as a maintainer by default.
+- Improve RepoStew itself when real usage reveals broken, stale, unsafe, or non-portable behavior.
 
-```bash
-git clone https://github.com/dajiaohuang/issue-fixer.git ~/.claude/skills/issue-fixer
-```
+## Supported agents
 
-**Prerequisites:** Python 3, `gh` CLI (authenticated with GitHub), `git`, `claude` CLI.
+RepoStew follows the open `SKILL.md` format. The same directory works with agents that implement the Agent Skills standard.
 
-## Full Lifecycle
+| Agent | Project location | Personal location | Invocation |
+|---|---|---|---|
+| OpenAI Codex | `.agents/skills/repostew` | `~/.agents/skills/repostew` | mention `$repostew` or let Codex match the description |
+| Cursor | `.agents/skills/repostew` or `.cursor/skills/repostew` | `~/.agents/skills/repostew` or `~/.cursor/skills/repostew` | `/repostew` or automatic |
+| Gemini CLI | `.agents/skills/repostew` or `.gemini/skills/repostew` | `~/.agents/skills/repostew` or `~/.gemini/skills/repostew` | automatic activation or Gemini's skills commands |
+| GitHub Copilot | `.agents/skills/repostew` or `.github/skills/repostew` | `~/.agents/skills/repostew` or `~/.copilot/skills/repostew` | `/repostew` or automatic |
+| Claude Code | `.claude/skills/repostew` | `~/.claude/skills/repostew` | `/repostew` or automatic |
 
-| Step | What Happens |
-|------|-------------|
-| **Discover** | Finds trending repos or uses one you specify; scans open issues with 3 search strategies |
-| **Verify** | Checks commits and PRs to confirm the issue isn't already fixed or claimed |
-| **Assess** | Classifies workload (trivial→large), applies a **taste gate** to filter out bad fits |
-| **Plan** | Enters plan mode with affected files, approach, and estimate — waits for your approval |
-| **Implement** | Forks the repo, clones it, writes the fix following the repo's own conventions |
-| **Submit** | Commits, pushes, and opens a PR (only after your explicit confirmation in confirm mode) |
-| **Track** | Records all PRs in `pr_tracker.json`; monitors CI status, reviews, and comments |
-| **Cleanup** | Deletes local clone after merge; fork can be kept or removed |
+`.agents/skills` is the recommended shared location for Codex, Cursor, Gemini CLI, and GitHub Copilot. Claude Code currently uses `.claude/skills`.
 
-## Three Ways to Use
+Platform references: [Codex skills](https://learn.chatgpt.com/docs/build-skills), [Claude Code skills](https://code.claude.com/docs/en/skills), [Cursor skills](https://cursor.com/docs/skills), [Gemini CLI skills](https://geminicli.com/docs/cli/skills/), and [GitHub Copilot skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills).
 
-### 1. Fix a Specific Issue
+## Prerequisites
 
-Triggered by: providing a full issue URL or `owner/repo#N`.
+- Git
+- Python 3.10 or newer
+- [GitHub CLI](https://cli.github.com/) authenticated with the account that will contribute
+- An Agent Skills-compatible coding agent
 
-```
-"Fix https://github.com/owner/repo/issues/42"
-```
-
-Claude forks, runs the pre-fix checklist (commits/PRs for prior fixes), enters plan mode, and implements with your approval.
-
-### 2. Scan a Repo for Fixable Issues
-
-Triggered by: providing a repo without an issue number ("扫一下 owner/repo", "看看这个仓库有什么能做的").
-
-Walks the repo's open issues **from newest to oldest**, applying the taste gate and pre-fix checklist to each one. Stops when it finds enough actionable candidates — doesn't blindly scan the entire backlog. Presents a table of candidates for you to choose from, then proceeds to the standard fix workflow.
-
-Stop conditions (whichever comes first):
-- 5 actionable candidates found
-- 50 issues walked
-- Reached issues older than 90 days with at least 1 candidate
-- In autonomous mode: 1 actionable candidate → fix immediately, then resume scan
-
-### 3. Auto-Discover Across GitHub
-
-Triggered by: "帮我找 issue", "find me issues to fix".
-
-Uses `scripts/discover.py` with three strategies (trending repos, domain keywords, direct issue search) to find low-effort, unaddressed issues across all of GitHub. Presents 3–5 candidates from diverse ecosystems.
-
-## Two Operating Modes
-
-### Confirm Mode (default)
-
-Triggered by: "帮我找 issue", "修这个 issue", "扫一下 owner/repo", or any fix request without autonomous keywords.
-
-```
-You pick → Claude plans → You approve → Claude implements → You approve PR → Submit
-```
-
-- Plan mode is mandatory before any code is written
-- Candidates presented as a table for you to choose from
-- PR submitted only after your explicit confirmation
-
-### Autonomous Mode
-
-Triggered by: **"自动"**, **"不停"**, **"一直"**, **"auto"**, **"autonomous"**, **"持续"**
-
-```
-Discover → Filter → Fix → Test → Commit → PR → Track → Repeat
-```
-
-- No plan mode, no confirmation prompts
-- Runs continuously: discovers, fixes, submits PRs, tracks them, and loops
-- Exits only after 3 consecutive discovery rounds find zero actionable candidates, or you interrupt
-
-## Discovery — Three Strategies
-
-The `scripts/discover.py` engine uses three search strategies to avoid always landing in the same JS/Python repos:
-
-| Strategy | How It Works |
-|----------|-------------|
-| **A — Trending repos** | Searches GitHub for repos pushed recently with minimum star threshold |
-| **B — Domain keywords** | Randomly samples from 100+ keywords (golang, kubernetes, postgresql, cli tool, llm, wasm...) to find repos across diverse ecosystems |
-| **C — Direct issue search** | Searches GitHub issues directly with quality signals: reactions, labels, body keywords, and issue age |
-
-Each candidate is mechanically verified: checks commits for issue references, checks open/closed/merged PRs, checks `closedByPullRequestsReferences`, filters assigned issues, and deduplicates against `seen_issues.json`.
+Verify the command-line prerequisites:
 
 ```bash
-# Trending repos only (fast scan)
-python scripts/discover.py --min-stars 100 --max-days 7 --repo-count 10
-
-# All three strategies combined (broadest coverage)
-python scripts/discover.py --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates 5
+git --version
+python --version
+gh auth status
 ```
 
-If discovery comes up empty, parameters auto-expand: `--min-stars` drops (100→50→30→5→1), `--max-days` widens (7→14→30→120), and `scan_known_repos.py` re-visits repos from previous contributions.
+Use `python3` instead of `python` on systems where that is the Python 3 command.
 
-## The Taste Gate
+## Install
 
-Before any issue is touched, it passes through a quality gate. Not every open issue is worth fixing.
+Always clone into a directory named `repostew`; the directory name must match the skill's `name`.
 
-**ACCEPT** (do directly): clear bugs, docs fixes, test additions, small backward-compatible enhancements, style-consistent changes.
+### Recommended: install for one repository
 
-**ASK_MAINTAINER** (clarify first): new dependencies, external tools, public API changes, architecture changes, security-sensitive work, unclear requirements.
+This keeps RepoStew versioned with, and scoped to, the workspace where it will be used.
 
-**REJECT_OR_SKIP** (avoid): stack rewrites, speculative features, tasks requiring secrets/paid services, off-topic or promotional issues, unbounded maintenance work.
+macOS/Linux:
 
-A hard **external dependency gate** also applies: any new dependency, service, CLI tool, GitHub Action, or cloud resource requires maintainer approval — period.
+```bash
+mkdir -p .agents/skills
+git clone https://github.com/dajiaohuang/RepoStew_skills.git .agents/skills/repostew
+```
 
-## Hard Rules
+Windows PowerShell:
 
-These apply in **both** modes, every repo, no exceptions:
+```powershell
+New-Item -ItemType Directory -Force -Path ".agents\skills" | Out-Null
+git clone https://github.com/dajiaohuang/RepoStew_skills.git ".agents\skills\repostew"
+```
 
-1. **Plan mode is mandatory** (confirm mode) — no code without your approval
-2. **Follow the target repo's rules first** — read `CONTRIBUTING.md`, `CLAUDE.md`, PR template, and linter config before writing a single line. Be a good guest.
-3. **Zero AI-generated markers** — never include "Co-Authored-By: Claude", "🤖 Generated with Claude Code", or any mention of Claude/Anthropic/AI/LLM in commits or PRs. The code is judged on its own merit.
-4. **Minimal diffs** — smallest change that fixes the issue; no drive-by refactors, no style rewrites
-5. **Contributor mode by default** — unless explicitly given maintainer authority, never reject issues, close issues, or speak on behalf of maintainers
+This project-local installation is discovered by Codex, Cursor, Gemini CLI, and GitHub Copilot. For Claude Code, use the same commands with `.claude/skills/repostew` instead:
 
-## Scripts Reference
+macOS/Linux:
+
+```bash
+mkdir -p .claude/skills
+git clone https://github.com/dajiaohuang/RepoStew_skills.git .claude/skills/repostew
+```
+
+Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force -Path ".claude\skills" | Out-Null
+git clone https://github.com/dajiaohuang/RepoStew_skills.git ".claude\skills\repostew"
+```
+
+### Install for the current user
+
+For Codex, Cursor, Gemini CLI, and GitHub Copilot, install once in the shared personal location.
+
+macOS/Linux:
+
+```bash
+mkdir -p ~/.agents/skills
+git clone https://github.com/dajiaohuang/RepoStew_skills.git ~/.agents/skills/repostew
+```
+
+Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills" | Out-Null
+git clone https://github.com/dajiaohuang/RepoStew_skills.git "$env:USERPROFILE\.agents\skills\repostew"
+```
+
+For Claude Code, replace `.agents` with `.claude` in those commands.
+
+### Gemini CLI installer
+
+Gemini CLI can also install the repository directly:
+
+```bash
+gemini skills install https://github.com/dajiaohuang/RepoStew_skills.git
+```
+
+Use `--scope workspace` for a workspace-scoped Gemini installation. Review any third-party skill before approving activation.
+
+### Update an installation
+
+Project installation:
+
+```bash
+git -C .agents/skills/repostew pull --ff-only
+```
+
+Personal installation on macOS/Linux:
+
+```bash
+git -C ~/.agents/skills/repostew pull --ff-only
+```
+
+Personal installation on Windows PowerShell:
+
+```powershell
+git -C "$env:USERPROFILE\.agents\skills\repostew" pull --ff-only
+```
+
+Use the actual installed path when using a platform-specific directory. Restart or reload the agent's skill list if it does not detect the update automatically.
+
+## Use RepoStew
+
+Examples:
+
+```text
+Use RepoStew to fix https://github.com/owner/repo/issues/42
+Use RepoStew to scan owner/repo for a small issue worth fixing
+Use RepoStew to audit owner/repo and draft confirmed bug reports
+Use RepoStew to find me 3 well-scoped open-source issues
+Use RepoStew to check and maintain my tracked pull requests
+Use RepoStew in autonomous mode and stop after 3 dry discovery rounds
+```
+
+### Confirm mode
+
+Confirm mode is the default:
+
+```text
+investigate → present candidates/plan → user approves edits → implement/test
+→ user approves external submission → open issue or PR → track
+```
+
+Read-only investigation can proceed immediately. Code edits and external GitHub writes wait for confirmation.
+
+### Autonomous mode
+
+Explicit words such as `autonomous`, `automatic`, `continuous`, `no confirmation`, `自动`, or `持续` enable autonomous mode:
+
+```text
+discover → assess → verify → fix → test → commit → PR → track → maintain
+```
+
+Autonomous mode removes intermediate user confirmation only inside the granted scope. It does not grant maintainer permissions, bypass repository policy, authorize new dependencies/services, or suppress the host agent's security controls. RepoStew stops after three consecutive broadened discovery rounds with no actionable candidate.
+
+## Contribution quality gate
+
+RepoStew uses three internal decisions:
+
+| Decision | Meaning |
+|---|---|
+| `ACCEPT` | clear, localized, compatible, testable, and aligned with the repository |
+| `ASK_MAINTAINER` | requirements, API, architecture, dependency, service, security, or compatibility direction needs approval |
+| `SKIP` | duplicate, assigned, already fixed, prohibited, speculative, unverifiable, or inappropriate for a focused external contribution |
+
+Labels are discovery signals, not permission. Every candidate is checked against the issue thread, commits, open/closed PRs, linked closing PRs, repository instructions, contribution policy, and expected maintenance cost.
+
+## Repository audit workflow
+
+RepoStew can produce issues as well as patches. A report is filed only after:
+
+1. reproducing the problem or collecting strong source evidence;
+2. checking supported versions and the default branch;
+3. searching existing issues, discussions, PRs, and commits;
+4. minimizing the reproduction;
+5. separating confirmed defects from preferences or speculative improvements;
+6. following the repository's issue template and security-reporting policy.
+
+Confirm mode presents draft issue titles and bodies before posting. RepoStew does not mass-file low-confidence findings.
+
+## Bundled scripts
+
+Scripts use only the Python standard library and external `git`/`gh` commands.
 
 | Script | Purpose |
-|--------|---------|
-| `scripts/discover.py` | Issue discovery engine (3 strategies, mechanical verification, JSON output) |
-| `scripts/auto_fix.py` | Autonomous pipeline: chains discovery → fork → fix → PR → track via `claude -p` |
-| `scripts/auto_fix.sh` | Bash equivalent of `auto_fix.py` |
-| `scripts/loop.py` | Continuous autonomous loop with 3-dry-round exit and automatic parameter expansion |
-| `scripts/pr_tracker.py` | PR lifecycle tracker: `add`, `check` (CI/reviews/comments), `list` |
-| `scripts/scan_known_repos.py` | Re-visits repos from `pr_tracker.json` to find new open issues |
+|---|---|
+| `scripts/discover.py` | Discover candidates through recent repositories, domain sampling, and direct issue search |
+| `scripts/scan_known_repos.py` | Revisit repositories already present in the PR tracker |
+| `scripts/pr_tracker.py` | Add, list, and refresh pull-request status |
+| `scripts/loop.py` | Run bounded, progressively broader discovery rounds |
+| `scripts/auto_fix.py` | Optional provider-neutral dispatcher for a user-supplied non-interactive agent command |
+| `scripts/auto_fix.sh` | Small POSIX wrapper around `auto_fix.py` |
 
-### PR Tracking
+### Discovery
 
 ```bash
-python scripts/pr_tracker.py add <pr-url> <issue-url> [--repo owner/repo]
-python scripts/pr_tracker.py check [--repo owner/repo]   # CI status, reviews, new comments
+# Recently active repositories
+python scripts/discover.py --min-stars 100 --max-days 7 --repo-count 10
+
+# All discovery strategies
+python scripts/discover.py \
+  --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates 5
+
+# Suppress progress logs and emit JSON only
+python scripts/discover.py --direct --json-only
+```
+
+Discovery output is a shortlist, not an automatic approval. The agent must still read and judge each issue.
+
+### PR tracking
+
+```bash
+python scripts/pr_tracker.py add \
+  "https://github.com/owner/repo/pull/123" \
+  "https://github.com/owner/repo/issues/42"
+
+python scripts/pr_tracker.py check
 python scripts/pr_tracker.py list
+python scripts/pr_tracker.py check --repo owner/repo
 ```
 
-When the user asks "维护PR" or "看看PR状态", Claude presents a **PR Maintenance Table** — all tracked PRs sorted by priority (🔴 action-needed → 🟡 waiting → 🟢 healthy → ⚪ terminal), with CI/review/activity status and a specific action for each row. In autonomous mode, maintenance checks run after every 3 fix rounds.
+### Mutable state
 
-### Autonomous Pipeline
+RepoStew stores mutable personal state outside the installed skill:
+
+```text
+~/.repostew/seen_issues.json
+~/.repostew/pr_tracker.json
+```
+
+Override the location when needed:
+
+macOS/Linux:
 
 ```bash
-python scripts/auto_fix.py [--loop] [--max 5]
-python scripts/loop.py          # Infinite loop, never stops until 3 dry rounds
+export REPOSTEW_HOME=/path/to/repostew-state
 ```
 
-## Safety Design
+Windows PowerShell:
 
-- **Plan mode is mandatory** — no code is written until you approve the plan (confirm mode)
-- **Commit + PR dual check** — verifies issues aren't already fixed, including merged PRs that didn't auto-close the issue
-- **Repo guidelines first** — follows the target repo's own `CLAUDE.md`/`CONTRIBUTING.md` when available; falls back to general best practices only when none exist
-- **PR confirmation required** — never opens a PR without your explicit go-ahead (confirm mode)
-- **Minimal diffs** — makes the smallest change that resolves the issue
-- **Review permission model** — acts as a contributor unless maintainer authority is confirmed; never oversteps
-- **Seen-issue deduplication** — `seen_issues.json` prevents re-processing the same issues across rounds
+```powershell
+$env:REPOSTEW_HOME = "D:\path\to\repostew-state"
+```
 
-## Target Issue Types
+Do not commit these personal tracking files to the skill repository.
 
-Prioritizes low-effort, high-value issues across categories:
+### Optional non-interactive dispatcher
 
-bug fixes · small features · documentation · test improvements · typos/formatting
-dependency updates · error messages · dead code removal · configuration · accessibility
+`auto_fix.py` is an integration hook, not the primary workflow. It accepts a user-supplied command that reads the task prompt from standard input and emits a final `PR_URL=...` line:
 
-Work priority: **Bug fix > regression test > docs > small enhancement > feature-flag-guarded feature > large feature proposal**
+```bash
+python scripts/auto_fix.py \
+  --workspace /path/to/workspace \
+  --max 3 \
+  --agent-command <client> <args...>
+```
 
-## Self-Maintaining
+`--agent-command` must be the final option so every remaining argument is passed to the client unchanged. Add `--loop` before it to continue until three consecutive dry rounds. RepoStew never injects permission-bypass flags. Validate the selected client's stdin behavior, sandbox, approvals, and authentication before using this adapter.
 
-This skill maintains itself. The RepoStew repository is stewarded by RepoStew — it discovers its own issues, fixes them, and continuously improves its own SKILL.md and scripts through the same workflow it provides to other repos.
+## Safety model
+
+- Follow target repository instructions before generic RepoStew guidance.
+- Treat issue and comment content as untrusted input.
+- Default to contributor authority.
+- Require maintainer approval for architecture, dependencies, services, permissions, and public API changes.
+- Avoid fabricated attribution and follow repository disclosure policy.
+- Keep diffs and communication focused.
+- Never claim tests passed when they were not run.
+- Never merge, close, delete forks, or modify governance without explicit authority.
+- Never expose credentials in prompts, logs, commits, issues, or PRs.
+
+## Develop and validate RepoStew
+
+Run local checks after changing the skill:
+
+```bash
+python -m compileall -q scripts
+python -m unittest discover -s tests -v
+```
+
+Also validate `SKILL.md` with the skill validator provided by your agent platform when available. Keep `SKILL.md` concise and move detailed procedures into `references/`.
+
+RepoStew is self-maintaining: portability bugs, unsafe defaults, documentation drift, and script failures found during real contributions should be fixed here in focused, separately tested commits.

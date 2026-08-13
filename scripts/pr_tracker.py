@@ -1,35 +1,36 @@
 #!/usr/bin/env python3
 """
-PR tracker for issue-fixer skill.
+Cross-platform pull-request tracker for RepoStew.
 - Records PRs after creation
 - Checks status of all tracked PRs
 - Detects CI failures, review requests, new comments
 
 Usage:
-    python pr_tracker.py add <pr-url> <issue-url> [--repo <owner/repo>]
+    python pr_tracker.py add <pr-url> <issue-url>
     python pr_tracker.py check [--repo <owner/repo>]
-    python pr_tracker.py list
+    python pr_tracker.py list [--repo <owner/repo>]
 """
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
-TRACKER_FILE = os.path.join(os.path.dirname(__file__), "..", "pr_tracker.json")
+from repostew_state import load_json, save_json, state_file
 
 
 def run(cmd, **kwargs):
+    if isinstance(cmd, str):
+        raise TypeError("commands must be argument lists")
     try:
-        shell = isinstance(cmd, str)
         result = subprocess.run(
             cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=kwargs.get("timeout", 30), shell=shell,
+            timeout=kwargs.get("timeout", 30), check=False,
         )
-        return (result.stdout or "").strip()
-    except subprocess.TimeoutExpired:
+        return (result.stdout or "").strip() if result.returncode == 0 else ""
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return ""
 
 def run_json(cmd, **kwargs):
@@ -42,31 +43,50 @@ def run_json(cmd, **kwargs):
         return None
 
 def load():
-    if os.path.exists(TRACKER_FILE):
-        with open(TRACKER_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    data = load_json(state_file("pr_tracker.json"), [])
+    return data if isinstance(data, list) else []
 
 def save(data):
-    with open(TRACKER_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    save_json(state_file("pr_tracker.json"), data)
+
+
+def parse_pr_url(url):
+    """Return (owner/repo, PR number) for a canonical GitHub PR URL."""
+    parsed = urlparse(url.rstrip("/"))
+    parts = [part for part in parsed.path.split("/") if part]
+    if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+        raise ValueError("expected an https://github.com pull-request URL")
+    if len(parts) != 4 or parts[2] != "pull" or not parts[3].isdigit():
+        raise ValueError("expected https://github.com/<owner>/<repo>/pull/<number>")
+    return f"{parts[0]}/{parts[1]}", int(parts[3])
+
+
+def normalize_issue_url(url):
+    """Validate and normalize a canonical GitHub issue URL."""
+    parsed = urlparse(url.rstrip("/"))
+    parts = [part for part in parsed.path.split("/") if part]
+    if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+        raise ValueError("expected an https://github.com issue URL")
+    if len(parts) != 4 or parts[2] != "issues" or not parts[3].isdigit():
+        raise ValueError("expected https://github.com/<owner>/<repo>/issues/<number>")
+    return f"https://github.com/{parts[0]}/{parts[1]}/issues/{int(parts[3])}"
 
 
 def cmd_add(args):
     """Add a PR to the tracker."""
     # Parse PR URL: https://github.com/owner/repo/pull/N
     url = args.pr_url.rstrip("/")
-    parts = url.split("/")
-    if len(parts) < 7 or parts[5] != "pull":
-        print(f"ERROR: invalid PR URL: {url}", file=sys.stderr)
+    try:
+        full_name, number = parse_pr_url(url)
+        issue_url = normalize_issue_url(args.issue_url)
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
         sys.exit(1)
-    owner, repo, number = parts[3], parts[4], parts[6]
-    full_name = f"{owner}/{repo}"
 
     # Get current PR status
     pr = run_json(
-        ["gh", "pr", "view", number, "--repo", full_name,
-         "--json", "state,createdAt,mergedAt,closedAt,statusCheckRollup"],
+        ["gh", "pr", "view", str(number), "--repo", full_name,
+         "--json", "title,state,createdAt,mergedAt,closedAt,statusCheckRollup,headRefName"],
         timeout=15,
     )
     if not pr:
@@ -75,9 +95,11 @@ def cmd_add(args):
 
     entry = {
         "repo": full_name,
-        "pr_number": int(number),
+        "pr_number": number,
         "pr_url": url,
-        "issue_url": args.issue_url,
+        "title": pr.get("title"),
+        "head_ref": pr.get("headRefName"),
+        "issue_url": issue_url,
         "state": pr.get("state"),
         "created_at": pr.get("createdAt"),
         "merged_at": pr.get("mergedAt"),
@@ -88,7 +110,7 @@ def cmd_add(args):
 
     data = load()
     # Replace if exists
-    data = [d for d in data if not (d["repo"] == full_name and d["pr_number"] == int(number))]
+    data = [d for d in data if not (d.get("repo") == full_name and d.get("pr_number") == number)]
     data.append(entry)
     save(data)
     print(f"Tracked: {full_name}#{number} ({pr.get('state')})")
@@ -102,16 +124,21 @@ def cmd_check(args):
         return
 
     updated = []
+    checked = 0
     for entry in data:
         full_name = entry["repo"]
         number = entry["pr_number"]
+        if args.repo and full_name.lower() != args.repo.lower():
+            updated.append(entry)
+            continue
+        checked += 1
         print(f"\n{'='*60}")
         print(f"{full_name}#{number}  {entry['pr_url']}")
         print(f"Issue: {entry.get('issue_url', '?')}")
 
         pr = run_json(
             ["gh", "pr", "view", str(number), "--repo", full_name,
-             "--json", "state,createdAt,mergedAt,closedAt,statusCheckRollup,reviews,comments"],
+             "--json", "title,state,createdAt,mergedAt,closedAt,statusCheckRollup,reviews,comments,headRefName"],
             timeout=15,
         )
         if not pr:
@@ -156,6 +183,8 @@ def cmd_check(args):
             print(f"     Latest by {author}: {body}")
 
         entry["state"] = new_state
+        entry["title"] = pr.get("title")
+        entry["head_ref"] = pr.get("headRefName")
         entry["merged_at"] = pr.get("mergedAt")
         entry["closed_at"] = pr.get("closedAt")
         entry["ci_status"] = ci
@@ -164,7 +193,7 @@ def cmd_check(args):
 
     save(updated)
     print(f"\n{'='*60}")
-    print(f"Checked {len(updated)} PRs.")
+    print(f"Checked {checked} PRs.")
 
 
 def cmd_list(args):
@@ -178,6 +207,8 @@ def cmd_list(args):
     print("-" * 100)
     for entry in data:
         full_name = entry["repo"]
+        if args.repo and full_name.lower() != args.repo.lower():
+            continue
         number = entry["pr_number"]
         state = entry.get("state", "?")
         ci = _format_ci(entry.get("ci_status", {}))
@@ -218,15 +249,17 @@ def _format_ci(ci):
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    p = argparse.ArgumentParser(description="PR tracker for issue-fixer")
+    p = argparse.ArgumentParser(description="PR tracker for RepoStew")
     sp = p.add_subparsers(dest="cmd")
 
     add_p = sp.add_parser("add")
     add_p.add_argument("pr_url")
     add_p.add_argument("issue_url")
 
-    sp.add_parser("check")
-    sp.add_parser("list")
+    check_p = sp.add_parser("check")
+    check_p.add_argument("--repo", help="only check one owner/repo")
+    list_p = sp.add_parser("list")
+    list_p.add_argument("--repo", help="only list one owner/repo")
 
     args = p.parse_args()
     if args.cmd == "add":

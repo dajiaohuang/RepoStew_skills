@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Issue discovery pipeline for issue-fixer skill.
-Three strategies → smart filter → output clean JSON for Claude.
+Cross-platform GitHub issue discovery for RepoStew.
+Three strategies → mechanical checks → agent-friendly JSON.
 
 Usage:
     python discover.py [--keyword] [--direct] [--max-candidates 5]
@@ -12,10 +12,20 @@ import json
 import os
 import random
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
+
+from repostew_state import load_json, save_json, state_file
+
+QUIET = False
+
+
+def log(message: str) -> None:
+    if not QUIET:
+        print(message, file=sys.stderr)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -92,34 +102,6 @@ DIRECT_SEARCH_QUERIES = [
     ('"is not defined" in:body language:javascript', "created"),
 ]
 
-# Repos whose full_name matches any of these patterns are excluded
-# Repos whose FAQ.md explicitly bans AI-generated content — skip entirely
-AI_BANNED_REPOS: set[str] = set()  # Populated at runtime from FAQ.md checks
-
-
-def _repo_bans_ai(repo_full_name: str) -> bool:
-    """Check if a repo's FAQ.md explicitly bans AI-generated contributions."""
-    if repo_full_name in AI_BANNED_REPOS:
-        return True
-    # Quick check: fetch FAQ.md and grep for AI ban keywords
-    try:
-        content = run(
-            ["gh", "api", f"repos/{repo_full_name}/contents/FAQ.md", "--jq", ".content"],
-            timeout=10,
-        )
-        if not content:
-            return False
-        import base64
-        decoded = base64.b64decode(content).decode("utf-8", errors="replace").lower()
-        if "ai-generated" in decoded and ("prohibited" in decoded or "not accepted" in decoded or "ban" in decoded):
-            AI_BANNED_REPOS.add(repo_full_name)
-            print(f"  [skip] {repo_full_name}: FAQ.md bans AI-generated content", file=sys.stderr)
-            return True
-    except Exception:
-        pass
-    return False
-
-
 EXCLUDED_REPO_PATTERNS = [
     r"/awesome$", r"/awesome-", r"/Awesome-", r"-awesome-",
     r"/public-apis$", r"/free-programming-books$",
@@ -145,14 +127,16 @@ SPAM_TITLE_PATTERNS = [
 # ═══════════════════════════════════════════════════════════════════════
 
 def run(cmd, **kwargs):
+    """Run a command without a shell and return stdout, or an empty string."""
+    if isinstance(cmd, str):
+        raise TypeError("commands must be argument lists")
     try:
-        shell = isinstance(cmd, str)
         result = subprocess.run(
             cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=kwargs.get("timeout", 30), shell=shell,
+            timeout=kwargs.get("timeout", 30), check=False,
         )
-        return (result.stdout or "").strip()
-    except subprocess.TimeoutExpired:
+        return (result.stdout or "").strip() if result.returncode == 0 else ""
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return ""
 
 def run_json(cmd, **kwargs):
@@ -169,21 +153,16 @@ def run_json(cmd, **kwargs):
 # Seen-issue deduplication
 # ═══════════════════════════════════════════════════════════════════════
 
-SEEN_FILE = os.path.join(os.path.dirname(__file__), "..", "seen_issues.json")
-
-
 def _load_seen() -> set[tuple[str, int]]:
     """Return set of (repo_full_name, issue_number) already seen."""
-    if not os.path.exists(SEEN_FILE):
-        return set()
-    try:
-        with open(SEEN_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return set()
+    data = load_json(state_file("seen_issues.json"), [])
     if not isinstance(data, list):
         return set()
-    return {(entry["repo"], entry["number"]) for entry in data if isinstance(entry, dict)}
+    return {
+        (entry["repo"], entry["number"])
+        for entry in data
+        if isinstance(entry, dict) and "repo" in entry and "number" in entry
+    }
 
 
 def _save_seen(seen: set[tuple[str, int]]) -> None:
@@ -192,8 +171,7 @@ def _save_seen(seen: set[tuple[str, int]]) -> None:
         [{"repo": r, "number": n} for r, n in seen],
         key=lambda x: (x["repo"], x["number"]),
     )
-    with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        json.dump(items, f, indent=2, ensure_ascii=False)
+    save_json(state_file("seen_issues.json"), items)
 
 
 def _mark_seen(repo_full_name: str, issue_number: int) -> None:
@@ -303,11 +281,12 @@ def check_linked_prs(repo_full_name, issue_number):
     return (linked or 0) > 0
 
 def clone_repo_shallow(repo_full_name):
-    clone_dir = tempfile.mkdtemp(prefix="ifx_")
+    clone_dir = tempfile.mkdtemp(prefix="repostew_")
     url = f"https://github.com/{repo_full_name}.git"
     run(["git", "clone", "--depth", "50", url, clone_dir], timeout=60)
     if os.path.isdir(os.path.join(clone_dir, ".git")):
         return clone_dir
+    shutil.rmtree(clone_dir, ignore_errors=True)
     return None
 
 
@@ -355,7 +334,7 @@ def get_keyword_repos(min_stars=10, max_stars=0, max_days=14, count=10):
         and not is_list_repo(r["full_name"])
     ]
     label = f"≤{max_stars}" if max_stars else "no max"
-    print(f"  [kw] '{keyword}' → {len(result)} total, {len(filtered)} stars ≥{min_stars} {label}", file=sys.stderr)
+    log(f"  [kw] '{keyword}' → {len(result)} total, {len(filtered)} stars ≥{min_stars} {label}")
     return filtered
 
 
@@ -364,27 +343,24 @@ def get_keyword_repos(min_stars=10, max_stars=0, max_days=14, count=10):
 # ═══════════════════════════════════════════════════════════════════════
 
 def get_direct_issues(count=30):
-    """Search issues with quality signals: reactions, comments, sorted by updated.
+    """Search open issues using labels, reproduction phrases, and error patterns.
 
-    Uses single-label queries with engagement filters:
-    - reactions:>1 → real users encountered the problem
-    - comments:>0 → discussion exists (not a template shell)
-    - sorted by updated → recent maintainer/community activity
-    - NOT checklist/template → exclude doc-only repos
+    Queries are sorted by recent creation or update and exclude obvious
+    checklist/template noise. Engagement and suitability are evaluated later.
     """
     all_issues = []
     queries = random.sample(DIRECT_SEARCH_QUERIES, min(3, len(DIRECT_SEARCH_QUERIES)))
 
     for label_q, sort_order in queries:
         # Build query as separate args (NOT with -- separator)
-        query_parts = f"{label_q} is:open NOT checklist NOT template".split()
+        query = f"{label_q} is:open NOT checklist NOT template"
         result = run_json(
             ["gh", "search", "issues",
+             query,
              "--limit", str(count // len(queries)),
              "--sort", sort_order,
              "--order", "desc",
-             "--json", "number,title,body,createdAt,labels,repository,commentsCount,assignees",
-             *query_parts],
+             "--json", "number,title,body,createdAt,labels,repository,commentsCount,assignees"],
             timeout=30,
         )
         if result:
@@ -429,15 +405,15 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
     # ── Smart filters ──
 
     if is_bad_license(repo_license_str):
-        print(f"  #{number} — SKIP (bad license: {repo_license_str})", file=sys.stderr)
+        log(f"  #{number} — SKIP (bad license: {repo_license_str})")
         return None
 
     if is_spam_title(title):
-        print(f"  #{number} — SKIP (spam title: {title[:60]})", file=sys.stderr)
+        log(f"  #{number} — SKIP (spam title: {title[:60]})")
         return None
 
     if not is_valid_body(body):
-        print(f"  #{number} — SKIP (body too short/noisy: {len(body)} chars)", file=sys.stderr)
+        log(f"  #{number} — SKIP (body too short/noisy: {len(body)} chars)")
         return None
 
     if is_stale_issue(created_at, comments_count):
@@ -446,38 +422,43 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
             age = (datetime.now(timezone.utc) - created).days
         except Exception:
             age = "?"
-        print(f"  #{number} — SKIP (stale: {age}d old, {comments_count} comments)", file=sys.stderr)
+        log(f"  #{number} — SKIP (stale: {age}d old, {comments_count} comments)")
         return None
 
     if not labels_ok(labels):
         label_names = [l.get("name", "") for l in labels]
-        print(f"  #{number} — SKIP (non-priority labels: {label_names})", file=sys.stderr)
+        log(f"  #{number} — SKIP (non-priority labels: {label_names})")
         return None
 
     # ── Assignee check ──
     if assignees:
-        print(f"  #{number} — SKIP (assigned: {assignees[0].get('login', '?')})", file=sys.stderr)
+        log(f"  #{number} — SKIP (assigned: {assignees[0].get('login', '?')})")
         return None
 
     # ── Mechanical checks ──
     if clone_dir and check_commits_for_issue(clone_dir, number, created_at):
-        print(f"  #{number} — SKIP (commit refs)", file=sys.stderr)
+        log(f"  #{number} — SKIP (commit refs)")
         return None
 
     if check_prs_for_issue(repo_full_name, number):
-        print(f"  #{number} — SKIP (PR refs)", file=sys.stderr)
+        log(f"  #{number} — SKIP (PR refs)")
         return None
 
     if check_linked_prs(repo_full_name, number):
-        print(f"  #{number} — SKIP (linked PRs)", file=sys.stderr)
+        log(f"  #{number} — SKIP (linked PRs)")
         return None
 
     # ── Repo guidelines ──
-    has_contributing = False
-    has_claude_md = False
+    governance_files = []
     if clone_dir:
-        has_contributing = os.path.isfile(os.path.join(clone_dir, "CONTRIBUTING.md"))
-        has_claude_md = os.path.isfile(os.path.join(clone_dir, "CLAUDE.md"))
+        for filename in (
+            "AGENTS.md", "CLAUDE.md", "GEMINI.md", "CONTRIBUTING.md",
+            "DEVELOPMENT.md", "BUILDING.md", "FAQ.md",
+            os.path.join(".github", "copilot-instructions.md"),
+            os.path.join(".github", "pull_request_template.md"),
+        ):
+            if os.path.isfile(os.path.join(clone_dir, filename)):
+                governance_files.append(filename.replace(os.sep, "/"))
 
     label_names = [l.get("name", "") for l in labels]
 
@@ -485,8 +466,7 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
         "repo": repo_full_name,
         "repo_stars": repo_stars,
         "repo_license": repo_license_str,
-        "repo_has_contributing": has_contributing,
-        "repo_has_claude_md": has_claude_md,
+        "repo_governance_files": governance_files,
         "issue_number": number,
         "issue_title": title,
         "issue_url": f"https://github.com/{repo_full_name}/issues/{number}",
@@ -520,21 +500,18 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
 
     # ── Strategy C: Direct issue search ──
     if use_direct:
-        print("[direct] Searching issues directly...", file=sys.stderr)
+        log("[direct] Searching issues directly...")
         direct_issues = get_direct_issues(count=30)
-        print(f"[direct] Found {len(direct_issues)} raw issues", file=sys.stderr)
+        log(f"[direct] Found {len(direct_issues)} raw issues")
         for iss in direct_issues:
             if len(candidates) >= max_candidates:
                 break
             rn = iss["_repo_full_name"]
             if not rn or is_list_repo(rn):
                 continue
-            if _repo_bans_ai(rn):
-                continue
             num = iss["number"]
             if _is_seen(rn, num):
                 continue  # already evaluated in a previous run
-            _mark_seen(rn, num)
             # Quick license check for direct issues
             license_key = "unknown"
             repo_info = run_json(
@@ -552,14 +529,15 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
             result = evaluate_issue(
                 rn, stars, license_key, iss, clone_dir=None,
             )
+            _mark_seen(rn, num)
             if result:
                 candidates.append(result)
-                print(f"  #{iss['number']} — CANDIDATE ✓", file=sys.stderr)
+                log(f"  #{iss['number']} — CANDIDATE ✓")
         if len(candidates) >= max_candidates:
             return candidates
 
     if not use_direct and not repos:
-        print("ERROR: No repos found.", file=sys.stderr)
+        log("ERROR: No repos found.")
         return []
 
     # ── Process repos (Strategy A + B) ──
@@ -571,7 +549,7 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
         if is_list_repo(full_name):
             continue
 
-        print(f"Scanning {full_name}...", file=sys.stderr)
+        log(f"Scanning {full_name}...")
         issues = run_json(
             ["gh", "issue", "list", "--repo", full_name, "--limit", str(issue_limit),
              "--state", "open", "--json", "number,title,updatedAt,createdAt,labels",
@@ -588,23 +566,31 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
             num = issue["number"]
             if _is_seen(full_name, num):
                 continue
-            _mark_seen(full_name, num)
             clone_dir = clone_dir or clone_repo_shallow(full_name)
+            detail = run_json(
+                ["gh", "issue", "view", str(num), "--repo", full_name,
+                 "--json", "number,title,body,createdAt,labels,assignees,commentsCount"],
+                timeout=10,
+            )
+            if not detail:
+                continue
             result = evaluate_issue(
                 full_name, repo["stars"], repo.get("license", "unknown"),
-                issue, clone_dir=clone_dir,
+                detail, clone_dir=clone_dir,
             )
+            _mark_seen(full_name, num)
             if result:
                 candidates.append(result)
-                print(f"  #{issue['number']} — CANDIDATE ✓", file=sys.stderr)
+                log(f"  #{issue['number']} — CANDIDATE ✓")
 
         if clone_dir:
-            run(f'rm -rf "{clone_dir}"', timeout=5)
+            shutil.rmtree(clone_dir, ignore_errors=True)
 
     return candidates
 
 
 def main():
+    global QUIET
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     p = argparse.ArgumentParser(description="Discover fixable GitHub issues")
@@ -620,8 +606,7 @@ def main():
     p.add_argument("--json-only", action="store_true")
     args = p.parse_args()
 
-    if args.json_only:
-        sys.stderr = open(os.devnull, "w")
+    QUIET = args.json_only
 
     candidates = discover_candidates(
         min_stars=args.min_stars, max_days=args.max_days,
@@ -631,11 +616,10 @@ def main():
         kw_min_stars=args.kw_min_stars, kw_max_stars=args.kw_max_stars,
     )
 
+    payload = {"candidates": candidates}
     if not candidates:
-        print(json.dumps({"error": "no candidates found", "candidates": []}))
-        sys.exit(1)
-
-    print(json.dumps({"candidates": candidates}, indent=2, ensure_ascii=False))
+        payload["message"] = "no candidates found"
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

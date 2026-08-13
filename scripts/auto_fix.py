@@ -1,123 +1,169 @@
 #!/usr/bin/env python3
-"""
-Autonomous issue-fixing pipeline using claude -p.
-Usage: python auto_fix.py [--loop] [--max 5]
-"""
+"""Optional provider-neutral dispatcher for RepoStew autonomous mode.
 
-import json, os, subprocess, sys, time
-
-SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DISCOVER = os.path.join(SKILL_DIR, "scripts", "discover.py")
-TRACKER = os.path.join(SKILL_DIR, "scripts", "pr_tracker.py")
-WORKSPACE = r"D:\repo\issue-fixer"
-
-FIX_PROMPT = """You are an autonomous issue fixer. Fix this GitHub issue and open a PR.
-Do NOT ask any questions. Do NOT enter plan mode. Work silently. Output only a summary at the end.
-
-**Issue:** {repo}#{num} — {title}
-**URL:** {url}
-**Stars:** {stars} | **License:** {license} | **Labels:** {labels}
-
-**Instructions:**
-1. Read the issue: gh issue view {num} --repo {repo}
-2. Fork: gh repo fork {repo} --clone=false
-3. Clone: git clone https://github.com/dajiaohuang/{name}.git {workspace}\\{owner}-{name}
-4. cd into clone, read relevant source files, understand the bug, apply the MINIMAL fix
-5. If the repo has CONTRIBUTING.md, follow its rules. If PR template exists, fill it.
-6. Run tests if available (pytest / npm test / cargo test / etc.)
-7. Commit with conventional commit (fix: / docs: / feat:). NEVER include Co-Authored-By, Generated with Claude Code, or 🤖.
-8. Check default branch: gh api repos/{repo} --jq .default_branch
-9. Push to branch '{branch}' on origin
-10. Create PR with title and body linking to the issue
-11. cd back to the workspace root
-
-**Output format:** When done, print exactly:
-PR_URL=<pr_url>
+The configured agent command must read a prompt from stdin and print a line in
+the form ``PR_URL=https://github.com/<owner>/<repo>/pull/<number>`` on success.
+RepoStew does not add permission-bypass flags or assume a particular AI client.
 """
 
+from __future__ import annotations
 
-def run(cmd, timeout=600):
+import argparse
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DISCOVER = SCRIPT_DIR / "discover.py"
+TRACKER = SCRIPT_DIR / "pr_tracker.py"
+PR_URL_PATTERN = re.compile(r"^PR_URL=(https://github\.com/[^/\s]+/[^/\s]+/pull/\d+)\s*$", re.MULTILINE)
+
+FIX_PROMPT = """Use the RepoStew workflow to address this GitHub issue in autonomous mode.
+
+Issue: {repo}#{number} — {title}
+URL: {issue_url}
+Labels: {labels}
+Workspace: {workspace}
+
+Before editing, read the complete issue thread and every applicable repository instruction,
+including AGENTS.md, CONTRIBUTING.md, tool-specific instruction files, development guides,
+the pull-request template, and CI/linter configuration. Confirm the issue is open, unassigned,
+not already fixed, and has no competing pull request. Apply the taste gate; stop without a PR
+if requirements are unclear, architecture-impacting, security-sensitive, or require a new
+dependency/service without maintainer approval.
+
+If actionable, fork with the currently authenticated GitHub account, create a focused branch,
+make the smallest conforming fix, add or update tests, run relevant validation, commit, push,
+and open a pull request that follows the repository template and disclosure policy. Do not add
+fabricated coauthors or unsolicited generated-by advertising. Never merge or close anything.
+
+On success, print exactly one final machine-readable line:
+PR_URL=<pull-request-url>
+"""
+
+
+def run(command: list[str], *, timeout: int, cwd: Path | None = None, stdin: str | None = None):
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=timeout)
-        return r.stdout.strip(), r.stderr.strip(), r.returncode
-    except subprocess.TimeoutExpired:
-        return "", "timeout", 1
+        return subprocess.run(
+            command,
+            input=stdin,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            cwd=cwd,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+        return subprocess.CompletedProcess(command, 1, "", str(error))
 
 
-def discover(max_candidates=3):
-    stdout, stderr, rc = run(
-        f"{sys.executable} {DISCOVER} --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates {max_candidates}",
+def discover(max_candidates: int, round_number: int = 1) -> list[dict]:
+    min_stars = (5, 3, 1)[min(round_number - 1, 2)]
+    max_days = (120, 180, 365)[min(round_number - 1, 2)]
+    result = run(
+        [
+            sys.executable,
+            str(DISCOVER),
+            "--direct",
+            "--keyword",
+            "--kw-min-stars",
+            str(min_stars),
+            "--max-days",
+            str(max_days),
+            "--max-candidates",
+            str(max_candidates),
+            "--json-only",
+        ],
         timeout=300,
     )
-    if rc != 0 or not stdout:
+    if result.returncode != 0:
         return []
     try:
-        return json.loads(stdout).get("candidates", [])
+        candidates = json.loads(result.stdout).get("candidates", [])
     except json.JSONDecodeError:
         return []
+    return candidates if isinstance(candidates, list) else []
 
 
-def fix_one(candidate):
-    repo = candidate["repo"]
-    owner, name = repo.split("/")
-    num = candidate["issue_number"]
-    title = candidate["issue_title"]
-    url = candidate["issue_url"]
-    stars = candidate.get("repo_stars", 0)
-    license_key = candidate.get("repo_license", "?")
-    labels = ",".join(candidate.get("issue_labels", []) or [])
-    slug = "".join(c if c.isalnum() else "-" for c in title.lower()[:40]).strip("-")
-    branch = f"fix/{num}-{slug}"
-
+def dispatch(candidate: dict, agent_command: list[str], workspace: Path, timeout: int) -> bool:
+    issue_url = candidate["issue_url"]
     prompt = FIX_PROMPT.format(
-        repo=repo, owner=owner, name=name, num=num,
-        title=title, url=url, stars=stars, license=license_key,
-        labels=labels, branch=branch, workspace=WORKSPACE,
+        repo=candidate["repo"],
+        number=candidate["issue_number"],
+        title=candidate["issue_title"],
+        issue_url=issue_url,
+        labels=", ".join(candidate.get("issue_labels", [])),
+        workspace=workspace,
     )
+    result = run(agent_command, timeout=timeout, cwd=workspace, stdin=prompt)
+    if result.stdout:
+        print(result.stdout.rstrip())
+    if result.returncode != 0:
+        print(result.stderr.rstrip() or "agent command failed", file=sys.stderr)
+        return False
 
-    print(f"\n>>> Fixing {repo}#{num}: {title[:80]}")
-    print(f"    Running: claude -p ...")
+    match = PR_URL_PATTERN.search(result.stdout)
+    if not match:
+        print("agent completed without a valid PR_URL line; not adding tracker entry", file=sys.stderr)
+        return False
 
-    stdout, stderr, rc = run(f'claude -p --permission-mode bypassPermissions "{prompt}"', timeout=600)
-    print(stdout[:500] if stdout else "(no output)")
+    tracked = run(
+        [sys.executable, str(TRACKER), "add", match.group(1), issue_url],
+        timeout=30,
+        cwd=workspace,
+    )
+    if tracked.returncode != 0:
+        print(tracked.stderr.rstrip() or "could not add PR to tracker", file=sys.stderr)
+        return False
+    print(tracked.stdout.rstrip())
+    return True
 
-    if rc == 0:
-        print(f"    ✓ {repo}#{num} done.")
-        run(f"{sys.executable} {TRACKER} add {url} {url}", timeout=10)
-    else:
-        print(f"    ✗ {repo}#{num} failed (rc={rc})")
-        if stderr:
-            print(f"    stderr: {stderr[:200]}")
 
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Dispatch RepoStew candidates to an agent command")
+    parser.add_argument("--workspace", type=Path, default=Path.cwd())
+    parser.add_argument("--max", dest="max_candidates", type=int, default=3)
+    parser.add_argument("--timeout", type=int, default=1800)
+    parser.add_argument("--loop", action="store_true")
+    parser.add_argument("--dry-rounds", type=int, default=3)
+    parser.add_argument(
+        "--agent-command",
+        nargs=argparse.REMAINDER,
+        required=True,
+        help="final option: executable and arguments for a client that reads stdin",
+    )
+    args = parser.parse_args()
+    if args.max_candidates < 1 or args.timeout < 1 or args.dry_rounds < 1:
+        parser.error("max, timeout, and dry-rounds must be positive")
 
-def main():
-    loop = "--loop" in sys.argv
-    max_candidates = 3
-    for i, a in enumerate(sys.argv):
-        if a == "--max" and i + 1 < len(sys.argv):
-            max_candidates = int(sys.argv[i + 1])
+    agent_command = args.agent_command
+    if not agent_command:
+        parser.error("agent-command requires an executable")
+    workspace = args.workspace.expanduser().resolve()
+    workspace.mkdir(parents=True, exist_ok=True)
 
-    if loop:
-        print("Autonomous loop started. Ctrl+C to stop.")
-        while True:
-            candidates = discover(max_candidates)
-            if not candidates:
-                print("No candidates. Sleeping 30s...")
-                time.sleep(30)
-                continue
-            print(f"Found {len(candidates)} candidate(s).")
-            for c in candidates:
-                fix_one(c)
-            time.sleep(5)
-    else:
-        candidates = discover(max_candidates)
+    dry_rounds = 0
+    while True:
+        candidates = discover(args.max_candidates, dry_rounds + 1)
         if not candidates:
-            print("No candidates found.")
-            return
-        print(f"Found {len(candidates)} candidate(s).")
-        for c in candidates:
-            fix_one(c)
+            dry_rounds += 1
+            print(f"No candidates ({dry_rounds}/{args.dry_rounds} dry rounds).", file=sys.stderr)
+            if not args.loop or dry_rounds >= args.dry_rounds:
+                return 0
+            continue
+
+        dry_rounds = 0
+        failures = 0
+        for candidate in candidates:
+            print(f">>> {candidate['repo']}#{candidate['issue_number']}: {candidate['issue_title']}")
+            failures += not dispatch(candidate, agent_command, workspace, args.timeout)
+        if not args.loop:
+            return 1 if failures else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
