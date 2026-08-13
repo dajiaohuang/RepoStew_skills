@@ -229,6 +229,96 @@ def fetch_pr(repo: str, number: int) -> dict | None:
     )
 
 
+def search_authored_prs(author: str, limit: int) -> list[dict]:
+    results = run_json(
+        [
+            "gh", "search", "prs", "--author", author, "--limit", str(limit),
+            "--json", "number,title,state,url,repository,createdAt,updatedAt,isDraft,closedAt",
+        ],
+        timeout=60,
+    )
+    return results if isinstance(results, list) else []
+
+
+def cmd_import_authored(args) -> int:
+    author = args.author or run(["gh", "api", "user", "--jq", ".login"], timeout=10)
+    if not author:
+        print("ERROR: could not determine the authenticated GitHub login", file=sys.stderr)
+        return 1
+    results = search_authored_prs(author, args.limit)
+    if not results:
+        print("No authored pull requests found.")
+        return 0
+
+    data = load()
+    existing = {
+        (entry.get("repo", "").lower(), entry.get("pr_number")): entry
+        for entry in data
+    }
+    imported = []
+    refreshed = 0
+    for item in results:
+        repository = item.get("repository") or {}
+        repo = repository.get("nameWithOwner")
+        number = item.get("number")
+        url = item.get("url")
+        if not repo or not number or not url:
+            continue
+        entry = existing.get((repo.lower(), number), {})
+        entry.update({
+            "repo": repo,
+            "pr_number": number,
+            "pr_url": url,
+            "title": item.get("title"),
+            "state": (item.get("state") or "").upper(),
+            "author_login": author,
+            "created_at": item.get("createdAt"),
+            "updated_at": item.get("updatedAt"),
+            "closed_at": None if item.get("closedAt") == "0001-01-01T00:00:00Z" else item.get("closedAt"),
+            "is_draft": item.get("isDraft", False),
+        })
+        entry.setdefault("issue_url", None)
+        entry.setdefault("ci_status", {"total": 0, "success": 0, "failure": 0, "skipped": 0, "pending": 0})
+        entry.setdefault("handled_activity_ids", [])
+        entry.setdefault("pending_activity", [])
+
+        if entry["state"] == "OPEN" and not args.no_refresh:
+            pr = fetch_pr(repo, number)
+            if pr:
+                apply_pr_state(entry, pr, fetch_activities(repo, number), author)
+                refreshed += 1
+        else:
+            priority, reasons, next_action = priority_and_action(entry)
+            entry["priority"] = priority
+            entry["attention_reasons"] = reasons
+            entry["next_action"] = next_action
+
+        existing[(repo.lower(), number)] = entry
+        imported.append(entry)
+        record_contribution(repo, "pull_requests", url, item.get("createdAt"))
+
+    save(sorted(existing.values(), key=lambda entry: entry.get("created_at") or "", reverse=True))
+    counts = {
+        state: sum(1 for entry in imported if entry.get("state") == state)
+        for state in ("OPEN", "MERGED", "CLOSED")
+    }
+    payload = {
+        "author": author,
+        "imported": len(imported),
+        "refreshed_open": refreshed,
+        "states": counts,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(
+            f"Imported {len(imported)} PRs for {author}: "
+            f"{counts['OPEN']} open, {counts['MERGED']} merged, {counts['CLOSED']} closed; "
+            f"refreshed {refreshed} open PRs."
+        )
+    return 0
+
+
 def cmd_add(args) -> int:
     url = args.pr_url.rstrip("/")
     try:
@@ -383,6 +473,12 @@ def main() -> int:
     resolve_parser = subparsers.add_parser("resolve")
     resolve_parser.add_argument("pr_url")
 
+    import_parser = subparsers.add_parser("import-authored")
+    import_parser.add_argument("--author", help="GitHub login; defaults to the authenticated user")
+    import_parser.add_argument("--limit", type=int, default=1000)
+    import_parser.add_argument("--no-refresh", action="store_true", help="do not fetch detailed state for open PRs")
+    import_parser.add_argument("--json", action="store_true")
+
     args = parser.parse_args()
     if args.command == "add":
         return cmd_add(args)
@@ -392,6 +488,10 @@ def main() -> int:
         return cmd_list(args)
     if args.command == "resolve":
         return cmd_resolve(args)
+    if args.command == "import-authored":
+        if args.limit < 1 or args.limit > 1000:
+            import_parser.error("limit must be between 1 and 1000")
+        return cmd_import_authored(args)
     parser.print_help()
     return 0
 

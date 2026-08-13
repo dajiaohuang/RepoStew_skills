@@ -16,6 +16,7 @@
 Refresh every tracked pull request before acting:
 
 ```bash
+python scripts/pr_tracker.py import-authored
 python scripts/pr_tracker.py check
 python scripts/pr_tracker.py check --repo <owner/repo>
 python scripts/pr_tracker.py check --json

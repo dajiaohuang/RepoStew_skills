@@ -67,7 +67,8 @@ def record_contribution(repo: str, kind: str = "repository", url: str | None = N
         data.append(entry)
 
     entry["repo"] = repo
-    entry["last_activity_at"] = timestamp
+    entry["first_recorded_at"] = min(entry.get("first_recorded_at") or timestamp, timestamp)
+    entry["last_activity_at"] = max(entry.get("last_activity_at") or timestamp, timestamp)
     entry.setdefault("pull_requests", [])
     entry.setdefault("issues", [])
     entry.setdefault("last_issue_scan_at", None)

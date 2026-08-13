@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import os
 import subprocess
 import sys
@@ -222,6 +224,68 @@ class TrackerTests(unittest.TestCase):
         self.assertEqual(entry["pending_activity"], [])
         self.assertEqual(entry["handled_activity_ids"], ["review:9"])
         self.assertEqual(entry["priority"], "green")
+
+    def test_import_authored_records_history_and_refreshes_open_prs(self):
+        results = [
+            {
+                "number": 2,
+                "title": "Open change",
+                "state": "open",
+                "url": "https://github.com/owner/repo/pull/2",
+                "repository": {"nameWithOwner": "owner/repo"},
+                "createdAt": "2026-02-01T00:00:00Z",
+                "updatedAt": "2026-02-02T00:00:00Z",
+                "closedAt": "0001-01-01T00:00:00Z",
+                "isDraft": False,
+            },
+            {
+                "number": 1,
+                "title": "Merged change",
+                "state": "merged",
+                "url": "https://github.com/owner/repo/pull/1",
+                "repository": {"nameWithOwner": "owner/repo"},
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-02T00:00:00Z",
+                "closedAt": "2026-01-02T00:00:00Z",
+                "isDraft": False,
+            },
+        ]
+        open_detail = {
+            "title": "Open change",
+            "state": "OPEN",
+            "headRefName": "fix/open",
+            "baseRefName": "main",
+            "isDraft": False,
+            "mergeStateStatus": "CLEAN",
+            "reviewDecision": "REVIEW_REQUIRED",
+            "updatedAt": "2026-02-02T00:00:00Z",
+            "mergedAt": None,
+            "closedAt": None,
+            "statusCheckRollup": [],
+        }
+        args = argparse.Namespace(
+            author="contributor", limit=1000, no_refresh=False, json=True
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(pr_tracker, "search_authored_prs", return_value=results),
+                mock.patch.object(pr_tracker, "fetch_pr", return_value=open_detail) as fetch_pr,
+                mock.patch.object(pr_tracker, "fetch_activities", return_value=[]),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                result = pr_tracker.cmd_import_authored(args)
+                entries = pr_tracker.load()
+                repositories = contribution_tracker.load()
+        self.assertEqual(result, 0)
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries[0]["state"], "OPEN")
+        self.assertEqual(entries[1]["priority"], "gray")
+        fetch_pr.assert_called_once_with("owner/repo", 2)
+        self.assertEqual(repositories[0]["pull_requests"], [
+            "https://github.com/owner/repo/pull/1",
+            "https://github.com/owner/repo/pull/2",
+        ])
 
 
 class ContributionTrackerTests(unittest.TestCase):

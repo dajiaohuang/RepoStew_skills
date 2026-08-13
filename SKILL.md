@@ -74,6 +74,17 @@ python --version
 
 If `gh` is unavailable, use an available GitHub connector or API. Do not silently downgrade mechanical verification.
 
+## Route by complexity
+
+Classify the work after read-only verification and before cloning or editing.
+
+- **Simple issue:** requirements and acceptance criteria are clear; the change is localized to one subsystem; existing patterns and tests cover the behavior; no architecture, dependency, service, permission, security-policy, or public-API decision is needed. Keep it in the current conversation and complete the normal confirm/autonomous workflow directly.
+- **Complex issue:** the work spans subsystems or repositories, requires substantial design discovery, has ambiguous requirements, changes architecture or public behavior, needs a long repository-wide audit, involves many issues, or is intended for persistent monitoring and maintenance. Use the host platform's user-visible new-task or handover capability when available. Do not substitute a hidden subagent for a requested handover.
+
+When handing over, include the repository and issue links, verified current state, applicable instructions, operating mode and authority, evidence collected, acceptance criteria, risks, expected validation, workspace/state locations, and explicit prohibited actions. Tell the new task to revalidate time-sensitive GitHub state rather than trusting the handoff summary. Keep simple follow-up fixes in the original task unless they independently meet the complex criteria.
+
+If the host cannot create a user-visible task, explain the limitation and continue in the current conversation only when the context and workspace remain safe; otherwise ask the user to start the isolated task.
+
 ## Verify a specific issue
 
 Before cloning or editing:
@@ -206,6 +217,12 @@ python scripts/pr_tracker.py add \
 ## Maintain pull requests
 
 Treat maintenance as a durable inbox. `check` refreshes PR state, CI, mergeability, review decisions, general comments, reviews, and inline comments. External activity remains pending across checks until it is explicitly resolved after action.
+
+Import the authenticated contributor's accessible PR history once before the first maintenance pass. Terminal PRs become history; open PRs receive a detailed refresh:
+
+```bash
+python scripts/pr_tracker.py import-authored
+```
 
 ```bash
 python scripts/pr_tracker.py check

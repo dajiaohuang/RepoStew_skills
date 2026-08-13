@@ -14,6 +14,7 @@ The skill is agent-neutral and operating-system-neutral. Its core workflow lives
 - Open and track pull requests in confirm or autonomous mode.
 - Persist unresolved PR comments and reviews, then drive code updates, replies, CI fixes, and conflict resolution to completion.
 - Retain a contribution registry and follow newly opened issues in repositories previously contributed to.
+- Complete simple, localized issues in the current conversation and hand complex or persistent work to a separate user-visible task when the host supports it.
 - Improve RepoStew itself when real usage reveals broken, stale, unsafe, or non-portable behavior.
 
 ## Supported agents
@@ -185,6 +186,8 @@ RepoStew uses three internal decisions:
 
 Labels are discovery signals, not permission. Every candidate is checked against the issue thread, commits, open/closed PRs, linked closing PRs, repository instructions, contribution policy, and expected maintenance cost.
 
+After verification, RepoStew also routes by execution complexity. A clear, localized change with established tests stays in the current conversation. Cross-subsystem work, ambiguous design, repository-wide audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task or handover when the agent platform provides one. The handoff carries evidence and authority boundaries, but the destination task must recheck current GitHub state.
+
 ## Repository audit workflow
 
 RepoStew can produce issues as well as patches. A report is filed only after:
@@ -237,6 +240,9 @@ Use `--repos-only` to locate repositories before looking for issues. Omit it to 
 ### PR tracking
 
 ```bash
+# Import accessible PR history for the authenticated GitHub account
+python scripts/pr_tracker.py import-authored
+
 python scripts/pr_tracker.py add \
   "https://github.com/owner/repo/pull/123" \
   "https://github.com/owner/repo/issues/42"
