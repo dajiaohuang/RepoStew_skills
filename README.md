@@ -300,3 +300,7 @@ python -m unittest discover -s tests -v
 Also validate `SKILL.md` with the skill validator provided by your agent platform when available. Keep `SKILL.md` concise and move detailed procedures into `references/`.
 
 RepoStew is self-maintaining: portability bugs, unsafe defaults, documentation drift, and script failures found during real contributions should be fixed here in focused, separately tested commits.
+
+## License
+
+[MIT](LICENSE) © 2026 dajiaohuang.
