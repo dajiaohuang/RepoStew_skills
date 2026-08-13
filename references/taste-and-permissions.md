@@ -36,7 +36,25 @@ Seek maintainer direction before implementing:
 - security-sensitive behavior or compatibility tradeoffs;
 - features that add ongoing maintenance obligations.
 
-In contributor mode, frame this as a question or tradeoff, not a project decision. The user grants standing authority to post one focused clarification comment on an existing public thread for each verified `ASK_MAINTAINER` decision. Check for an existing answer or duplicate question, post the evidence and concrete options once, record the comment URL, and wait without bumping. This authority does not cover opening a new issue/discussion or publicly disclosing security-sensitive concerns. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
+In contributor mode, frame this as a question or tradeoff, not a project decision. The user grants standing authority to post one focused clarification comment on an existing public thread for each verified `ASK_MAINTAINER` decision and to use the policy-compliant draft route below. Check for an existing answer or duplicate question, post the evidence and concrete options once, record the comment URL, and wait without bumping. This authority does not cover opening a new issue/discussion or publicly disclosing security-sensitive concerns. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
+
+### Permission-gated draft route
+
+Treat submission permission and technical approval as separate gates.
+
+| Repository policy | Allowed draft action |
+|---|---|
+| Unsolicited PRs or early Draft PRs are allowed | Open one upstream Draft PR, clearly identify the unresolved decision, and avoid closing keywords or ownership claims. |
+| External PRs are invitation-only or require approval before submission | Do not open an upstream PR. Push a fork branch and open a Draft PR only inside the fork; if unsupported, persist the tested branch and complete draft title/body. Link the draft from one existing public thread and request the invitation. |
+| Implementation itself requires prior approval | Keep the draft design-only or local; do not implement gated dependencies, services, permissions, public APIs, or architecture. |
+
+A Draft PR is evidence for review, not approval. It must still be focused, validated to the extent possible, non-competitive, and compliant with disclosure rules. Never use Draft status to bypass an assignment rule, invitation requirement, dependency gate, security channel, or explicit request not to submit code.
+
+For an invitation-only repository, use language like:
+
+> I did not open an upstream PR because the contribution policy says external PRs are invitation-only. I prepared a tested draft at `<draft URL or fork branch>`. If this direction fits the team's architecture, an invitation would let me submit it through the project's normal review process.
+
+Post once, record both URLs, and wait without bumping. Revalidate policy, ownership, duplicates, and the default branch before any upstream submission.
 
 ### SKIP
 

@@ -42,6 +42,10 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("standing authority for one focused clarification comment", skill)
         self.assertIn("Never use `SKIP` merely because an issue is large", taste)
         self.assertIn("standing authority to post one focused clarification comment", taste)
+        self.assertIn("Route permission-gated pull requests", skill)
+        self.assertIn("do **not** open an upstream PR, including a Draft PR", skill)
+        self.assertIn("I did not open an upstream PR because", taste)
+        self.assertIn("A Draft PR is evidence for review, not approval", taste)
         self.assertNotIn("issues too large for a focused contribution", taste)
 
 
@@ -385,6 +389,11 @@ class LoopTests(unittest.TestCase):
 
 
 class DispatcherTests(unittest.TestCase):
+    def test_dispatcher_prompt_preserves_invitation_only_policy(self):
+        self.assertIn("do not open an upstream PR", auto_fix.FIX_PROMPT)
+        self.assertIn("fork-only Draft PR", auto_fix.FIX_PROMPT)
+        self.assertIn("Draft status never overrides technical approval gates", auto_fix.FIX_PROMPT)
+
     def test_pr_url_protocol_is_strict(self):
         output = "done\nPR_URL=https://github.com/owner/repo/pull/9\n"
         self.assertEqual(auto_fix.PR_URL_PATTERN.search(output).group(1), "https://github.com/owner/repo/pull/9")

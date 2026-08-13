@@ -190,6 +190,22 @@ After verification, RepoStew separately routes by execution complexity. A clear,
 
 For a verified `ASK_MAINTAINER` decision, RepoStew has standing authority to post one concise clarification comment directly on the existing public issue, discussion, or the contributor's own PR. It checks for an existing answer, states the blocking decision and options, records the resulting URL, and waits without repeated pings. This exception does not authorize creating a new issue/discussion, claiming work, promising delivery, or disclosing security-sensitive information.
 
+### Permission-gated Draft PRs
+
+RepoStew separates permission to submit a PR from approval of its technical direction:
+
+| Policy | RepoStew action |
+|---|---|
+| Unsolicited PRs or early Draft PRs are accepted | Open one focused upstream Draft PR, mark the unresolved decision, omit closing keywords, and wait for direction. |
+| External PRs are invitation-only or require approval before submission | Do not use Draft status to bypass the rule. Push a fork branch and open a fork-only Draft PR; if unsupported, persist the tested branch and complete draft title/body. Request an invitation once on the existing thread. |
+| Dependencies, services, permissions, public APIs, or architecture require prior approval | Keep the draft design-only or local until approval. |
+
+For an invitation-only project, the public note can say:
+
+> I did not open an upstream PR because the contribution policy says external PRs are invitation-only. I prepared a tested draft at `<draft URL or fork branch>`. If this direction fits the team's architecture, an invitation would let me submit it through the project's normal review process.
+
+The draft is a review artifact, not assignment, approval, or permission to merge. RepoStew records the draft and thread URLs, waits without bumping, and rechecks policy, ownership, competing PRs, and the default branch before upstream submission.
+
 ## Repository audit workflow
 
 RepoStew can produce issues as well as patches. A report is filed only after:

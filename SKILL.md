@@ -30,7 +30,7 @@ Use **confirm mode** unless the user explicitly requests autonomous, automatic, 
 5. Present the tested diff and proposed PR content.
 6. Wait for approval before opening the PR or posting an issue/comment.
 
-Exception: the user grants standing authority for one focused clarification comment when a verified candidate is classified `ASK_MAINTAINER`. Post it directly on the existing issue, discussion, or the contributor's own PR, then report and persist the URL. This exception does not authorize opening a new issue or discussion, claiming the work, promising delivery, requesting assignment, posting implementation, or making any other external change.
+Exception: the user grants standing authority for one focused clarification comment when a verified candidate is classified `ASK_MAINTAINER`, plus the policy-compliant draft route described below. Post on an existing issue, discussion, or the contributor's own PR, then report and persist the URL. This exception does not authorize opening a new issue or discussion, claiming the work, promising delivery, requesting assignment, or bypassing repository policy.
 
 ### Autonomous mode
 
@@ -92,6 +92,20 @@ For `ASK_MAINTAINER`, use the standing comment authority immediately when a suit
 3. Do not claim the issue, request assignment, promise an ETA, ping individuals without repository precedent, expose security-sensitive details, or mention agent provenance.
 4. Record the issue or PR in the contribution tracker, return the exact comment URL, and classify the work as waiting for maintainer direction.
 5. Do not repeat or bump the question. Resume after a substantive response, revalidate current state, and route the approved work by complexity.
+
+### Route permission-gated pull requests
+
+Separate **submission permission** from **technical approval**. A Draft PR is a review artifact, not maintainer approval, assignment, or permission to merge.
+
+- If the repository allows unsolicited PRs or explicitly accepts Draft PRs for early review, the user grants standing authority to open one upstream Draft PR for a verified candidate that is otherwise blocked on maintainer direction. Mark it Draft, avoid closing keywords and assignment claims, identify the unresolved decision, and keep prohibited dependency, service, permission, public-API, or architecture changes out until approved.
+- If policy says external PRs are invitation-only, approval-only, or must be requested before submission, do **not** open an upstream PR, including a Draft PR. Push a focused branch to the contributor's fork and create a Draft PR only inside that fork. If the platform cannot create a fork-only Draft PR, persist the tested branch and complete draft title/body instead. On the existing public thread, link the tested draft and request the required invitation once.
+- If policy prohibits implementation before approval, prepare a design-only draft or local patch rather than implementing gated behavior. Draft status never overrides the dependency and architecture gate.
+
+Use a concise invitation note such as:
+
+> I did not open an upstream PR because the contribution policy says external PRs are invitation-only. I prepared a tested draft at `<draft URL or fork branch>`. If this direction fits the team's architecture, an invitation would let me submit it through the project's normal review process.
+
+Record the issue and draft URL, then wait without bumping. Before converting or opening the upstream PR, recheck the invitation, issue ownership, competing PRs, default branch, and current repository policy.
 
 If no suitable existing public thread exists, or the question is security-sensitive, do not create a new issue/discussion or disclose it publicly under this exception; follow the repository's reporting path or request the additional authority needed.
 

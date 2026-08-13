@@ -34,6 +34,13 @@ not already fixed, and has no competing pull request. Apply the taste gate; stop
 if requirements are unclear, architecture-impacting, security-sensitive, or require a new
 dependency/service without maintainer approval.
 
+If the candidate is sound but submission needs maintainer permission, follow RepoStew's draft
+route. Open an upstream Draft PR only when repository policy allows unsolicited early drafts.
+For invitation-only or approval-before-submission repositories, do not open an upstream PR;
+push a focused fork branch, create a fork-only Draft PR (or persist a complete draft when that
+is unsupported), and request an invitation once on the existing public thread.
+Draft status never overrides technical approval gates.
+
 If actionable, fork with the currently authenticated GitHub account, create a focused branch,
 make the smallest conforming fix, add or update tests, run relevant validation, commit, push,
 and open a pull request that follows the repository template and disclosure policy. Do not add
