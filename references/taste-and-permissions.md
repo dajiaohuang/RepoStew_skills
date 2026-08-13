@@ -36,7 +36,7 @@ Seek maintainer direction before implementing:
 - security-sensitive behavior or compatibility tradeoffs;
 - features that add ongoing maintenance obligations.
 
-In contributor mode, frame this as a question or tradeoff, not a project decision. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
+In contributor mode, frame this as a question or tradeoff, not a project decision. The user grants standing authority to post one focused clarification comment on an existing public thread for each verified `ASK_MAINTAINER` decision. Check for an existing answer or duplicate question, post the evidence and concrete options once, record the comment URL, and wait without bumping. This authority does not cover opening a new issue/discussion or publicly disclosing security-sensitive concerns. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
 
 ### SKIP
 

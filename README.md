@@ -188,6 +188,8 @@ Labels are discovery signals, not permission. Every candidate is checked against
 
 After verification, RepoStew separately routes by execution complexity. A clear, localized change with established tests stays in the current conversation. Cross-subsystem work, repository-wide audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task or handover when the agent platform provides one. Complexity alone never causes rejection. Ambiguous design or architecture may require `ASK_MAINTAINER`, but approved work then continues through the appropriate route. The handoff carries evidence and authority boundaries, while the destination task rechecks current GitHub state.
 
+For a verified `ASK_MAINTAINER` decision, RepoStew has standing authority to post one concise clarification comment directly on the existing public issue, discussion, or the contributor's own PR. It checks for an existing answer, states the blocking decision and options, records the resulting URL, and waits without repeated pings. This exception does not authorize creating a new issue/discussion, claiming work, promising delivery, or disclosing security-sensitive information.
+
 ## Repository audit workflow
 
 RepoStew can produce issues as well as patches. A report is filed only after:

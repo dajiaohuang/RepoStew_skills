@@ -39,7 +39,9 @@ class PolicyTests(unittest.TestCase):
         skill = (root / "SKILL.md").read_text(encoding="utf-8")
         taste = (root / "references" / "taste-and-permissions.md").read_text(encoding="utf-8")
         self.assertIn("Complexity is never, by itself, a reason to reject, skip, or stop work", skill)
+        self.assertIn("standing authority for one focused clarification comment", skill)
         self.assertIn("Never use `SKIP` merely because an issue is large", taste)
+        self.assertIn("standing authority to post one focused clarification comment", taste)
         self.assertNotIn("issues too large for a focused contribution", taste)
 
 

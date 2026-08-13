@@ -30,6 +30,8 @@ Use **confirm mode** unless the user explicitly requests autonomous, automatic, 
 5. Present the tested diff and proposed PR content.
 6. Wait for approval before opening the PR or posting an issue/comment.
 
+Exception: the user grants standing authority for one focused clarification comment when a verified candidate is classified `ASK_MAINTAINER`. Post it directly on the existing issue, discussion, or the contributor's own PR, then report and persist the URL. This exception does not authorize opening a new issue or discussion, claiming the work, promising delivery, requesting assignment, posting implementation, or making any other external change.
+
 ### Autonomous mode
 
 Proceed through discovery, assessment, implementation, validation, commit, push, PR creation, and tracking without intermediate user confirmation, but stay within the user's stated scope. Stop when:
@@ -82,6 +84,16 @@ Classify the work after read-only verification and before cloning or editing.
 - **Complex issue:** the work spans subsystems or repositories, requires substantial design discovery, has ambiguous requirements, changes architecture or public behavior, needs a long repository-wide audit, involves many issues, or is intended for persistent monitoring and maintenance. Use the host platform's user-visible new-task or handover capability when available. Do not substitute a hidden subagent for a requested handover.
 
 Complexity is never, by itself, a reason to reject, skip, or stop work. Separate the contribution decision from the execution route: clear, permitted, valuable, testable work is `ACCEPT` regardless of size, then simple work stays here and complex work is handed over. Use `ASK_MAINTAINER` only for a real unresolved product, architecture, dependency, compatibility, security, or authority decision; after approval, continue through the appropriate route. Use `SKIP` only for substantive blockers such as duplication, existing ownership or fixes, repository prohibition, lack of evidence, or unavailable required access.
+
+For `ASK_MAINTAINER`, use the standing comment authority immediately when a suitable public thread already exists:
+
+1. Re-read the full thread and repository policy; confirm the same question has not already been answered or recently asked.
+2. Post one concise comment that states the verified evidence, the exact blocking decision, and concrete options with tradeoffs.
+3. Do not claim the issue, request assignment, promise an ETA, ping individuals without repository precedent, expose security-sensitive details, or mention agent provenance.
+4. Record the issue or PR in the contribution tracker, return the exact comment URL, and classify the work as waiting for maintainer direction.
+5. Do not repeat or bump the question. Resume after a substantive response, revalidate current state, and route the approved work by complexity.
+
+If no suitable existing public thread exists, or the question is security-sensitive, do not create a new issue/discussion or disclose it publicly under this exception; follow the repository's reporting path or request the additional authority needed.
 
 When handing over, include the repository and issue links, verified current state, applicable instructions, operating mode and authority, evidence collected, acceptance criteria, risks, expected validation, workspace/state locations, and explicit prohibited actions. Tell the new task to revalidate time-sensitive GitHub state rather than trusting the handoff summary. Keep simple follow-up fixes in the original task unless they independently meet the complex criteria.
 
