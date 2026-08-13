@@ -19,4 +19,5 @@ Thumbs.db
 # Personal tracking data (do not upload)
 pr_tracker.json
 seen_issues.json
+contributions.json
 .repostew/

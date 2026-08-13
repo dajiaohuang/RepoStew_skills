@@ -12,7 +12,8 @@ The skill is agent-neutral and operating-system-neutral. Its core workflow lives
 - Audit a repository and draft evidence-backed, non-duplicate issues.
 - Create minimal, tested changes that follow the target repository's own rules.
 - Open and track pull requests in confirm or autonomous mode.
-- Triage reviews, CI failures, conflicts, and follow-up work without acting as a maintainer by default.
+- Persist unresolved PR comments and reviews, then drive code updates, replies, CI fixes, and conflict resolution to completion.
+- Retain a contribution registry and follow newly opened issues in repositories previously contributed to.
 - Improve RepoStew itself when real usage reveals broken, stale, unsafe, or non-portable behavior.
 
 ## Supported agents
@@ -204,8 +205,9 @@ Scripts use only the Python standard library and external `git`/`gh` commands.
 | Script | Purpose |
 |---|---|
 | `scripts/discover.py` | Rank active repositories or discover issue candidates through global, directional, and direct search |
-| `scripts/scan_known_repos.py` | Revisit repositories already present in the PR tracker |
-| `scripts/pr_tracker.py` | Add, list, and refresh pull-request status |
+| `scripts/contribution_tracker.py` | Persist repositories, PRs, and issues contributed to |
+| `scripts/scan_known_repos.py` | Find new issue candidates in contributed repositories |
+| `scripts/pr_tracker.py` | Persist PR state, CI, reviews, comments, and unresolved activity |
 | `scripts/loop.py` | Run bounded, progressively broader discovery rounds |
 | `scripts/auto_fix.py` | Optional provider-neutral dispatcher for a user-supplied non-interactive agent command |
 | `scripts/auto_fix.sh` | Small POSIX wrapper around `auto_fix.py` |
@@ -244,6 +246,36 @@ python scripts/pr_tracker.py list
 python scripts/pr_tracker.py check --repo owner/repo
 ```
 
+`check` reads general PR comments, submitted reviews, and inline review comments in addition to CI and merge state. External activity remains pending across checks until the contributor has read it, made and tested any required change, pushed the existing branch, and replied. Only then resolve the current activity set and refresh again:
+
+```bash
+python scripts/pr_tracker.py resolve \
+  "https://github.com/owner/repo/pull/123"
+python scripts/pr_tracker.py check --repo owner/repo
+```
+
+### Persistent contribution follow-up
+
+PRs are registered automatically. Record issues you file or repositories deliberately adopted for continued stewardship:
+
+```bash
+python scripts/contribution_tracker.py add \
+  "https://github.com/owner/repo/issues/84"
+python scripts/contribution_tracker.py add \
+  "https://github.com/owner/repo"
+python scripts/contribution_tracker.py list
+```
+
+Scan newly opened issues across the persistent repository set or one repository:
+
+```bash
+python scripts/scan_known_repos.py
+python scripts/scan_known_repos.py --repo owner/repo
+python scripts/scan_known_repos.py --since-days 30 --issue-limit 50
+```
+
+The scanner remembers the last successful scan with a one-day overlap. Its output still requires manual policy, duplicate, assignment, linked-PR, relevance, and scope review. Previous participation provides useful context but does not grant maintainer authority or justify filing low-confidence issues.
+
 ### Mutable state
 
 RepoStew stores mutable personal state outside the installed skill:
@@ -251,6 +283,7 @@ RepoStew stores mutable personal state outside the installed skill:
 ```text
 ~/.repostew/seen_issues.json
 ~/.repostew/pr_tracker.json
+~/.repostew/contributions.json
 ```
 
 Override the location when needed:

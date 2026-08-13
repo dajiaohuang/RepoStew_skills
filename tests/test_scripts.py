@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import sys
@@ -12,10 +13,12 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import auto_fix
+import contribution_tracker
 import discover
 import loop
 import pr_tracker
 import repostew_state
+import scan_known_repos
 
 
 class StateTests(unittest.TestCase):
@@ -160,6 +163,134 @@ class TrackerTests(unittest.TestCase):
     def test_normalize_issue_url_rejects_pull_url(self):
         with self.assertRaises(ValueError):
             pr_tracker.normalize_issue_url("https://github.com/owner/repo/pull/42")
+
+    def test_unresolved_external_activity_persists_across_checks(self):
+        activity = {
+            "key": "review_comment:7",
+            "kind": "review_comment",
+            "author": "maintainer",
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+        entry = {"pending_activity": [], "handled_activity_ids": []}
+        first = pr_tracker.reconcile_pending(entry, [activity], "contributor")
+        entry["pending_activity"] = first
+        second = pr_tracker.reconcile_pending(entry, [], "contributor")
+        self.assertEqual(second, [activity])
+
+    def test_handled_and_self_authored_activity_is_not_pending(self):
+        activities = [
+            {"key": "review:1", "author": "maintainer", "created_at": "2026-01-01"},
+            {"key": "pr_comment:2", "author": "contributor", "created_at": "2026-01-02"},
+        ]
+        entry = {"pending_activity": [], "handled_activity_ids": ["review:1"]}
+        self.assertEqual(pr_tracker.reconcile_pending(entry, activities, "contributor"), [])
+
+    def test_priority_marks_failed_ci_and_pending_feedback_red(self):
+        entry = {
+            "state": "OPEN",
+            "ci_status": {"failure": 1, "pending": 0},
+            "review_decision": "CHANGES_REQUESTED",
+            "merge_state": "DIRTY",
+            "pending_activity": [{"key": "review:1"}],
+        }
+        priority, reasons, _action = pr_tracker.priority_and_action(entry)
+        self.assertEqual(priority, "red")
+        self.assertEqual(
+            reasons,
+            ["ci_failure", "changes_requested", "conflict", "unresolved_activity"],
+        )
+
+    def test_resolve_moves_pending_activity_to_handled_history(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):
+                pr_tracker.save([
+                    {
+                        "repo": "owner/repo",
+                        "pr_number": 7,
+                        "state": "OPEN",
+                        "ci_status": {"failure": 0, "pending": 0},
+                        "review_decision": "APPROVED",
+                        "pending_activity": [{"key": "review:9"}],
+                        "handled_activity_ids": [],
+                    }
+                ])
+                result = pr_tracker.cmd_resolve(
+                    argparse.Namespace(pr_url="https://github.com/owner/repo/pull/7")
+                )
+                entry = pr_tracker.load()[0]
+        self.assertEqual(result, 0)
+        self.assertEqual(entry["pending_activity"], [])
+        self.assertEqual(entry["handled_activity_ids"], ["review:9"])
+        self.assertEqual(entry["priority"], "green")
+
+
+class ContributionTrackerTests(unittest.TestCase):
+    def test_parse_repository_issue_and_pull_urls(self):
+        self.assertEqual(
+            contribution_tracker.parse_github_url("https://github.com/owner/repo"),
+            ("owner/repo", "repository", "https://github.com/owner/repo"),
+        )
+        self.assertEqual(
+            contribution_tracker.parse_github_url("https://github.com/owner/repo/issues/0042/"),
+            ("owner/repo", "issues", "https://github.com/owner/repo/issues/42"),
+        )
+        self.assertEqual(
+            contribution_tracker.parse_github_url("https://github.com/owner/repo/pull/9"),
+            ("owner/repo", "pull_requests", "https://github.com/owner/repo/pull/9"),
+        )
+
+    def test_record_contribution_deduplicates_artifacts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):
+                url = "https://github.com/owner/repo/issues/7"
+                contribution_tracker.record_contribution("owner/repo", "issues", url, "2026-01-01T00:00:00Z")
+                contribution_tracker.record_contribution("owner/repo", "issues", url, "2026-01-02T00:00:00Z")
+                entries = contribution_tracker.load()
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["issues"], [url])
+
+    def test_known_repositories_include_registry_and_legacy_prs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):
+                contribution_tracker.record_contribution("owner/issue-repo", timestamp="2026-01-01T00:00:00Z")
+                repostew_state.save_json(
+                    repostew_state.state_file("pr_tracker.json"),
+                    [{"repo": "owner/pr-repo"}, {"repo": "owner/issue-repo"}],
+                )
+                repos = scan_known_repos.get_known_repos()
+        self.assertEqual(repos, ["owner/issue-repo", "owner/pr-repo"])
+
+    def test_new_issue_scan_overlaps_previous_success_by_one_day(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-04-01T00:00:00+00:00"
+                )
+                contribution_tracker.mark_issue_scan(
+                    "owner/repo", "2026-04-10T12:30:00+00:00"
+                )
+                start = scan_known_repos.issue_search_start("owner/repo", 30)
+        self.assertEqual(start, "2026-04-09")
+
+    def test_successful_empty_issue_scan_updates_checkpoint(self):
+        args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
+        responses = [
+            {"stars": 100, "license": "MIT", "has_issues": True},
+            [],
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+            ):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
+                )
+                candidates, succeeded = scan_known_repos.scan_repository("owner/repo", args)
+                checkpoint = contribution_tracker.get_repository("owner/repo")["last_issue_scan_at"]
+        self.assertTrue(succeeded)
+        self.assertEqual(candidates, [])
+        self.assertIsNotNone(checkpoint)
 
 
 class LoopTests(unittest.TestCase):

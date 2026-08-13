@@ -5,8 +5,9 @@ description: >-
   audit repositories, implement focused fixes, test changes, open and maintain
   pull requests, or draft evidence-backed issues. Use when the user asks to fix
   a GitHub issue, scan a repository, find open-source work or active high-star
-  repositories in a technical direction, audit a repo,
-  contribute a patch, maintain PRs, or invokes RepoStew/repostew.
+  repositories in a technical direction, audit a repo, contribute a patch,
+  maintain submitted PRs, respond to reviews, or follow repositories already
+  contributed to. Also use when the user invokes RepoStew/repostew.
   Apply before cloning, editing, commenting, filing issues, or opening PRs
   because this skill defines authority, safety, verification, and contribution
   workflow.
@@ -61,6 +62,7 @@ Choose one workflow:
 - **GitHub discovery:** the user asks for suitable issues across repositories.
 - **Repository audit:** the user asks to inspect a repository and propose or file issues.
 - **PR maintenance:** the user asks to check or respond to existing pull requests.
+- **Contribution follow-up:** the user asks to revisit participated repositories or their new issues.
 
 Authenticate read-only before beginning:
 
@@ -149,6 +151,7 @@ Mutable state is stored under `~/.repostew` by default. Set `REPOSTEW_HOME` to u
 6. Separate confirmed defects from suggestions. Do not inflate style preferences into bugs.
 7. In confirm mode, present draft issue titles and bodies before posting.
 8. File only actionable, non-duplicate issues that follow the repository template. Do not mass-file low-confidence findings.
+9. After filing, record the real issue URL with `python scripts/contribution_tracker.py add <issue-url>`.
 
 ## Fork, clone, and branch
 
@@ -202,7 +205,7 @@ python scripts/pr_tracker.py add \
 
 ## Maintain pull requests
 
-Use:
+Treat maintenance as a durable inbox. `check` refreshes PR state, CI, mergeability, review decisions, general comments, reviews, and inline comments. External activity remains pending across checks until it is explicitly resolved after action.
 
 ```bash
 python scripts/pr_tracker.py check
@@ -210,7 +213,33 @@ python scripts/pr_tracker.py list
 python scripts/pr_tracker.py check --repo owner/repo
 ```
 
-Read [references/pr-maintenance.md](references/pr-maintenance.md) before responding to reviews, resolving conflicts, diagnosing CI, or producing the maintenance table.
+For each red item, read all feedback and current code, reproduce valid concerns, update the existing branch, test, commit, push, and post one evidence-backed response. Then mark the observed activity handled and immediately refresh once more:
+
+```bash
+python scripts/pr_tracker.py resolve https://github.com/owner/repo/pull/N
+python scripts/pr_tracker.py check --repo owner/repo
+```
+
+Never resolve unread or unhandled activity. Read [references/pr-maintenance.md](references/pr-maintenance.md) before responding to reviews, resolving conflicts, diagnosing CI, replying to inline threads, or producing the maintenance table.
+
+## Sustain contributed repositories
+
+Every tracked PR automatically registers its repository. Record filed issues and repositories intentionally adopted for continued stewardship:
+
+```bash
+python scripts/contribution_tracker.py add https://github.com/owner/repo/issues/N
+python scripts/contribution_tracker.py add https://github.com/owner/repo
+python scripts/contribution_tracker.py list
+```
+
+Periodically scan new issues in this persistent set:
+
+```bash
+python scripts/scan_known_repos.py
+python scripts/scan_known_repos.py --repo owner/repo
+```
+
+Treat results as candidates, not claims. Reapply repository policy, duplicate, assignment, linked-PR, taste, and scope checks. Prior participation grants context but no maintainer authority. Audit a contributed repository and file a new issue only when evidence is reproducible, non-duplicate, useful, and allowed by the active operating mode; record the resulting issue URL.
 
 ## Run the optional autonomous dispatcher
 
