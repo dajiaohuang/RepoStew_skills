@@ -258,7 +258,7 @@ python scripts/pr_tracker.py list
 python scripts/pr_tracker.py notifications --repo owner/repo
 ```
 
-The notification command requests all notifications updated after the stored GitHub checkpoint where the contributor is participating or mentioned, performs targeted refreshes, and does not change notification read state. Never use unread state as a cursor because the user may read notifications independently. On the first pass, use a bounded lookback; use `--include-watching` only when broader watched-repository traffic is intentional. Preserve unmatched notifications for issue or discussion triage instead of silently discarding them.
+The notification command requests all notifications updated after the stored GitHub checkpoint where the contributor is participating or mentioned, persists every thread in `notification_inbox.json`, and performs targeted refreshes for known PRs without changing notification read state. Never use unread state as a cursor because the user may read notifications independently. On the first pass, use a bounded lookback; use `--include-watching` only when broader watched-repository traffic is intentional. List the durable queue with `python scripts/pr_tracker.py notification-inbox`; resolve a notification entry only after its full GitHub state has been handled.
 
 When GitHub Notifications are unavailable, use a user-configured Outlook folder as a secondary trigger if the host can read Outlook. Query that folder for GitHub notification mail with `receivedDateTime` later than the stored Outlook checkpoint, deduplicate by immutable message ID, and then perform the same targeted GitHub refresh. Never infer or hard-code a folder name. Email is not authoritative: delivery settings, rules, and delays can omit events.
 

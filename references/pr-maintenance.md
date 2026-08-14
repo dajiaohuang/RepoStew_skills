@@ -22,7 +22,15 @@ python scripts/pr_tracker.py notifications --repo <owner/repo>
 python scripts/pr_tracker.py notifications --json
 ```
 
-By default, the command requests all GitHub notifications updated later than the stored GitHub checkpoint in which the contributor is participating or mentioned. It maps PullRequest subjects to tracked PRs, deduplicates targets, and performs a complete refresh only for those PRs. It reports other notification subjects for separate triage. It never marks GitHub notifications read.
+By default, the command requests all GitHub notifications updated later than the stored GitHub checkpoint in which the contributor is participating or mentioned. It durably merges every thread into `notification_inbox.json`, maps PullRequest subjects to tracked PRs, deduplicates targets, and performs a complete refresh only for those PRs. Issue, discussion, untracked-PR, and terminal-PR events remain in the generic inbox for later triage. It never marks GitHub notifications read.
+
+```bash
+python scripts/pr_tracker.py notification-inbox
+python scripts/pr_tracker.py notification-inbox --repo <owner/repo>
+python scripts/pr_tracker.py notification-resolve <thread-id>
+```
+
+Resolving the generic entry changes only RepoStew's local queue; it does not change GitHub read state. If a resolved notification thread receives a later update, intake reopens it automatically.
 
 Notifications contain routing metadata, not enough evidence to answer a review. The targeted refresh collects state, CI, mergeability, review decisions, general PR comments, submitted reviews, and inline review comments. External activity remains in `pending_activity` across repeated checks. Observation is not handling; never clear activity merely to make the inbox green.
 

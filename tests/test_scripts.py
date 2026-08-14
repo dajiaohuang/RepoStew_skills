@@ -332,6 +332,29 @@ class TrackerTests(unittest.TestCase):
                     )
         self.assertEqual(saved, "2026-08-15T00:00:00+00:00")
 
+    def test_notification_inbox_persists_and_reopens_updated_threads(self):
+        notification = {
+            "id": "101",
+            "updated_at": "2026-08-15T00:00:00Z",
+            "reason": "author",
+            "repository": {"full_name": "owner/repo"},
+            "subject": {"type": "Issue", "title": "A report", "url": "api-url"},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):
+                pr_tracker.persist_notification_batch("github", [notification], "seen-1")
+                resolve_args = argparse.Namespace(source="github", thread_id="101")
+                self.assertEqual(pr_tracker.cmd_notification_resolve(resolve_args), 0)
+                notification["updated_at"] = "2026-08-15T01:00:00Z"
+                pr_tracker.persist_notification_batch("github", [notification], "seen-2")
+                entries = repostew_state.load_json(
+                    repostew_state.state_file("notification_inbox.json"), []
+                )
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["status"], "pending")
+        self.assertEqual(entries[0]["first_seen_at"], "seen-1")
+        self.assertEqual(entries[0]["last_seen_at"], "seen-2")
+
     def test_resolve_moves_pending_activity_to_handled_history(self):
         with tempfile.TemporaryDirectory() as directory:
             with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):

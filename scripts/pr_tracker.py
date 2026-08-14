@@ -22,6 +22,7 @@ PR_FIELDS = (
     "mergeStateStatus,reviewDecision,statusCheckRollup,headRefName,baseRefName"
 )
 NOTIFICATION_CHECKPOINTS = "notification_checkpoints.json"
+NOTIFICATION_INBOX = "notification_inbox.json"
 
 
 def now_iso() -> str:
@@ -310,6 +311,83 @@ def _notification_summary(notification: dict) -> dict:
     }
 
 
+def persist_notification_batch(source: str, notifications: list[dict], seen_at: str) -> int:
+    """Durably merge notification routing metadata without clearing pending items."""
+    data = load_json(state_file(NOTIFICATION_INBOX), [])
+    if not isinstance(data, list):
+        data = []
+    existing = {
+        item.get("key"): item
+        for item in data
+        if isinstance(item, dict) and item.get("key")
+    }
+    for notification in notifications:
+        summary = _notification_summary(notification)
+        key = f"{source}:{summary.get('thread_id')}"
+        item = existing.get(key, {})
+        previous_update = item.get("updated_at")
+        if item.get("status") == "resolved" and previous_update != summary.get("updated_at"):
+            item["status"] = "pending"
+            item.pop("resolved_at", None)
+        item.update(summary)
+        item["key"] = key
+        item["source"] = source
+        item.setdefault("status", "pending")
+        item.setdefault("first_seen_at", seen_at)
+        item["last_seen_at"] = seen_at
+        existing[key] = item
+    merged = sorted(
+        existing.values(),
+        key=lambda item: (item.get("updated_at") or "", item.get("key") or ""),
+        reverse=True,
+    )
+    save_json(state_file(NOTIFICATION_INBOX), merged)
+    return len(notifications)
+
+
+def cmd_notification_inbox(args) -> int:
+    entries = load_json(state_file(NOTIFICATION_INBOX), [])
+    if not isinstance(entries, list):
+        entries = []
+    entries = [
+        item for item in entries
+        if (args.include_resolved or item.get("status") != "resolved")
+        and (not args.repo or (item.get("repo") or "").lower() == args.repo.lower())
+    ]
+    if args.json:
+        print(json.dumps({"notifications": entries}, indent=2, ensure_ascii=False))
+        return 0
+    if not entries:
+        print("No pending persisted notifications.")
+        return 0
+    for item in entries:
+        print(
+            f"[{item.get('status', 'pending').upper()}] {item.get('repo') or '?'} "
+            f"{item.get('subject_type') or '?'} {item.get('title') or ''}"
+        )
+        print(
+            f"  {item.get('key')} reason={item.get('reason') or '?'} "
+            f"updated={item.get('updated_at') or '?'}"
+        )
+    return 0
+
+
+def cmd_notification_resolve(args) -> int:
+    key = f"{args.source}:{args.thread_id}"
+    entries = load_json(state_file(NOTIFICATION_INBOX), [])
+    if not isinstance(entries, list):
+        entries = []
+    entry = next((item for item in entries if item.get("key") == key), None)
+    if not entry:
+        print(f"ERROR: notification {key} is not persisted", file=sys.stderr)
+        return 1
+    entry["status"] = "resolved"
+    entry["resolved_at"] = now_iso()
+    save_json(state_file(NOTIFICATION_INBOX), entries)
+    print(f"Resolved persisted notification {key}; GitHub read state was unchanged.")
+    return 0
+
+
 def cmd_notifications(args) -> int:
     """Use notifications to refresh only affected tracked pull requests."""
     batch_started_at = now_iso()
@@ -331,6 +409,7 @@ def cmd_notifications(args) -> int:
             item for item in notifications
             if ((item.get("repository") or {}).get("full_name") or "").lower() == args.repo.lower()
         ]
+    persisted = persist_notification_batch("github", notifications, batch_started_at)
 
     data = load()
     entries = {
@@ -377,6 +456,7 @@ def cmd_notifications(args) -> int:
         "since": since,
         "suggested_checkpoint": batch_started_at,
         "notifications_seen": len(notifications),
+        "notifications_persisted": persisted,
         "pull_requests_refreshed": refreshed,
         "unmatched_notifications": unmatched,
         "ignored_terminal_notifications": ignored_terminal,
@@ -679,6 +759,19 @@ def main() -> int:
     )
     notifications_parser.add_argument("--json", action="store_true")
 
+    inbox_parser = subparsers.add_parser(
+        "notification-inbox", help="list durably persisted notification metadata"
+    )
+    inbox_parser.add_argument("--repo", help="only list one owner/repo")
+    inbox_parser.add_argument("--include-resolved", action="store_true")
+    inbox_parser.add_argument("--json", action="store_true")
+
+    notification_resolve_parser = subparsers.add_parser(
+        "notification-resolve", help="resolve one persisted notification after handling it"
+    )
+    notification_resolve_parser.add_argument("thread_id")
+    notification_resolve_parser.add_argument("--source", choices=("github", "outlook"), default="github")
+
     checkpoint_parser = subparsers.add_parser(
         "checkpoint", help="advance a notification-source checkpoint after handling a full batch"
     )
@@ -707,6 +800,10 @@ def main() -> int:
         if args.initial_lookback_days < 1:
             notifications_parser.error("initial-lookback-days must be positive")
         return cmd_notifications(args)
+    if args.command == "notification-inbox":
+        return cmd_notification_inbox(args)
+    if args.command == "notification-resolve":
+        return cmd_notification_resolve(args)
     if args.command == "checkpoint":
         return cmd_checkpoint(args)
     if args.command == "list":
