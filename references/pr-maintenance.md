@@ -13,16 +13,54 @@
 
 ## Run the maintenance inbox
 
-Refresh every tracked pull request before acting:
+Use GitHub Notifications to identify the small set of tracked pull requests that changed:
 
 ```bash
 python scripts/pr_tracker.py import-authored
-python scripts/pr_tracker.py check
-python scripts/pr_tracker.py check --repo <owner/repo>
-python scripts/pr_tracker.py check --json
+python scripts/pr_tracker.py notifications
+python scripts/pr_tracker.py notifications --repo <owner/repo>
+python scripts/pr_tracker.py notifications --json
 ```
 
-The tracker collects state, CI, mergeability, review decisions, general PR comments, submitted reviews, and inline review comments. External activity remains in `pending_activity` across repeated checks. A check means “observed,” not “handled.” Never clear it merely to make the inbox green.
+By default, the command requests all GitHub notifications updated later than the stored GitHub checkpoint in which the contributor is participating or mentioned. It maps PullRequest subjects to tracked PRs, deduplicates targets, and performs a complete refresh only for those PRs. It reports other notification subjects for separate triage. It never marks GitHub notifications read.
+
+Notifications contain routing metadata, not enough evidence to answer a review. The targeted refresh collects state, CI, mergeability, review decisions, general PR comments, submitted reviews, and inline review comments. External activity remains in `pending_activity` across repeated checks. Observation is not handling; never clear activity merely to make the inbox green.
+
+Never use read/unread state as a cursor; the user may read notifications independently. The command uses `all=true` with an API `since` timestamp, defaults to a seven-day lookback when no checkpoint exists, and prints the batch-start timestamp it proposes as the next checkpoint. Use `--include-watching` only when watched-repository traffic is desired; it is normally too broad for contribution follow-up. After every item in one notification thread has been read and handled, it may be acknowledged in GitHub's inbox, but acknowledgement is independent of checkpoint progress.
+
+Advance the GitHub checkpoint only after the entire batch was handled or durably retained:
+
+```bash
+python scripts/pr_tracker.py checkpoint github <batch-start-ISO-8601>
+```
+
+### Outlook fallback
+
+If GitHub Notifications are unavailable, an existing Outlook folder may be used as a secondary event source when the host platform provides Outlook mail access:
+
+1. obtain the exact folder identity from the user or the connected mailbox; never guess it;
+2. capture a batch-start timestamp, then query only that folder for GitHub notification mail whose `receivedDateTime` is later than the stored Outlook checkpoint;
+3. deduplicate by immutable Outlook message ID, not subject text;
+4. extract the repository and issue or PR URL, then verify it on GitHub;
+5. perform the same targeted full refresh before responding;
+6. advance the local checkpoint to the captured batch-start timestamp only after every selected message was either handled or durably retained as pending:
+
+```bash
+python scripts/pr_tracker.py checkpoint outlook <batch-start-ISO-8601>
+```
+
+Do not treat unread state as a durable cursor: a mail rule, client, or user can change it. Events arriving during processing remain later than the batch-start checkpoint and are picked up next time. Outlook delivery is a fallback because GitHub email preferences, rules, batching, or delays can omit or reorder messages.
+
+### Reconciliation safety net
+
+Run a low-frequency full reconciliation of open tracked PRs, such as weekly or after a suspected notification gap:
+
+```bash
+python scripts/pr_tracker.py check
+python scripts/pr_tracker.py check --repo <owner/repo>
+```
+
+This is a recovery control, not the ordinary loop. Do not rescan terminal history on every follow-up.
 
 Use the priority as a queue, not as permission:
 
@@ -107,10 +145,10 @@ After completing the code change and response—or after documenting why no acti
 ```bash
 python scripts/pr_tracker.py resolve \
   https://github.com/<owner>/<repo>/pull/<N>
-python scripts/pr_tracker.py check --repo <owner/repo>
+python scripts/pr_tracker.py notifications --repo <owner/repo>
 ```
 
-If the second check finds new feedback, treat it as a new cycle. Never resolve activity that has not been read and triaged.
+If the next notification pass finds new feedback, treat it as a new cycle. Never resolve activity that has not been read and triaged. Use a targeted `check --repo` immediately when you need to verify a just-pushed state before GitHub emits another notification.
 
 ## Follow contributed repositories
 

@@ -11,8 +11,8 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
-from urllib.parse import urlparse
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode, urlparse
 
 from contribution_tracker import record_contribution
 from repostew_state import load_json, save_json, state_file
@@ -21,10 +21,41 @@ PR_FIELDS = (
     "title,state,url,author,createdAt,updatedAt,mergedAt,closedAt,isDraft,"
     "mergeStateStatus,reviewDecision,statusCheckRollup,headRefName,baseRefName"
 )
+NOTIFICATION_CHECKPOINTS = "notification_checkpoints.json"
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_timestamp(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("timestamp must include a timezone")
+    return parsed.astimezone(timezone.utc)
+
+
+def notification_since(source: str, explicit: str | None = None,
+                       initial_lookback_days: int = 7) -> str:
+    """Return an explicit/stored checkpoint, or a bounded first-run lookback."""
+    checkpoints = load_json(state_file(NOTIFICATION_CHECKPOINTS), {})
+    candidate = explicit or (checkpoints.get(source) if isinstance(checkpoints, dict) else None)
+    if candidate:
+        return _parse_timestamp(candidate).isoformat()
+    return (datetime.now(timezone.utc) - timedelta(days=initial_lookback_days)).isoformat()
+
+
+def save_notification_checkpoint(source: str, timestamp: str) -> str:
+    normalized = _parse_timestamp(timestamp).isoformat()
+    checkpoints = load_json(state_file(NOTIFICATION_CHECKPOINTS), {})
+    if not isinstance(checkpoints, dict):
+        checkpoints = {}
+    previous = checkpoints.get(source)
+    if previous and _parse_timestamp(normalized) < _parse_timestamp(previous):
+        raise ValueError("checkpoint cannot move backwards")
+    checkpoints[source] = normalized
+    save_json(state_file(NOTIFICATION_CHECKPOINTS), checkpoints)
+    return normalized
 
 
 def run(cmd, **kwargs):
@@ -229,6 +260,166 @@ def fetch_pr(repo: str, number: int) -> dict | None:
     )
 
 
+def notification_pr_target(notification: dict) -> tuple[str, int] | None:
+    """Return a notification's (owner/repo, PR number), when it targets a PR."""
+    subject = notification.get("subject") or {}
+    if subject.get("type") != "PullRequest":
+        return None
+    parsed = urlparse(subject.get("url") or "")
+    parts = [part for part in parsed.path.split("/") if part]
+    if parsed.netloc.lower() != "api.github.com":
+        return None
+    if len(parts) != 5 or parts[0] != "repos" or parts[3] != "pulls" or not parts[4].isdigit():
+        return None
+    return f"{parts[1]}/{parts[2]}", int(parts[4])
+
+
+def fetch_github_notifications(*, since: str,
+                               participating_only: bool = True) -> list[dict] | None:
+    """Fetch GitHub notification threads without changing their read state."""
+    query = urlencode({
+        "all": "true",
+        "participating": str(participating_only).lower(),
+        "since": since,
+        "per_page": 50,
+    })
+    data = run_json(
+        ["gh", "api", "--paginate", "--slurp", f"notifications?{query}"],
+        timeout=30,
+    )
+    if not isinstance(data, list):
+        return None
+    if data and all(isinstance(page, list) for page in data):
+        return [item for page in data for item in page if isinstance(item, dict)]
+    return [item for item in data if isinstance(item, dict)]
+
+
+def _notification_summary(notification: dict) -> dict:
+    subject = notification.get("subject") or {}
+    repository = notification.get("repository") or {}
+    return {
+        "thread_id": notification.get("id"),
+        "repo": repository.get("full_name"),
+        "reason": notification.get("reason"),
+        "unread": notification.get("unread"),
+        "updated_at": notification.get("updated_at"),
+        "subject_type": subject.get("type"),
+        "title": subject.get("title"),
+        "subject_api_url": subject.get("url"),
+        "latest_comment_api_url": subject.get("latest_comment_url"),
+    }
+
+
+def cmd_notifications(args) -> int:
+    """Use notifications to refresh only affected tracked pull requests."""
+    batch_started_at = now_iso()
+    try:
+        since = notification_since("github", args.since, args.initial_lookback_days)
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    notifications = fetch_github_notifications(
+        since=since,
+        participating_only=not args.include_watching,
+    )
+    if notifications is None:
+        print("ERROR: could not fetch GitHub notifications", file=sys.stderr)
+        return 1
+
+    if args.repo:
+        notifications = [
+            item for item in notifications
+            if ((item.get("repository") or {}).get("full_name") or "").lower() == args.repo.lower()
+        ]
+
+    data = load()
+    entries = {
+        (entry.get("repo", "").lower(), entry.get("pr_number")): entry
+        for entry in data
+    }
+    targets: dict[tuple[str, int], list[dict]] = {}
+    unmatched = []
+    ignored_terminal = []
+    for notification in notifications:
+        target = notification_pr_target(notification)
+        key = (target[0].lower(), target[1]) if target else None
+        entry = entries.get(key) if key else None
+        if entry and entry.get("state") in {"MERGED", "CLOSED"}:
+            ignored_terminal.append(_notification_summary(notification))
+        elif entry:
+            targets.setdefault(key, []).append(notification)
+        else:
+            unmatched.append(_notification_summary(notification))
+
+    viewer = run(["gh", "api", "user", "--jq", ".login"], timeout=10)
+    refreshed = []
+    failed = []
+    for key, target_notifications in targets.items():
+        entry = entries[key]
+        repo = entry["repo"]
+        number = entry["pr_number"]
+        pr = fetch_pr(repo, number)
+        if not pr:
+            failed.append({
+                "repo": repo,
+                "pr_number": number,
+                "thread_ids": [item.get("id") for item in target_notifications],
+            })
+            continue
+        apply_pr_state(entry, pr, fetch_activities(repo, number), viewer or entry.get("author_login"))
+        entry["triggered_by_notifications"] = [
+            _notification_summary(item) for item in target_notifications
+        ]
+        refreshed.append(entry)
+    save(data)
+
+    payload = {
+        "since": since,
+        "suggested_checkpoint": batch_started_at,
+        "notifications_seen": len(notifications),
+        "pull_requests_refreshed": refreshed,
+        "unmatched_notifications": unmatched,
+        "ignored_terminal_notifications": ignored_terminal,
+        "refresh_failures": failed,
+        "notifications_marked_read": False,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if not failed else 1
+
+    if not notifications:
+        print("No matching GitHub notifications.")
+        print(f"Suggested checkpoint after this empty batch is accepted: {batch_started_at}")
+        return 0
+    for entry in refreshed:
+        thread_ids = ", ".join(
+            str(item.get("thread_id")) for item in entry.get("triggered_by_notifications", [])
+        )
+        print(f"[{entry.get('priority', '?').upper()}] {entry['repo']}#{entry['pr_number']} {entry['pr_url']}")
+        print(f"  Notification threads: {thread_ids}")
+        print(f"  Pending activity: {len(entry.get('pending_activity', []))}")
+        print(f"  Next: {entry.get('next_action')}")
+    if unmatched:
+        print(f"Unmatched notifications retained for triage: {len(unmatched)}")
+    if ignored_terminal:
+        print(f"Ignored notifications for already terminal tracked PRs: {len(ignored_terminal)}")
+    if failed:
+        print(f"Failed targeted refreshes: {len(failed)}", file=sys.stderr)
+    print(f"Suggested checkpoint after the entire batch is handled: {batch_started_at}")
+    print("The checkpoint and notification read state were not changed.")
+    return 0 if not failed else 1
+
+
+def cmd_checkpoint(args) -> int:
+    try:
+        timestamp = save_notification_checkpoint(args.source, args.timestamp)
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    print(f"Advanced {args.source} notification checkpoint to {timestamp}")
+    return 0
+
+
 def search_authored_prs(author: str, limit: int) -> list[dict]:
     results = run_json(
         [
@@ -375,6 +566,8 @@ def cmd_check(args) -> int:
     for entry in data:
         if args.repo and entry.get("repo", "").lower() != args.repo.lower():
             continue
+        if not args.include_terminal and entry.get("state") in {"MERGED", "CLOSED"}:
+            continue
         repo = entry["repo"]
         number = entry["pr_number"]
         pr = fetch_pr(repo, number)
@@ -464,7 +657,33 @@ def main() -> int:
 
     check_parser = subparsers.add_parser("check")
     check_parser.add_argument("--repo", help="only check one owner/repo")
+    check_parser.add_argument(
+        "--include-terminal", action="store_true", help="also recheck merged and closed PR history"
+    )
     check_parser.add_argument("--json", action="store_true")
+
+    notifications_parser = subparsers.add_parser(
+        "notifications", help="refresh only tracked PRs named by GitHub notifications"
+    )
+    notifications_parser.add_argument("--repo", help="only inspect notifications for one owner/repo")
+    notifications_parser.add_argument(
+        "--since", help="override the stored ISO-8601 checkpoint for this pass"
+    )
+    notifications_parser.add_argument(
+        "--initial-lookback-days", type=int, default=7,
+        help="bounded lookback when no GitHub checkpoint exists (default: 7)",
+    )
+    notifications_parser.add_argument(
+        "--include-watching", action="store_true",
+        help="include watched repositories, not only direct participation and mentions",
+    )
+    notifications_parser.add_argument("--json", action="store_true")
+
+    checkpoint_parser = subparsers.add_parser(
+        "checkpoint", help="advance a notification-source checkpoint after handling a full batch"
+    )
+    checkpoint_parser.add_argument("source", choices=("github", "outlook"))
+    checkpoint_parser.add_argument("timestamp", help="batch-start ISO-8601 timestamp")
 
     list_parser = subparsers.add_parser("list")
     list_parser.add_argument("--repo", help="only list one owner/repo")
@@ -484,6 +703,12 @@ def main() -> int:
         return cmd_add(args)
     if args.command == "check":
         return cmd_check(args)
+    if args.command == "notifications":
+        if args.initial_lookback_days < 1:
+            notifications_parser.error("initial-lookback-days must be positive")
+        return cmd_notifications(args)
+    if args.command == "checkpoint":
+        return cmd_checkpoint(args)
     if args.command == "list":
         return cmd_list(args)
     if args.command == "resolve":

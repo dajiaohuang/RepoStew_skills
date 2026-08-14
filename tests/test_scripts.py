@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import io
+import json
 import os
 import subprocess
 import sys
@@ -219,6 +220,117 @@ class TrackerTests(unittest.TestCase):
             reasons,
             ["ci_failure", "changes_requested", "conflict", "unresolved_activity"],
         )
+
+    def test_notification_pr_target_parses_pull_request_subject(self):
+        notification = {
+            "subject": {
+                "type": "PullRequest",
+                "url": "https://api.github.com/repos/owner/repo/pulls/42",
+            }
+        }
+        self.assertEqual(pr_tracker.notification_pr_target(notification), ("owner/repo", 42))
+        notification["subject"]["type"] = "Issue"
+        self.assertIsNone(pr_tracker.notification_pr_target(notification))
+
+    def test_notifications_refresh_only_the_notified_tracked_pr(self):
+        detail = {
+            "title": "Notified change",
+            "state": "OPEN",
+            "headRefName": "fix/notified",
+            "baseRefName": "main",
+            "isDraft": False,
+            "mergeStateStatus": "CLEAN",
+            "reviewDecision": "REVIEW_REQUIRED",
+            "updatedAt": "2026-08-15T00:00:00Z",
+            "mergedAt": None,
+            "closedAt": None,
+            "statusCheckRollup": [],
+        }
+        notifications = [{
+            "id": "99",
+            "reason": "author",
+            "unread": True,
+            "repository": {"full_name": "owner/repo"},
+            "subject": {
+                "type": "PullRequest",
+                "title": "Notified change",
+                "url": "https://api.github.com/repos/owner/repo/pulls/2",
+            },
+        }]
+        args = argparse.Namespace(
+            repo=None, since="2026-08-14T00:00:00Z", initial_lookback_days=7,
+            include_watching=False, json=True
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(pr_tracker, "fetch_github_notifications", return_value=notifications),
+                mock.patch.object(pr_tracker, "fetch_pr", return_value=detail) as fetch_pr,
+                mock.patch.object(pr_tracker, "fetch_activities", return_value=[]),
+                mock.patch.object(pr_tracker, "run", return_value="contributor"),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                pr_tracker.save([
+                    {"repo": "owner/repo", "pr_number": 1, "pr_url": "https://github.com/owner/repo/pull/1"},
+                    {"repo": "owner/repo", "pr_number": 2, "pr_url": "https://github.com/owner/repo/pull/2"},
+                ])
+                result = pr_tracker.cmd_notifications(args)
+                entries = pr_tracker.load()
+        self.assertEqual(result, 0)
+        fetch_pr.assert_called_once_with("owner/repo", 2)
+        self.assertNotIn("last_checked", entries[0])
+        self.assertEqual(entries[1]["triggered_by_notifications"][0]["thread_id"], "99")
+
+    def test_notifications_ignore_already_terminal_tracked_prs(self):
+        notification = {
+            "id": "100",
+            "repository": {"full_name": "owner/repo"},
+            "subject": {
+                "type": "PullRequest",
+                "url": "https://api.github.com/repos/owner/repo/pulls/3",
+            },
+        }
+        args = argparse.Namespace(
+            repo=None, since="2026-08-14T00:00:00Z", initial_lookback_days=7,
+            include_watching=False, json=True
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(pr_tracker, "fetch_github_notifications", return_value=[notification]),
+                mock.patch.object(pr_tracker, "fetch_pr") as fetch_pr,
+                mock.patch.object(pr_tracker, "run", return_value="contributor"),
+                contextlib.redirect_stdout(io.StringIO()) as stdout,
+            ):
+                pr_tracker.save([{
+                    "repo": "owner/repo",
+                    "pr_number": 3,
+                    "pr_url": "https://github.com/owner/repo/pull/3",
+                    "state": "MERGED",
+                }])
+                result = pr_tracker.cmd_notifications(args)
+        self.assertEqual(result, 0)
+        fetch_pr.assert_not_called()
+        self.assertEqual(
+            json.loads(stdout.getvalue())["ignored_terminal_notifications"][0]["thread_id"],
+            "100",
+        )
+
+    def test_notification_checkpoint_is_timestamp_based_and_monotonic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):
+                saved = pr_tracker.save_notification_checkpoint(
+                    "outlook", "2026-08-15T08:00:00+08:00"
+                )
+                self.assertEqual(
+                    pr_tracker.notification_since("outlook"),
+                    "2026-08-15T00:00:00+00:00",
+                )
+                with self.assertRaises(ValueError):
+                    pr_tracker.save_notification_checkpoint(
+                        "outlook", "2026-08-14T23:59:59Z"
+                    )
+        self.assertEqual(saved, "2026-08-15T00:00:00+00:00")
 
     def test_resolve_moves_pending_activity_to_handled_history(self):
         with tempfile.TemporaryDirectory() as directory:

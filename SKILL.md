@@ -244,7 +244,7 @@ python scripts/pr_tracker.py add \
 
 ## Maintain pull requests
 
-Treat maintenance as a durable inbox. `check` refreshes PR state, CI, mergeability, review decisions, general comments, reviews, and inline comments. External activity remains pending across checks until it is explicitly resolved after action.
+Treat maintenance as a durable, notification-first inbox. Use GitHub Notifications as the default trigger and refresh only the tracked PRs named by those notifications. A notification is a wake-up signal, not the complete review record: after a hit, read the full PR state, CI, mergeability, review decision, general comments, reviews, and inline comments. External activity remains pending until it is explicitly resolved after action.
 
 Import the authenticated contributor's accessible PR history once before the first maintenance pass. Terminal PRs become history; open PRs receive a detailed refresh:
 
@@ -253,16 +253,29 @@ python scripts/pr_tracker.py import-authored
 ```
 
 ```bash
-python scripts/pr_tracker.py check
+python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py list
-python scripts/pr_tracker.py check --repo owner/repo
+python scripts/pr_tracker.py notifications --repo owner/repo
 ```
+
+The notification command requests all notifications updated after the stored GitHub checkpoint where the contributor is participating or mentioned, performs targeted refreshes, and does not change notification read state. Never use unread state as a cursor because the user may read notifications independently. On the first pass, use a bounded lookback; use `--include-watching` only when broader watched-repository traffic is intentional. Preserve unmatched notifications for issue or discussion triage instead of silently discarding them.
+
+When GitHub Notifications are unavailable, use a user-configured Outlook folder as a secondary trigger if the host can read Outlook. Query that folder for GitHub notification mail with `receivedDateTime` later than the stored Outlook checkpoint, deduplicate by immutable message ID, and then perform the same targeted GitHub refresh. Never infer or hard-code a folder name. Email is not authoritative: delivery settings, rules, and delays can omit events.
+
+Capture the batch-start timestamp before fetching. Advance a source checkpoint to that timestamp only after the entire batch is handled or durably retained; this prevents events arriving during processing from falling into a gap:
+
+```bash
+python scripts/pr_tracker.py checkpoint github <batch-start-ISO-8601>
+python scripts/pr_tracker.py checkpoint outlook <batch-start-ISO-8601>
+```
+
+Run a low-frequency reconciliation with `python scripts/pr_tracker.py check` for open tracked PRs to catch missed, prematurely read, or undelivered notifications. This is a safety net, not the normal comment-follow-up loop.
 
 For each red item, read all feedback and current code, reproduce valid concerns, update the existing branch, test, commit, push, and post one evidence-backed response. Then mark the observed activity handled and immediately refresh once more:
 
 ```bash
 python scripts/pr_tracker.py resolve https://github.com/owner/repo/pull/N
-python scripts/pr_tracker.py check --repo owner/repo
+python scripts/pr_tracker.py notifications --repo owner/repo
 ```
 
 Never resolve unread or unhandled activity. Read [references/pr-maintenance.md](references/pr-maintenance.md) before responding to reviews, resolving conflicts, diagnosing CI, replying to inline threads, or producing the maintenance table.

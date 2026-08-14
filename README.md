@@ -265,17 +265,26 @@ python scripts/pr_tracker.py add \
   "https://github.com/owner/repo/pull/123" \
   "https://github.com/owner/repo/issues/42"
 
-python scripts/pr_tracker.py check
+python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py list
-python scripts/pr_tracker.py check --repo owner/repo
+python scripts/pr_tracker.py check  # low-frequency open-PR reconciliation
 ```
 
-`check` reads general PR comments, submitted reviews, and inline review comments in addition to CI and merge state. External activity remains pending across checks until the contributor has read it, made and tested any required change, pushed the existing branch, and replied. Only then resolve the current activity set and refresh again:
+Comment follow-up is notification-first. GitHub Notifications select which tracked PRs receive a complete state, CI, review, general-comment, and inline-comment refresh:
+
+```bash
+python scripts/pr_tracker.py notifications
+python scripts/pr_tracker.py notifications --repo owner/repo
+```
+
+The command uses a durable timestamp checkpoint rather than unread state: it requests every participating or mentioned notification updated later than the last successful batch, leaves notification read state unchanged, and reports unmatched issue or discussion notifications for separate triage. This remains reliable when you read notifications yourself. An existing Outlook folder can serve as a configured fallback on agent platforms with Outlook access; it is queried by `receivedDateTime` later than its own checkpoint, and RepoStew still verifies every email-triggered item against GitHub. Each source checkpoint advances to the captured batch-start time only after the whole batch is handled. Run the broader `check` command only as a low-frequency reconciliation safety net.
+
+External activity remains pending until the contributor has read it, made and tested any required change, pushed the existing branch, and replied. Only then resolve the current activity set:
 
 ```bash
 python scripts/pr_tracker.py resolve \
   "https://github.com/owner/repo/pull/123"
-python scripts/pr_tracker.py check --repo owner/repo
+python scripts/pr_tracker.py notifications --repo owner/repo
 ```
 
 ### Persistent contribution follow-up
@@ -308,6 +317,7 @@ RepoStew stores mutable personal state outside the installed skill:
 ~/.repostew/seen_issues.json
 ~/.repostew/pr_tracker.json
 ~/.repostew/contributions.json
+~/.repostew/notification_checkpoints.json
 ```
 
 Override the location when needed:
