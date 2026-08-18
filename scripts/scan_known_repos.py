@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import shutil
 import sys
@@ -47,7 +48,12 @@ def issue_search_start(repo: str, since_days: int) -> str:
     return (datetime.now(timezone.utc) - timedelta(days=since_days)).strftime("%Y-%m-%d")
 
 
-def scan_repository(full_name: str, args, candidate_limit: int | None = None) -> tuple[list[dict], bool]:
+def scan_repository(
+    full_name: str,
+    args,
+    candidate_limit: int | None = None,
+    audit: list[dict] | None = None,
+) -> tuple[list[dict], bool]:
     repo_info = run_json(
         [
             "gh", "api", f"repos/{full_name}", "--jq",
@@ -85,6 +91,13 @@ def scan_repository(full_name: str, args, candidate_limit: int | None = None) ->
                 break
             number = issue["number"]
             if _is_seen(full_name, number):
+                if audit is not None:
+                    audit.append({
+                        "repo": full_name,
+                        "number": number,
+                        "title": issue.get("title", ""),
+                        "decision": "already_seen",
+                    })
                 continue
             detail = run_json(
                 [
@@ -94,18 +107,38 @@ def scan_repository(full_name: str, args, candidate_limit: int | None = None) ->
                 timeout=10,
             )
             if not detail:
+                # Do not advance the repository checkpoint when an issue could
+                # not be read. A later scan must be allowed to retry it.
+                completed = False
+                if audit is not None:
+                    audit.append({
+                        "repo": full_name,
+                        "number": number,
+                        "title": issue.get("title", ""),
+                        "decision": "detail_fetch_failed",
+                    })
                 continue
             clone_dir = clone_dir or clone_repo_shallow(full_name)
+            reason = []
             result = evaluate_issue(
                 full_name,
                 repo_info.get("stars", 0),
                 repo_info.get("license", ""),
                 detail,
                 clone_dir,
+                decision_reason=reason,
             )
             _mark_seen(full_name, number)
             if result:
                 candidates.append(result)
+            if audit is not None:
+                audit.append({
+                    "repo": full_name,
+                    "number": number,
+                    "title": issue.get("title", ""),
+                    "decision": "candidate" if result else "filtered",
+                    "reason": reason[0] if reason else "unknown",
+                })
     finally:
         if clone_dir:
             shutil.rmtree(clone_dir, ignore_errors=True)
@@ -125,6 +158,11 @@ def main() -> int:
     parser.add_argument("--issue-limit", type=int, default=50)
     parser.add_argument("--max-candidates", type=int, default=10)
     parser.add_argument("--json-only", action="store_true")
+    parser.add_argument(
+        "--include-decisions",
+        action="store_true",
+        help="include one audit record for every listed issue",
+    )
     args = parser.parse_args()
     if args.since_days < 1 or args.issue_limit < 1 or args.max_candidates < 1:
         parser.error("since-days, issue-limit, and max-candidates must be positive")
@@ -135,21 +173,44 @@ def main() -> int:
 
     candidates = []
     scanned = []
+    scan_summaries = []
+    decisions = []
     for repo in repos:
         if len(candidates) >= args.max_candidates:
             break
         if not args.json_only:
             print(f"Scanning contributed repository {repo}...", file=sys.stderr)
         remaining = args.max_candidates - len(candidates)
-        repo_candidates, succeeded = scan_repository(repo, args, remaining)
+        search_start = issue_search_start(repo, args.since_days)
+        checkpoint_before = (get_repository(repo) or {}).get("last_issue_scan_at")
+        repo_audit = []
+        repo_candidates, succeeded = scan_repository(
+            repo, args, remaining, audit=repo_audit,
+        )
+        checkpoint_after = (get_repository(repo) or {}).get("last_issue_scan_at")
         if succeeded:
             scanned.append(repo)
         candidates.extend(repo_candidates)
+        counts = Counter(item["decision"] for item in repo_audit)
+        scan_summaries.append({
+            "repo": repo,
+            "search_start": search_start,
+            "checkpoint_advanced": checkpoint_after != checkpoint_before,
+            "issues_listed": len(repo_audit),
+            "candidate": counts["candidate"],
+            "filtered": counts["filtered"],
+            "already_seen": counts["already_seen"],
+            "detail_fetch_failed": counts["detail_fetch_failed"],
+        })
+        decisions.extend(repo_audit)
 
     payload = {
         "repositories_scanned": scanned,
+        "scan_summaries": scan_summaries,
         "candidates": candidates,
     }
+    if args.include_decisions:
+        payload["decisions"] = decisions
     if not candidates:
         payload["message"] = "no new actionable issues found"
     print(json.dumps(payload, indent=2, ensure_ascii=False))

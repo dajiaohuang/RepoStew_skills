@@ -444,7 +444,7 @@ def get_direct_issues(count=30):
 # ═══════════════════════════════════════════════════════════════════════
 
 def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
-                   clone_dir=None):
+                   clone_dir=None, decision_reason=None):
     """Run all filters and mechanical checks on one issue.
     Returns a candidate dict or None if filtered out."""
 
@@ -456,19 +456,24 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
     assignees = issue.get("assignees", []) or []
     comments_count = (issue.get("commentsCount", None) or 0)
 
+    def reject(reason):
+        if decision_reason is not None:
+            decision_reason.append(reason)
+        return None
+
     # ── Smart filters ──
 
     if is_bad_license(repo_license_str):
         log(f"  #{number} — SKIP (bad license: {repo_license_str})")
-        return None
+        return reject("bad_license")
 
     if is_spam_title(title):
         log(f"  #{number} — SKIP (spam title: {title[:60]})")
-        return None
+        return reject("spam_title")
 
     if not is_valid_body(body):
         log(f"  #{number} — SKIP (body too short/noisy: {len(body)} chars)")
-        return None
+        return reject("invalid_body")
 
     if is_stale_issue(created_at, comments_count):
         try:
@@ -477,30 +482,30 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
         except Exception:
             age = "?"
         log(f"  #{number} — SKIP (stale: {age}d old, {comments_count} comments)")
-        return None
+        return reject("stale")
 
     if not labels_ok(labels):
         label_names = [l.get("name", "") for l in labels]
         log(f"  #{number} — SKIP (non-priority labels: {label_names})")
-        return None
+        return reject("non_priority_labels")
 
     # ── Assignee check ──
     if assignees:
         log(f"  #{number} — SKIP (assigned: {assignees[0].get('login', '?')})")
-        return None
+        return reject("assigned")
 
     # ── Mechanical checks ──
     if clone_dir and check_commits_for_issue(clone_dir, number, created_at):
         log(f"  #{number} — SKIP (commit refs)")
-        return None
+        return reject("commit_reference")
 
     if check_prs_for_issue(repo_full_name, number):
         log(f"  #{number} — SKIP (PR refs)")
-        return None
+        return reject("pull_request_reference")
 
     if check_linked_prs(repo_full_name, number):
         log(f"  #{number} — SKIP (linked PRs)")
-        return None
+        return reject("linked_pull_request")
 
     # ── Repo guidelines ──
     governance_files = []
@@ -515,6 +520,9 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
                 governance_files.append(filename.replace(os.sep, "/"))
 
     label_names = [l.get("name", "") for l in labels]
+
+    if decision_reason is not None:
+        decision_reason.append("candidate")
 
     return {
         "repo": repo_full_name,

@@ -310,9 +310,10 @@ Scan newly opened issues across the persistent repository set or one repository:
 python scripts/scan_known_repos.py
 python scripts/scan_known_repos.py --repo owner/repo
 python scripts/scan_known_repos.py --since-days 30 --issue-limit 50
+python scripts/scan_known_repos.py --repo owner/repo --include-decisions
 ```
 
-The scanner remembers the last successful scan with a one-day overlap. Its output still requires manual policy, duplicate, assignment, linked-PR, relevance, and scope review. Previous participation provides useful context but does not grant maintainer authority or justify filing low-confidence issues.
+The scanner remembers the last successful scan with a one-day overlap. Every run reports candidate, filtered, previously seen, and fetch-failure counts per repository; add `--include-decisions` for one audit record and mechanical filter reason per listed issue. If issue details cannot be fetched, the repository checkpoint remains unchanged so the next run can retry. Output still requires manual policy, duplicate, assignment, linked-PR, relevance, and scope review. Previous participation provides useful context but does not grant maintainer authority or justify filing low-confidence issues.
 
 ### Mutable state
 

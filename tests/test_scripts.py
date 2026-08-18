@@ -509,6 +509,83 @@ class ContributionTrackerTests(unittest.TestCase):
         self.assertEqual(candidates, [])
         self.assertIsNotNone(checkpoint)
 
+    def test_issue_scan_audits_already_seen_items(self):
+        args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
+        responses = [
+            {"stars": 100, "license": "MIT", "has_issues": True},
+            [{"number": 7, "title": "Handled earlier", "createdAt": "2026-01-02T00:00:00Z"}],
+        ]
+        audit = []
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+            ):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
+                )
+                discover._mark_seen("owner/repo", 7)
+                candidates, succeeded = scan_known_repos.scan_repository(
+                    "owner/repo", args, audit=audit
+                )
+        self.assertTrue(succeeded)
+        self.assertEqual(candidates, [])
+        self.assertEqual(audit[0]["decision"], "already_seen")
+
+    def test_issue_detail_failure_does_not_advance_checkpoint(self):
+        args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
+        responses = [
+            {"stars": 100, "license": "MIT", "has_issues": True},
+            [{"number": 8, "title": "Retry me", "createdAt": "2026-01-02T00:00:00Z"}],
+            None,
+        ]
+        audit = []
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+            ):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
+                )
+                candidates, succeeded = scan_known_repos.scan_repository(
+                    "owner/repo", args, audit=audit
+                )
+                checkpoint = contribution_tracker.get_repository("owner/repo")["last_issue_scan_at"]
+        self.assertTrue(succeeded)
+        self.assertEqual(candidates, [])
+        self.assertIsNone(checkpoint)
+        self.assertEqual(audit[0]["decision"], "detail_fetch_failed")
+
+    def test_issue_scan_records_filter_reason(self):
+        args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
+        responses = [
+            {"stars": 100, "license": "MIT", "has_issues": True},
+            [{"number": 9, "title": "Too little detail", "createdAt": "2026-01-02T00:00:00Z"}],
+            {
+                "number": 9,
+                "title": "Too little detail",
+                "body": "short",
+                "createdAt": "2026-01-02T00:00:00Z",
+                "labels": [],
+                "assignees": [],
+                "commentsCount": 0,
+            },
+        ]
+        audit = []
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+                mock.patch.object(scan_known_repos, "clone_repo_shallow", return_value=None),
+            ):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
+                )
+                scan_known_repos.scan_repository("owner/repo", args, audit=audit)
+        self.assertEqual(audit[0]["decision"], "filtered")
+        self.assertEqual(audit[0]["reason"], "invalid_body")
+
 
 class LoopTests(unittest.TestCase):
     def test_discovery_command_broadens_for_later_rounds(self):
