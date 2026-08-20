@@ -583,6 +583,37 @@ class ContributionTrackerTests(unittest.TestCase):
         self.assertIsNone(checkpoint)
         self.assertEqual(audit[0]["decision"], "detail_fetch_failed")
 
+    def test_issue_limit_truncation_does_not_advance_checkpoint(self):
+        args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=5)
+        issues = [
+            {"number": number, "title": f"Issue {number}", "createdAt": "2026-01-02T00:00:00Z"}
+            for number in range(1, 7)
+        ]
+        responses = [
+            {"stars": 100, "license": "MIT", "has_issues": True},
+            issues,
+        ]
+        audit = []
+        metadata = {}
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+                mock.patch.object(scan_known_repos, "_is_seen", return_value=True),
+            ):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
+                )
+                candidates, succeeded = scan_known_repos.scan_repository(
+                    "owner/repo", args, audit=audit, metadata=metadata
+                )
+                checkpoint = contribution_tracker.get_repository("owner/repo")["last_issue_scan_at"]
+        self.assertTrue(succeeded)
+        self.assertEqual(candidates, [])
+        self.assertEqual(len(audit), 5)
+        self.assertTrue(metadata["truncated"])
+        self.assertIsNone(checkpoint)
+
     def test_issue_scan_records_filter_reason(self):
         args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
         responses = [

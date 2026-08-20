@@ -62,6 +62,7 @@ def scan_repository(
     args,
     candidate_limit: int | None = None,
     audit: list[dict] | None = None,
+    metadata: dict | None = None,
 ) -> tuple[list[dict], bool]:
     repo_info = run_json(
         [
@@ -79,7 +80,9 @@ def scan_repository(
     issues = run_json(
         [
             "gh", "issue", "list", "--repo", full_name,
-            "--limit", str(args.issue_limit), "--state", "open",
+            # Fetch one extra item so an exact-size result can be
+            # distinguished from a truncated result.
+            "--limit", str(args.issue_limit + 1), "--state", "open",
             "--search", f"created:>={since}",
             "--json", "number,title,createdAt,labels",
             "--jq", "sort_by(.createdAt) | reverse",
@@ -89,9 +92,16 @@ def scan_repository(
     if issues is None:
         return [], False
 
+    truncated = len(issues) > args.issue_limit
+    issues = issues[:args.issue_limit]
+    if metadata is not None:
+        metadata["truncated"] = truncated
+
     candidates = []
     clone_dir = None
-    completed = True
+    # Do not advance the checkpoint until every item in the query window has
+    # been available for inspection.
+    completed = not truncated
     candidate_limit = candidate_limit or args.max_candidates
     try:
         for issue in issues:
@@ -189,8 +199,9 @@ def main() -> int:
         search_start = issue_search_start(repo, args.since_days)
         checkpoint_before = (get_repository(repo) or {}).get("last_issue_scan_at")
         repo_audit = []
+        repo_metadata = {}
         repo_candidates, succeeded = scan_repository(
-            repo, args, remaining, audit=repo_audit,
+            repo, args, remaining, audit=repo_audit, metadata=repo_metadata,
         )
         checkpoint_after = (get_repository(repo) or {}).get("last_issue_scan_at")
         if succeeded:
@@ -202,6 +213,7 @@ def main() -> int:
             "search_start": search_start,
             "checkpoint_advanced": checkpoint_after != checkpoint_before,
             "issues_listed": len(repo_audit),
+            "truncated": repo_metadata.get("truncated", False),
             "candidate": counts["candidate"],
             "filtered": counts["filtered"],
             "already_seen": counts["already_seen"],

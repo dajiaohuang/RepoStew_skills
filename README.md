@@ -319,7 +319,7 @@ python scripts/scan_known_repos.py --repo owner/repo --include-decisions
 `--repo` is repeatable. Use an explicit set when a maintenance workspace has
 an active-follow registry, so paused historical contributions remain excluded.
 
-The scanner remembers the last successful scan with a one-day overlap. Every run reports candidate, filtered, previously seen, and fetch-failure counts per repository; add `--include-decisions` for one audit record and mechanical filter reason per listed issue. If issue details cannot be fetched, the repository checkpoint remains unchanged so the next run can retry. Output still requires manual policy, duplicate, assignment, linked-PR, relevance, and scope review. Previous participation provides useful context but does not grant maintainer authority or justify filing low-confidence issues.
+The scanner remembers the last successful scan with a one-day overlap. Every run reports candidate, filtered, previously seen, fetch-failure, and truncation state per repository; add `--include-decisions` for one audit record and mechanical filter reason per listed issue. If issue details cannot be fetched or the result window exceeds `--issue-limit`, the repository checkpoint remains unchanged so omitted work can be retried; rerun truncated repositories with a larger limit. Output still requires manual policy, duplicate, assignment, linked-PR, relevance, and scope review. Previous participation provides useful context but does not grant maintainer authority or justify filing low-confidence issues.
 
 ### Mutable state
 
