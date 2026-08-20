@@ -181,22 +181,24 @@ RepoStew uses three internal decisions:
 | Decision | Meaning |
 |---|---|
 | `ACCEPT` | clear, permitted, compatible, testable, valuable, and aligned with the repository; complexity only determines routing |
-| `ASK_MAINTAINER` | requirements, API, architecture, dependency, service, security, or compatibility direction needs approval |
+| `ASK_MAINTAINER` | a hard requirements, API, architecture, dependency, service, security, authority, or compatibility decision truly needs approval after the direct-PR gate is applied |
 | `SKIP` | duplicate, assigned, already fixed, prohibited, speculative, unverifiable, or blocked by unavailable required access |
 
 Labels are discovery signals, not permission. Every candidate is checked against the issue thread, commits, open/closed PRs, linked closing PRs, repository instructions, contribution policy, and expected maintenance cost.
 
 After verification, RepoStew separately routes by execution complexity. A clear, localized change with established tests stays in the current conversation. Cross-subsystem work, repository-wide audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task or handover when the agent platform provides one. Complexity alone never causes rejection. Ambiguous design or architecture may require `ASK_MAINTAINER`, but approved work then continues through the appropriate route. The handoff carries evidence and authority boundaries, while the destination task rechecks current GitHub state.
 
-For a verified `ASK_MAINTAINER` decision, RepoStew has standing authority to post one concise clarification comment directly on the existing public issue, discussion, or the contributor's own PR. It checks for an existing answer, states the blocking decision and options, records the resulting URL, and waits without repeated pings. This exception does not authorize creating a new issue/discussion, claiming work, promising delivery, or disclosing security-sensitive information.
+RepoStew does not use a question or Draft as a routine prerequisite. In autonomous mode it opens a regular upstream PR directly when the repository accepts unsolicited PRs; the issue is open, available, and not already covered; expected behavior is strongly supported by the issue, tests, code, and repository patterns; the smallest complete solution preserves defaults and interfaces; no approval-gated dependency, service, credential, permission, CI, security, public API, or architecture boundary is crossed; focused validation passes; and the PR states material assumptions honestly. Previously unanswered questions and upstream Drafts are rechecked under the same standard, then advanced without creating duplicate PRs.
 
-### Permission-gated Draft PRs
+For a genuine `ASK_MAINTAINER` decision that remains after this gate, RepoStew has standing authority to post one concise clarification comment directly on the existing public issue, discussion, or the contributor's own PR. It checks for an existing answer, states the blocking decision and options, records the resulting URL, and waits without repeated pings. This exception does not authorize creating a new issue/discussion, claiming work, promising delivery, or disclosing security-sensitive information.
 
-RepoStew separates permission to submit a PR from approval of its technical direction. When several implementation directions remain, RepoStew selects the strongest evidence-backed, smallest, reversible option and uses the Draft to expose assumptions and alternatives; solution confirmation alone does not force design-only work.
+### Direct PRs and permission-gated Draft PRs
+
+RepoStew separates permission to submit a PR from approval of its technical direction. A regular PR is the default when the direct-PR standard passes. When a material implementation uncertainty remains, RepoStew selects the strongest evidence-backed, smallest, reversible option and uses a Draft to expose assumptions and alternatives; solution confirmation alone does not force design-only work.
 
 | Policy | RepoStew action |
 |---|---|
-| Unsolicited PRs or early Draft PRs are accepted | Open one focused upstream Draft PR, mark the unresolved decision, omit closing keywords, and wait for direction. |
+| Unsolicited PRs or early Draft PRs are accepted, but the direct regular-PR standard is not met | Open one focused upstream Draft PR, mark the unresolved decision, omit closing keywords, and wait for direction. |
 | External PRs are invitation-only, require approval before submission, or ask contributors to agree on a solution before upstream submission | Do not use Draft status to bypass upstream submission policy. Push a fork branch and open a fork-only Draft PR; if unsupported, persist the tested branch and complete draft title/body. Request an invitation once on the existing thread. |
 | Policy explicitly prohibits implementation/public prototypes in the current state, or the implementation crosses a separately gated security, dependency, service, credential, privileged-permission, or public-API boundary | Keep the draft design-only or local and cite the exact prohibition. |
 

@@ -33,12 +33,15 @@ the pull-request template, and CI/linter configuration. Confirm the issue is ope
 not already fixed, and has no competing pull request. Apply the taste gate; stop without a PR
 if the issue is security-sensitive, has a competing implementation, or requires a new
 dependency/service/credential/privileged permission/public API without the required approval.
-Do not stop merely because maintainers have not selected among reasonable solutions. Choose
-the smallest reversible option supported by repository evidence, test it, and document its
-assumptions and alternatives in the Draft.
+Do not stop merely because maintainers have not selected among reasonable solutions. When
+unsolicited PRs are allowed and the issue is available, expected behavior is strongly supported
+by repository evidence, the smallest complete reversible patch preserves defaults/interfaces,
+crosses no separately gated boundary, and focused validation passes, open a regular upstream PR
+directly. Do not post a redundant question or default to Draft. State material assumptions and
+tradeoffs in the PR body.
 
-If the candidate is sound but submission needs maintainer permission, follow RepoStew's draft
-route. Open an upstream Draft PR only when repository policy allows unsolicited early drafts.
+If a material implementation uncertainty remains after that direct-PR gate, follow RepoStew's
+draft route. Open an upstream Draft PR only when repository policy allows unsolicited early drafts.
 For invitation-only, approval-before-submission, or agree-before-upstream-submission repositories, do not open an upstream PR;
 push a focused fork branch, create a fork-only Draft PR (or persist a complete draft when that
 is unsupported), and request an invitation once on the existing public thread.

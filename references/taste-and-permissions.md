@@ -27,7 +27,9 @@ Record evidence: reproduction or source proof, expected behavior, likely affecte
 
 ### ASK_MAINTAINER
 
-Seek maintainer direction before implementing:
+First test whether a regular PR can safely carry the decision. A missing maintainer confirmation is not itself a reason to ask. Open a regular upstream PR directly when unsolicited contributions are allowed, the issue is available and unambiguous enough to infer expected behavior, repository evidence strongly supports one small reversible solution, the patch preserves defaults and interfaces, focused validation passes, and no separately gated dependency, service, credential, permission, CI, security, public-API, or architecture boundary is crossed.
+
+Seek maintainer direction before implementing only when a hard gate remains:
 
 - unclear requirements or missing acceptance criteria;
 - public API, CLI, configuration, schema, or behavior changes;
@@ -38,13 +40,15 @@ Seek maintainer direction before implementing:
 
 In contributor mode, frame this as a question or tradeoff, not a project decision. The user grants standing authority to post one focused clarification comment on an existing public thread for each verified `ASK_MAINTAINER` decision and to use the policy-compliant draft route below. Check for an existing answer or duplicate question, post the evidence and concrete options once, record the comment URL, and wait without bumping. This authority does not cover opening a new issue/discussion or publicly disclosing security-sensitive concerns. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
 
-### Permission-gated draft route
+### Direct PR and permission-gated draft route
 
-Treat submission permission and technical approval as separate gates. Do not leave an item design-only merely because maintainers have not selected among reasonable implementations. Choose the smallest reversible option supported by repository evidence, validate it, and make its assumptions and alternatives explicit in the Draft.
+Treat submission permission and technical approval as separate gates. Do not leave an item design-only merely because maintainers have not selected among reasonable implementations. When the direct regular-PR standard above is met, classify it `ACCEPT` and open a regular upstream PR; do not post a redundant question or default to Draft. Recheck previously unanswered questions and upstream Drafts under this standard, and mark an existing Draft ready for review instead of opening a duplicate.
+
+If a material implementation uncertainty remains, choose the smallest reversible option supported by repository evidence, validate it, and make its assumptions and alternatives explicit in the Draft.
 
 | Repository policy | Allowed draft action |
 |---|---|
-| Unsolicited PRs or early Draft PRs are allowed | Open one upstream Draft PR, clearly identify the unresolved decision, and avoid closing keywords or ownership claims. |
+| Unsolicited PRs or early Draft PRs are allowed, but the direct regular-PR standard is not met | Open one upstream Draft PR, clearly identify the unresolved decision, and avoid closing keywords or ownership claims. |
 | External PRs are invitation-only, require approval before submission, or ask contributors to agree on a solution before upstream submission | Do not open an upstream PR. Push a fork branch and open a Draft PR only inside the fork; if unsupported, persist the tested branch and complete draft title/body. Link the draft from one existing public thread and request the invitation. |
 | Policy explicitly prohibits implementation or public prototypes in the current state, or the implementation crosses a separately gated security/dependency/service/credential/privileged-permission/public-API boundary | Keep the draft design-only or local and report the exact prohibition. |
 

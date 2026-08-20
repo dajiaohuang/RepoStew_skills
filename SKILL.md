@@ -85,7 +85,9 @@ Classify the work after read-only verification and before cloning or editing.
 
 Complexity is never, by itself, a reason to reject, skip, or stop work. Separate the contribution decision from the execution route: clear, permitted, valuable, testable work is `ACCEPT` regardless of size, then simple work stays here and complex work is handed over. Use `ASK_MAINTAINER` only for a real unresolved product, architecture, dependency, compatibility, security, or authority decision; after approval, continue through the appropriate route. Use `SKIP` only for substantive blockers such as duplication, existing ownership or fixes, repository prohibition, lack of evidence, or unavailable required access.
 
-For `ASK_MAINTAINER`, use the standing comment authority immediately when a suitable public thread already exists:
+Do not classify work `ASK_MAINTAINER` merely because nobody has confirmed the proposed solution. First apply the direct-PR judgment gate below. Use `ASK_MAINTAINER` only when a hard approval boundary remains or the expected behavior cannot be inferred safely enough to produce a reviewable patch.
+
+For a genuine `ASK_MAINTAINER`, use the standing comment authority immediately when a suitable public thread already exists:
 
 1. Re-read the full thread and repository policy; confirm the same question has not already been answered or recently asked.
 2. Post one concise comment that states the verified evidence, the exact blocking decision, and concrete options with tradeoffs.
@@ -95,7 +97,24 @@ For `ASK_MAINTAINER`, use the standing comment authority immediately when a suit
 
 ### Route permission-gated pull requests
 
-Separate **submission permission** from **technical approval**. A Draft PR is a review artifact, not maintainer approval, assignment, or permission to merge. An unresolved implementation choice is not, by itself, a reason to stay design-only: select the strongest evidence-backed, smallest, reversible option, test it, and state the assumptions and alternatives in the Draft.
+Separate **submission permission** from **technical approval**. Do not make a clarification comment or Draft PR the default staging step.
+
+#### Direct regular-PR judgment gate
+
+In autonomous mode, open a regular upstream PR without first asking for solution confirmation or opening a Draft when all of these are true:
+
+1. repository policy permits unsolicited external PRs and does not require prior assignment, invitation, or design approval;
+2. the issue is open and available, with no competing PR, active claimant, equivalent default-branch fix, or maintainer rejection of the direction;
+3. the requested outcome and compatibility expectations can be inferred with high confidence from the issue, tests, current behavior, and established repository patterns;
+4. the chosen change is the smallest complete and reversible solution, preserves existing defaults and interfaces, and does not add a dependency, service, credential, privileged permission, CI action, public API, or architectural commitment requiring approval;
+5. the defect is reproduced or supported by strong code evidence, focused regression coverage is practical, relevant validation passes, and the diff is narrow enough for normal review; and
+6. the PR body states material assumptions and tradeoffs honestly, without claiming assignment or maintainer endorsement.
+
+When the gate passes, classify the candidate `ACCEPT` and open the regular PR. A prior unanswered question, an earlier `ASK_MAINTAINER` label, or Draft status is not itself a blocker: revalidate current state, then replace the question-only route or mark the contributor's upstream Draft ready for review. Do not create a duplicate PR when an existing Draft can be converted.
+
+#### Fallback draft route
+
+A Draft PR is a review artifact, not maintainer approval, assignment, or permission to merge. Use it only when the direct regular-PR gate fails because a material but non-prohibited implementation uncertainty remains and repository policy accepts early Drafts. An unresolved implementation choice is not, by itself, a reason to stay design-only: select the strongest evidence-backed, smallest, reversible option, test it, and state the assumptions and alternatives in the Draft.
 
 - If the repository allows unsolicited PRs or explicitly accepts Draft PRs for early review, the user grants standing authority to open one upstream Draft PR for a verified candidate that is otherwise blocked on maintainer direction. Mark it Draft, avoid closing keywords and assignment claims, identify the unresolved decision, and choose the best minimal implementation instead of waiting merely for solution confirmation. Keep separately prohibited dependency, service, credential, permission, public-API, or security-sensitive changes out until approved.
 - If policy says external PRs are invitation-only, approval-only, or asks contributors to agree on a solution before upstream submission, do **not** open an upstream PR, including a Draft PR. Push a focused branch to the contributor's fork and create a Draft PR only inside that fork. Treat it as an experimental review artifact, state assumptions and alternatives, and do not imply upstream acceptance. If the platform cannot create a fork-only Draft PR, persist the tested branch and complete draft title/body instead. On the existing public thread, link the tested draft and request the required invitation once.

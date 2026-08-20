@@ -49,6 +49,10 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("I did not open an upstream PR because", taste)
         self.assertIn("A Draft PR is evidence for review, not approval", taste)
         self.assertIn("Solution uncertainty alone is not a technical approval gate", taste)
+        self.assertIn("Direct regular-PR judgment gate", skill)
+        self.assertIn("open a regular upstream PR without first asking", skill)
+        self.assertIn("A prior unanswered question", skill)
+        self.assertIn("do not post a redundant question or default to Draft", taste)
         self.assertNotIn("issues too large for a focused contribution", taste)
 
 
@@ -630,6 +634,8 @@ class DispatcherTests(unittest.TestCase):
         self.assertIn("do not open an upstream PR", auto_fix.FIX_PROMPT)
         self.assertIn("fork-only Draft PR", auto_fix.FIX_PROMPT)
         self.assertIn("Solution uncertainty alone is not such a gate", auto_fix.FIX_PROMPT)
+        self.assertIn("open a regular upstream PR", auto_fix.FIX_PROMPT)
+        self.assertIn("Do not post a redundant question or default to Draft", auto_fix.FIX_PROMPT)
 
     def test_pr_url_protocol_is_strict(self):
         output = "done\nPR_URL=https://github.com/owner/repo/pull/9\n"
