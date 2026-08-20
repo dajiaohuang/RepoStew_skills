@@ -175,9 +175,14 @@ Scan newly opened issues since the last successful scan, with a one-day overlap 
 ```bash
 python scripts/scan_known_repos.py
 python scripts/scan_known_repos.py --repo <owner/repo>
+python scripts/scan_known_repos.py --repo <owner/one> --repo <owner/two>
 python scripts/scan_known_repos.py --since-days 30 --issue-limit 50
 python scripts/scan_known_repos.py --repo <owner/repo> --include-decisions
 ```
+
+When the surrounding workspace maintains an explicit active-follow registry,
+repeat `--repo` for that active set instead of scanning the complete historical
+contribution registry.
 
 The scan reports per-repository counts even when it finds no candidates. Use `--include-decisions` for an auditable record of every listed issue (`candidate`, `filtered` with its reason, `already_seen`, or `detail_fetch_failed`). Detail-fetch failures keep the issue checkpoint unchanged for retry. The scan is still only a candidate feed: re-read repository policy and apply duplicate, assignment, linked-PR, taste, and scope checks before claiming or fixing anything. Prior participation creates context, not ownership or priority over other contributors.
 

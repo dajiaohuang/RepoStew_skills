@@ -150,6 +150,27 @@ def run_json(cmd, **kwargs):
         return None
 
 
+def fetch_issue_detail(repo_full_name, issue_number, timeout=10):
+    """Fetch issue details using fields supported by ``gh issue view``.
+
+    ``commentsCount`` is available from ``gh search issues`` but not from
+    ``gh issue view``. Fetch comments here and normalize them to the count
+    expected by the mechanical evaluator.
+    """
+    detail = run_json(
+        [
+            "gh", "issue", "view", str(issue_number), "--repo", repo_full_name,
+            "--json", "number,title,body,createdAt,labels,assignees,comments",
+        ],
+        timeout=timeout,
+    )
+    if detail is None:
+        return None
+    comments = detail.pop("comments", []) or []
+    detail["commentsCount"] = len(comments)
+    return detail
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Seen-issue deduplication
 # ═══════════════════════════════════════════════════════════════════════
@@ -629,11 +650,7 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
             if _is_seen(full_name, num):
                 continue
             clone_dir = clone_dir or clone_repo_shallow(full_name)
-            detail = run_json(
-                ["gh", "issue", "view", str(num), "--repo", full_name,
-                 "--json", "number,title,body,createdAt,labels,assignees,commentsCount"],
-                timeout=10,
-            )
+            detail = fetch_issue_detail(full_name, num, timeout=10)
             if not detail:
                 continue
             result = evaluate_issue(

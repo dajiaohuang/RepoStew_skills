@@ -295,8 +295,13 @@ Periodically scan new issues in this persistent set:
 ```bash
 python scripts/scan_known_repos.py
 python scripts/scan_known_repos.py --repo owner/repo
+python scripts/scan_known_repos.py --repo owner/one --repo owner/two
 python scripts/scan_known_repos.py --repo owner/repo --include-decisions
 ```
+
+Repeat `--repo` when a workspace keeps an explicit active-follow list. This
+prevents paused historical contributions from being reintroduced by the
+default full contribution registry.
 
 The output always includes per-repository counts for candidates, filtered issues, previously seen issues, and detail-fetch failures. Use `--include-decisions` when an all-issues audit needs one record per listed issue, including the mechanical filter reason. A detail-fetch failure prevents checkpoint advancement so the issue remains retryable. Treat candidates as leads, not claims. Reapply repository policy, duplicate, assignment, linked-PR, taste, and scope checks. Prior participation grants context but no maintainer authority. Audit a contributed repository and file a new issue only when evidence is reproducible, non-duplicate, useful, and allowed by the active operating mode; record the resulting issue URL.
 

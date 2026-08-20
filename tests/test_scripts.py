@@ -53,6 +53,20 @@ class PolicyTests(unittest.TestCase):
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_fetch_issue_detail_normalizes_comments_count(self):
+        detail = {
+            "number": 7,
+            "title": "Example",
+            "comments": [{"id": "one"}, {"id": "two"}],
+        }
+        with mock.patch.object(discover, "run_json", return_value=detail) as run_json:
+            result = discover.fetch_issue_detail("owner/repo", 7)
+
+        self.assertEqual(result["commentsCount"], 2)
+        self.assertNotIn("comments", result)
+        self.assertIn("comments", run_json.call_args.args[0][-1])
+        self.assertNotIn("commentsCount", run_json.call_args.args[0][-1])
+
     def test_keyword_search_has_no_maximum_star_qualifier(self):
         repository = {
             "full_name": "owner/agent-runtime",
@@ -442,6 +456,14 @@ class TrackerTests(unittest.TestCase):
 
 
 class ContributionTrackerTests(unittest.TestCase):
+    def test_issue_scan_repo_argument_is_repeatable(self):
+        repos = ["Owner/One", "owner/two", "owner/paused"]
+        selected = scan_known_repos.select_repositories(
+            repos, ["owner/one", "OWNER/TWO"],
+        )
+
+        self.assertEqual(selected, ["Owner/One", "owner/two"])
+
     def test_parse_repository_issue_and_pull_urls(self):
         self.assertEqual(
             contribution_tracker.parse_github_url("https://github.com/owner/repo"),
@@ -537,13 +559,13 @@ class ContributionTrackerTests(unittest.TestCase):
         responses = [
             {"stars": 100, "license": "MIT", "has_issues": True},
             [{"number": 8, "title": "Retry me", "createdAt": "2026-01-02T00:00:00Z"}],
-            None,
         ]
         audit = []
         with tempfile.TemporaryDirectory() as directory:
             with (
                 mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
                 mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+                mock.patch.object(scan_known_repos, "fetch_issue_detail", return_value=None),
             ):
                 contribution_tracker.record_contribution(
                     "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
@@ -562,21 +584,22 @@ class ContributionTrackerTests(unittest.TestCase):
         responses = [
             {"stars": 100, "license": "MIT", "has_issues": True},
             [{"number": 9, "title": "Too little detail", "createdAt": "2026-01-02T00:00:00Z"}],
-            {
-                "number": 9,
-                "title": "Too little detail",
-                "body": "short",
-                "createdAt": "2026-01-02T00:00:00Z",
-                "labels": [],
-                "assignees": [],
-                "commentsCount": 0,
-            },
         ]
+        detail = {
+            "number": 9,
+            "title": "Too little detail",
+            "body": "short",
+            "createdAt": "2026-01-02T00:00:00Z",
+            "labels": [],
+            "assignees": [],
+            "commentsCount": 0,
+        }
         audit = []
         with tempfile.TemporaryDirectory() as directory:
             with (
                 mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
                 mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+                mock.patch.object(scan_known_repos, "fetch_issue_detail", return_value=detail),
                 mock.patch.object(scan_known_repos, "clone_repo_shallow", return_value=None),
             ):
                 contribution_tracker.record_contribution(

@@ -16,6 +16,7 @@ from discover import (
     _mark_seen,
     clone_repo_shallow,
     evaluate_issue,
+    fetch_issue_detail,
     is_bad_license,
     is_list_repo,
     run_json,
@@ -33,6 +34,14 @@ def get_known_repos() -> list[str]:
             if isinstance(entry, dict) and entry.get("repo")
         )
     return list(dict.fromkeys(repos))
+
+
+def select_repositories(repos: list[str], selected: list[str] | None) -> list[str]:
+    """Limit a registry to an explicitly selected, case-insensitive set."""
+    if not selected:
+        return repos
+    wanted = {repo.lower() for repo in selected}
+    return [repo for repo in repos if repo.lower() in wanted]
 
 
 def issue_search_start(repo: str, since_days: int) -> str:
@@ -99,13 +108,7 @@ def scan_repository(
                         "decision": "already_seen",
                     })
                 continue
-            detail = run_json(
-                [
-                    "gh", "issue", "view", str(number), "--repo", full_name,
-                    "--json", "number,title,body,createdAt,labels,assignees,commentsCount",
-                ],
-                timeout=10,
-            )
+            detail = fetch_issue_detail(full_name, number, timeout=10)
             if not detail:
                 # Do not advance the repository checkpoint when an issue could
                 # not be read. A later scan must be allowed to retry it.
@@ -153,7 +156,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Scan newly opened issues in repositories previously contributed to"
     )
-    parser.add_argument("--repo", help="only scan one tracked owner/repo")
+    parser.add_argument(
+        "--repo",
+        action="append",
+        help="only scan this tracked owner/repo; repeat to scan an explicit set",
+    )
     parser.add_argument("--since-days", type=int, default=30, help="first-scan lookback")
     parser.add_argument("--issue-limit", type=int, default=50)
     parser.add_argument("--max-candidates", type=int, default=10)
@@ -167,9 +174,7 @@ def main() -> int:
     if args.since_days < 1 or args.issue_limit < 1 or args.max_candidates < 1:
         parser.error("since-days, issue-limit, and max-candidates must be positive")
 
-    repos = get_known_repos()
-    if args.repo:
-        repos = [repo for repo in repos if repo.lower() == args.repo.lower()]
+    repos = select_repositories(get_known_repos(), args.repo)
 
     candidates = []
     scanned = []
