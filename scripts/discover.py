@@ -465,7 +465,8 @@ def get_direct_issues(count=30):
 # ═══════════════════════════════════════════════════════════════════════
 
 def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
-                   clone_dir=None, decision_reason=None):
+                   clone_dir=None, decision_reason=None,
+                   allow_nonstandard_license=False):
     """Run all filters and mechanical checks on one issue.
     Returns a candidate dict or None if filtered out."""
 
@@ -484,7 +485,7 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
 
     # ── Smart filters ──
 
-    if is_bad_license(repo_license_str):
+    if not allow_nonstandard_license and is_bad_license(repo_license_str):
         log(f"  #{number} — SKIP (bad license: {repo_license_str})")
         return reject("bad_license")
 

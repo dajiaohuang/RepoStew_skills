@@ -17,7 +17,6 @@ from discover import (
     clone_repo_shallow,
     evaluate_issue,
     fetch_issue_detail,
-    is_bad_license,
     is_list_repo,
     run_json,
 )
@@ -73,7 +72,10 @@ def scan_repository(
     )
     if not repo_info or not repo_info.get("has_issues"):
         return [], False
-    if is_bad_license(repo_info.get("license", "")) or is_list_repo(full_name):
+    # A repository already selected for ongoing maintenance may intentionally
+    # use a non-SPDX or source-available license. License filtering belongs to
+    # discovery, not to scanning an explicitly tracked contribution target.
+    if is_list_repo(full_name):
         return [], False
 
     since = issue_search_start(full_name, args.since_days)
@@ -140,6 +142,7 @@ def scan_repository(
                 detail,
                 clone_dir,
                 decision_reason=reason,
+                allow_nonstandard_license=True,
             )
             _mark_seen(full_name, number)
             if result:

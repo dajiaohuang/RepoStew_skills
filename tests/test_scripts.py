@@ -535,6 +535,36 @@ class ContributionTrackerTests(unittest.TestCase):
         self.assertEqual(candidates, [])
         self.assertIsNotNone(checkpoint)
 
+    def test_known_repo_scan_allows_nonstandard_license(self):
+        args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
+        responses = [
+            {"stars": 100, "license": "NOASSERTION", "has_issues": True},
+            [{"number": 7, "title": "Tracked issue", "createdAt": "2026-01-02T00:00:00Z"}],
+        ]
+        detail = {
+            "number": 7,
+            "title": "Tracked issue",
+            "body": "This issue contains enough detail to evaluate a focused fix.",
+            "createdAt": "2026-01-02T00:00:00Z",
+            "labels": [],
+            "assignees": [],
+            "commentsCount": 0,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(scan_known_repos, "run_json", side_effect=responses),
+                mock.patch.object(scan_known_repos, "fetch_issue_detail", return_value=detail),
+                mock.patch.object(scan_known_repos, "clone_repo_shallow", return_value=None),
+                mock.patch.object(scan_known_repos, "evaluate_issue", return_value=None) as evaluate,
+            ):
+                contribution_tracker.record_contribution(
+                    "owner/repo", timestamp="2026-01-01T00:00:00+00:00"
+                )
+                _, succeeded = scan_known_repos.scan_repository("owner/repo", args)
+        self.assertTrue(succeeded)
+        self.assertTrue(evaluate.call_args.kwargs["allow_nonstandard_license"])
+
     def test_issue_scan_audits_already_seen_items(self):
         args = argparse.Namespace(since_days=30, issue_limit=5, max_candidates=2)
         responses = [
