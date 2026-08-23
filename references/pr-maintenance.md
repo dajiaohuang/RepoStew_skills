@@ -2,6 +2,7 @@
 
 ## Contents
 
+- Configure a persistent maintenance workspace
 - Run the maintenance inbox
 - Triage pull-request activity
 - Respond with code and communication
@@ -10,6 +11,10 @@
 - Follow contributed repositories
 - File durable issues
 - Handle terminal outcomes
+
+## Configure a persistent maintenance workspace
+
+When RepoStew is used for recurring work across several repositories, read [maintenance-workspace-agents.md](maintenance-workspace-agents.md) and adapt its root `AGENTS.md` template. It separates the active-follow registry from historical contribution data, preserves notification checkpoint correctness across partitioned batches, and defines safe private-state backup boundaries.
 
 ## Run the maintenance inbox
 
