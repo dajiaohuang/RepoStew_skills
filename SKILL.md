@@ -55,6 +55,8 @@ Autonomy does not grant maintainer authority and does not override repository ru
 
 Read [references/taste-and-permissions.md](references/taste-and-permissions.md) when candidate suitability, contributor authority, dependencies, security, or issue filing is in question.
 
+Read [references/cold-start.md](references/cold-start.md) for first-time setup including private state backup repository creation.
+
 ## Intake the request
 
 Choose one workflow:
