@@ -26,6 +26,7 @@ from repostew_state import load_json, save_json, state_file
 RESOURCE_STATE = "workspace_resources.json"
 TERMINAL_STATES = {"MERGED", "CLOSED"}
 DISPOSABLE_PARTS = {
+    ".astro",
     ".cache",
     ".gradle",
     ".mypy_cache",
