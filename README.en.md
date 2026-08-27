@@ -11,7 +11,12 @@ The skill is agent-neutral and operating-system-neutral. Its core workflow lives
 - Fix a specific GitHub issue after checking that it is still actionable.
 - Scan one repository for high-value contribution candidates of any complexity.
 - Discover suitable issues across GitHub with mechanical duplicate and assignment checks.
-- Audit a repository and draft evidence-backed, non-duplicate issues.
+- Audit every tracked code, test, delivery, dependency, documentation, and
+  website surface with an explicit coverage ledger.
+- Cross-check all READMEs, localized documentation, examples, GitHub Pages, and
+  live project sites against the audited code, releases, and deployment source.
+- Turn confirmed, non-duplicate audit findings into focused issues and tested
+  pull requests when the user grants that authority.
 - Create minimal, tested changes that follow the target repository's own rules.
 - Open and track pull requests in confirm or autonomous mode.
 - Persist unresolved PR comments and reviews, then drive code updates, replies, CI fixes, and conflict resolution to completion.
@@ -215,16 +220,52 @@ The draft is a review artifact, not assignment, approval, or permission to merge
 
 ## Repository audit workflow
 
-RepoStew can produce issues as well as patches. A report is filed only after:
+RepoStew treats a repository-wide audit as a coverage and evidence exercise,
+not an extension-limited scan. It starts from every tracked path and records how
+production source, tests, CI/build/release automation, dependency files,
+documentation, website code, generated/vendor content, and opaque assets were
+reviewed. Large repositories may be reviewed in risk-ordered stages, but
+unreviewed or non-semantic boundaries remain explicit limitations.
 
-1. reproducing the problem or collecting strong source evidence;
-2. checking supported versions and the default branch;
-3. searching existing issues, discussions, PRs, and commits;
-4. minimizing the reproduction;
-5. separating confirmed defects from preferences or speculative improvements;
-6. following the repository's issue template and security-reporting policy.
+Documentation is checked semantically. RepoStew reads all tracked READMEs,
+localized copies, guides, examples, API/CLI/configuration references, and site
+sources; compares them with code, defaults, supported versions, release and
+deployment workflows; and inspects every advertised GitHub Pages, documentation,
+demo, or project website. The report includes a documentation/site consistency
+matrix with the compared source of truth, method, status, and concrete evidence.
+A newer live deployment is distinguished from an actual stale or broken
+snapshot rather than being reported automatically as drift.
 
-Confirm mode presents draft issue titles and bodies before posting. RepoStew does not mass-file low-confidence findings.
+A defect is eligible for an issue only after reproduction or equally strong
+source evidence, supported-version and default-branch checks, and duplicate
+searches across issues, discussions, all PR states, commits, and recent history.
+Confirmed defects, risks/suggestions, and audit limitations are reported
+separately. Security findings use the repository's private reporting path.
+
+An audit request is read-only authority. Confirm mode presents draft issue
+titles and bodies before posting. If the user explicitly authorizes an
+audit-to-issue-to-PR campaign, RepoStew revalidates each finding on the latest
+upstream state, files one focused issue, implements the smallest complete fix
+with regression coverage, pushes to the authenticated contributor's fork, opens
+the policy-compliant PR, and tracks both URLs. Authorization never creates a
+quota: repositories without a qualifying finding are reported without a
+fabricated issue or PR.
+
+When a finding qualifies for public reporting but a safe PR is blocked by the
+available platform, validation, repository submission policy, required
+maintainer decision, or authorized repair scope, RepoStew may finish with an
+`issue-only` result. The issue explains the evidence, why no PR accompanies it,
+and what decision or validation would unblock a patch. Existing equivalent
+issues are reused rather than duplicated, and security-sensitive findings stay
+on private reporting channels.
+
+Multi-repository campaigns use one user-visible task per repository when the
+host supports it, plus a controller task for selection criteria, task mapping,
+cross-repository deduplication, priority, and final aggregation. Each task owns
+an isolated checkout and revalidates time-sensitive GitHub and deployment state.
+
+The detailed standard is in
+[references/repository-audit.md](references/repository-audit.md).
 
 ## Bundled scripts
 
