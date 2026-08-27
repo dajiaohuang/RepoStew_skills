@@ -104,6 +104,11 @@ or cannot be reverified, then fall back to external-contributor rules. Read
 [references/maintaining-owned-repositories.md](references/maintaining-owned-repositories.md)
 before creating, verifying, changing, or relying on the authority registry.
 
+For a repository-wide audit, multi-repository audit, documentation/site
+consistency review, or audit-to-issue-to-PR campaign, read
+[references/repository-audit.md](references/repository-audit.md) before building
+the audit inventory or handing work to another task.
+
 ## Route by complexity
 
 Classify the work after read-only verification and before cloning or editing.
@@ -227,17 +232,35 @@ python scripts/loop.py --focus agent --focus harness --dry-rounds 3
 
 Mutable state is stored under `~/.repostew` by default. Set `REPOSTEW_HOME` to use another directory.
 
-## Audit a repository and propose issues
+## Audit repositories and contribute findings
 
-1. Read repository policy and inspect open issues before auditing.
-2. Establish the supported versions, intended scope, and current tests/CI.
-3. Reproduce each suspected defect on the default branch or collect equally strong static evidence.
-4. Search existing issues, discussions, PRs, and commits for duplicates.
-5. Minimize the reproduction and identify impact, expected behavior, actual behavior, environment, and likely affected area.
-6. Separate confirmed defects from suggestions. Do not inflate style preferences into bugs.
-7. In confirm mode, present draft issue titles and bodies before posting.
-8. File only actionable, non-duplicate issues that follow the repository template. Do not mass-file low-confidence findings.
-9. After filing, record the real issue URL with `python scripts/contribution_tracker.py add <issue-url>`.
+Follow [references/repository-audit.md](references/repository-audit.md) for the
+complete coverage ledger, documentation and live-site consistency matrix,
+multi-repository routing, evidence standard, and audit-to-issue-to-PR workflow.
+
+At minimum:
+
+1. Freeze an exact audit commit and use an isolated clean workspace without
+   disturbing user checkouts.
+2. Account for every tracked file across production code, tests, delivery,
+   dependencies, all documentation and localized READMEs, website sources,
+   generated/vendor content, and opaque assets. State different review methods
+   and limitations honestly.
+3. Compare repository documentation, examples, configuration, releases, and
+   every advertised live documentation or project site against the code and
+   deployment source. Do not reduce this to sampled link checking.
+4. Reproduce each suspected defect on the supported default branch or collect
+   equally strong static evidence, then search issues, discussions, all PR
+   states, commits, and recent history for duplicates.
+5. Separate confirmed defects, risks/suggestions, and audit limitations. In
+   confirm mode, present draft issue titles and bodies before posting.
+6. File and track only actionable, non-duplicate issues allowed by the active
+   authority. An audit request alone is read-only, and an authorized campaign
+   never requires inventing one issue or PR per repository.
+7. When issue and PR authority is explicit, revalidate the latest upstream
+   state, file the focused issue, implement the smallest tested fix on an
+   isolated branch, open the policy-compliant PR, and record both URLs. Keep
+   security findings private and stop at every repository or approval gate.
 
 ## Fork, clone, and branch
 
