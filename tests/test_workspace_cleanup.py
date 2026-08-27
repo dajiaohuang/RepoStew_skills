@@ -77,6 +77,11 @@ class CleanupFixture:
 
 
 class WorkspaceCleanupTests(unittest.TestCase):
+    def test_astro_build_state_is_disposable_but_unknown_data_is_not(self):
+        self.assertTrue(workspace_cleanup._disposable_ignored(".astro/"))
+        self.assertTrue(workspace_cleanup._disposable_ignored(".astro/content.db"))
+        self.assertFalse(workspace_cleanup._disposable_ignored("data/campaign.db"))
+
     def _args(self, fixture: CleanupFixture, tracker: Path, **overrides):
         values = {
             "workspace": str(fixture.workspace),
