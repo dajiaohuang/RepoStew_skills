@@ -64,6 +64,38 @@ If the workspace contains a `FOLLOWED_REPOSITORIES.md`, keep it updated. If not,
 - owner/paused-repo
 ```
 
+## 4. Set up MAINTAINED_REPOSITORIES.md
+
+Keep authority separate from follow intake. Create the registry even when it is
+initially empty:
+
+```markdown
+# Maintained Repositories
+
+This registry records verified owner/admin/maintain authority. Follow status
+and contribution history do not establish permission.
+
+| Repository | Role | Maintenance status | Verified at | Source | Notes |
+|---|---|---|---|---|---|
+```
+
+Consider only active/self followed repositories and repositories the user
+explicitly names. Verify each candidate rather than enumerating every repository
+accessible to the account:
+
+```bash
+gh api user --jq .login
+gh repo view owner/repo --json nameWithOwner,viewerPermission,owner
+python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
+```
+
+Use `owner` only when the owner login matches the viewer; use `admin` or
+`maintain` only for organization `ADMIN` or `MAINTAIN` permission. Preserve a
+lost or uncertain authority row as `paused` history and fall back to ordinary
+external-contributor rules. Read
+[maintaining-owned-repositories.md](maintaining-owned-repositories.md) before
+relying on the registry.
+
 ## Periodic State Sync
 
 If a private backup repository exists (`~/.repostew_backup`), sync state periodically or after significant changes:
@@ -73,6 +105,7 @@ If a private backup repository exists (`~/.repostew_backup`), sync state periodi
 cp ~/.repostew/contributions.json ~/.repostew_backup/.repostew/
 cp ~/.repostew/notification_inbox.json ~/.repostew_backup/.repostew/
 cp ~/.repostew/pr_tracker.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
+cp ~/.repostew/workspace_resources.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
 
 # Commit and push
 cd ~/.repostew_backup

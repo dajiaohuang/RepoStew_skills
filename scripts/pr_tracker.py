@@ -19,7 +19,8 @@ from repostew_state import load_json, save_json, state_file
 
 PR_FIELDS = (
     "title,state,url,author,createdAt,updatedAt,mergedAt,closedAt,isDraft,"
-    "mergeStateStatus,reviewDecision,statusCheckRollup,headRefName,baseRefName"
+    "mergeStateStatus,reviewDecision,statusCheckRollup,headRefName,headRefOid,"
+    "headRepository,baseRefName"
 )
 NOTIFICATION_CHECKPOINTS = "notification_checkpoints.json"
 NOTIFICATION_INBOX = "notification_inbox.json"
@@ -236,6 +237,9 @@ def apply_pr_state(entry: dict, pr: dict, activities: list[dict], viewer_login: 
     entry["title"] = pr.get("title")
     entry["state"] = pr.get("state")
     entry["head_ref"] = pr.get("headRefName")
+    entry["head_oid"] = pr.get("headRefOid")
+    head_repository = pr.get("headRepository") or {}
+    entry["head_repo"] = head_repository.get("nameWithOwner") if isinstance(head_repository, dict) else None
     entry["base_ref"] = pr.get("baseRefName")
     entry["is_draft"] = pr.get("isDraft", False)
     entry["merge_state"] = pr.get("mergeStateStatus")

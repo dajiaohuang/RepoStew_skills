@@ -13,7 +13,9 @@ The skill is agent-neutral and operating-system-neutral. Its core workflow lives
 - Create minimal, tested changes that follow the target repository's own rules.
 - Open and track pull requests in confirm or autonomous mode.
 - Persist unresolved PR comments and reviews, then drive code updates, replies, CI fixes, and conflict resolution to completion.
+- Maintain verified owner/admin/maintain repositories without repeating external-contributor qualification on every event.
 - Retain a contribution registry and follow newly opened issues in repositories previously contributed to.
+- Inventory and safely retire explicitly registered local worktrees and branches after tracked PRs merge or close.
 - Complete simple, localized issues in the current conversation and hand complex or persistent work to a separate user-visible task when the host supports it.
 - Improve RepoStew itself when real usage reveals broken, stale, unsafe, or non-portable behavior.
 
@@ -150,6 +152,7 @@ Use RepoStew to scan owner/repo for a small issue worth fixing
 Use RepoStew to audit owner/repo and draft confirmed bug reports
 Use RepoStew to find me 3 well-scoped open-source issues
 Use RepoStew to check and maintain my tracked pull requests
+Use RepoStew to maintain my verified owned and administered repositories
 Use RepoStew in autonomous mode and stop after 3 dry discovery rounds
 ```
 
@@ -231,6 +234,8 @@ Scripts use only the Python standard library and external `git`/`gh` commands.
 | `scripts/contribution_tracker.py` | Persist repositories, PRs, and issues contributed to |
 | `scripts/scan_known_repos.py` | Find new issue candidates in contributed repositories |
 | `scripts/pr_tracker.py` | Persist PR state, CI, reviews, comments, and unresolved activity |
+| `scripts/maintained_repositories.py` | Validate the separate owned/maintained repository authority registry |
+| `scripts/workspace_cleanup.py` | Dry-run-first cleanup of verified terminal-PR worktrees and local branches |
 | `scripts/loop.py` | Run bounded, progressively broader discovery rounds |
 | `scripts/auto_fix.py` | Optional provider-neutral dispatcher for a user-supplied non-interactive agent command |
 | `scripts/auto_fix.sh` | Small POSIX wrapper around `auto_fix.py` |
@@ -321,6 +326,68 @@ an active-follow registry, so paused historical contributions remain excluded.
 
 The scanner remembers the last successful scan with a one-day overlap. Every run reports candidate, filtered, previously seen, fetch-failure, and truncation state per repository; add `--include-decisions` for one audit record and mechanical filter reason per listed issue. If issue details cannot be fetched or the result window exceeds `--issue-limit`, the repository checkpoint remains unchanged so omitted work can be retried; rerun truncated repositories with a larger limit. Output still requires manual policy, duplicate, assignment, linked-PR, relevance, and scope review. Previous participation provides useful context but does not grant maintainer authority or justify filing low-confidence issues.
 
+### Owned and maintained repositories
+
+Persistent workspaces keep intake and authority in separate files.
+`FOLLOWED_REPOSITORIES.md` selects active/self repositories for routine events;
+`MAINTAINED_REPOSITORIES.md` records verified `owner`, `admin`, or `maintain`
+capability. Following or contributing to a repository never establishes
+authority, and authority alone never adds a repository to scheduled intake.
+
+Validate the authority table with:
+
+```bash
+python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
+```
+
+For enabled, recently verified rows, RepoStew can maintain the user's PRs and
+branches without rechecking external-contributor eligibility, CLA applicability,
+PR acceptance, or push capability on every notification. It still refreshes one
+complete current PR snapshot on a notification/state change, follows repository
+instructions, runs required validation, and preserves checkpoint rules. The
+registry does not authorize automatic merge/close, remote deletion, governance,
+release, or secret access. See
+[`references/maintaining-owned-repositories.md`](references/maintaining-owned-repositories.md).
+
+### Safe local workspace cleanup
+
+After opening and tracking a PR from a linked worktree, explicitly register the
+local resource. This avoids guessing ownership later from branch or directory
+names:
+
+```bash
+python scripts/workspace_cleanup.py register \
+  --workspace /absolute/path/to/workspace \
+  --worktree /absolute/path/to/workspace/repo-issue \
+  --pr-url https://github.com/owner/repo/pull/123
+```
+
+Cleanup is a dry run unless `--apply` is present:
+
+```bash
+python scripts/workspace_cleanup.py cleanup --workspace /absolute/path/to/workspace
+python scripts/workspace_cleanup.py cleanup --workspace /absolute/path/to/workspace --apply --json
+```
+
+Only explicitly registered linked worktrees with a tracked `MERGED` or `CLOSED`
+PR can qualify. RepoStew rechecks the exact path, canonical-clone boundary,
+branch, GitHub remote identity, pushed tip, clean tracked/untracked state,
+ignored output, and worktree ownership immediately before deletion. Canonical
+clones, forks, remote branches, active PRs, credentials, unknown ignored data,
+and uncommitted or unpushed work remain untouched. The JSON result reports
+estimated and actual freed logical bytes; `workspace_resources.json` retains
+ownership and cleanup history. See
+[`references/workspace-cleanup.md`](references/workspace-cleanup.md).
+
+### Scheduled maintenance examples
+
+[`references/scheduled-maintenance.md`](references/scheduled-maintenance.md)
+contains copyable, platform-neutral prompts for a two-hour notification-first
+maintenance inbox and a weekly safe-storage cleanup. Both use persistent
+checkpoints, minimum permissions, and bounded standalone runs. Comprehensive
+repository audits and proactive audit-driven issue filing are explicitly
+excluded from scheduled work and require a separate human request.
+
 ### Mutable state
 
 RepoStew stores mutable personal state outside the installed skill:
@@ -331,6 +398,7 @@ RepoStew stores mutable personal state outside the installed skill:
 ~/.repostew/contributions.json
 ~/.repostew/notification_checkpoints.json
 ~/.repostew/notification_inbox.json
+~/.repostew/workspace_resources.json
 ```
 
 Override the location when needed:

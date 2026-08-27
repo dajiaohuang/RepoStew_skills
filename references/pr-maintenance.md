@@ -16,6 +16,11 @@
 
 When RepoStew is used for recurring work across several repositories, read [maintenance-workspace-agents.md](maintenance-workspace-agents.md) and adapt its root `AGENTS.md` template. It separates the active-follow registry from historical contribution data, preserves notification checkpoint correctness across partitioned batches, and defines safe private-state backup boundaries.
 
+When the workspace also records repositories the user owns or administers,
+read [maintaining-owned-repositories.md](maintaining-owned-repositories.md).
+Keep follow intake separate from verified authority, and apply its quick path
+without skipping the notification cursor or full current-state refresh.
+
 ## Run the maintenance inbox
 
 Use GitHub Notifications to identify the small set of tracked pull requests that changed:

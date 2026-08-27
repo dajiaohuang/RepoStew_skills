@@ -6,8 +6,10 @@ description: >-
   pull requests, or draft evidence-backed issues. Use when the user asks to fix
   a GitHub issue, scan a repository, find open-source work or active high-star
   repositories in a technical direction, audit a repo, contribute a patch,
-  maintain submitted PRs, respond to reviews, or follow repositories already
-  contributed to. Also use when the user invokes RepoStew/repostew.
+  maintain submitted PRs, maintain repositories the user owns or administers,
+  respond to reviews, or follow repositories already contributed to, including
+  safe local cleanup after terminal contributions. Also use when the user
+  invokes RepoStew/repostew.
   Apply before cloning, editing, commenting, filing issues, or opening PRs
   because this skill defines authority, safety, verification, and contribution
   workflow.
@@ -45,7 +47,7 @@ Autonomy does not grant maintainer authority and does not override repository ru
 ## Apply non-negotiable rules
 
 1. Read applicable repository instructions before editing. Check `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `DEVELOPMENT.md`, `BUILDING.md`, `FAQ.md`, code-of-conduct files, PR templates, issue templates, formatter/linter configuration, and build scripts. Follow the most specific instruction for the files being changed.
-2. Work as an outside contributor unless repository permissions or explicit delegation prove maintainer authority. Do not close issues, apply labels, merge PRs, reject proposals, or speak for maintainers without that authority.
+2. Work as an outside contributor unless current repository permissions, an enabled verified maintained-repository row, or explicit delegation proves authority. Verified owner/admin/maintain authority enables the focused quick path below; it does not itself authorize merging, closing, remote deletion, governance, releases, secrets, or speaking for other maintainers.
 3. Verify every issue is still open, unassigned or available, not already fixed, and not covered by an open or merged PR.
 4. Prefer the smallest complete change. Avoid drive-by refactors, broad formatting, speculative features, and unrelated dependency updates.
 5. Never expose secrets or use paid/privileged services outside the granted scope.
@@ -66,6 +68,7 @@ Choose one workflow:
 - **GitHub discovery:** the user asks for suitable issues across repositories.
 - **Repository audit:** the user asks to inspect a repository and propose or file issues.
 - **PR maintenance:** the user asks to check or respond to existing pull requests.
+- **Owned/maintained repository maintenance:** the user asks to maintain repositories they own or administer.
 - **Contribution follow-up:** the user asks to revisit participated repositories or their new issues.
 
 Authenticate read-only before beginning:
@@ -77,6 +80,29 @@ python --version
 ```
 
 If `gh` is unavailable, use an available GitHub connector or API. Do not silently downgrade mechanical verification.
+
+## Use verified owner or maintainer authority
+
+Keep maintenance intake and authority separate. An active/self row in
+`FOLLOWED_REPOSITORIES.md` selects routine events; it does not prove permission.
+An enabled, recently verified row in `MAINTAINED_REPOSITORIES.md` proves
+owner/admin/maintain capability; it does not automatically add the repository
+to intake.
+
+For the intersection—or an explicitly named maintained repository—reuse the
+verified authority instead of repeating external-contributor eligibility, CLA,
+PR-acceptance, or push-permission questions for every cycle. Still act only on
+a notification or state change, an explicit request, or due low-frequency
+reconciliation. On a hit, read one complete current issue/PR snapshot including
+comments, reviews, inline threads, commits, checks, mergeability, and head state
+before acting. Repository instructions, focused validation, scope, checkpoint,
+and secret-safety checks remain required.
+
+Never infer authority from a contribution, follow row, organization affiliation,
+fork, or local clone. Pause and retain a registry row when permission disappears
+or cannot be reverified, then fall back to external-contributor rules. Read
+[references/maintaining-owned-repositories.md](references/maintaining-owned-repositories.md)
+before creating, verifying, changing, or relying on the authority registry.
 
 ## Route by complexity
 
@@ -263,9 +289,19 @@ python scripts/pr_tracker.py add \
   "https://github.com/owner/repo/issues/M"
 ```
 
+When RepoStew created a linked worktree for the contribution, record its exact
+ownership after tracking the PR. This enables later cleanup without inferring
+ownership from a directory name. Read
+[references/workspace-cleanup.md](references/workspace-cleanup.md) before
+registration or cleanup.
+
 ## Maintain pull requests
 
 Treat maintenance as a durable, notification-first inbox. Use GitHub Notifications as the default trigger and refresh only the tracked PRs named by those notifications. A notification is a wake-up signal, not the complete review record: after a hit, read the full PR state, CI, mergeability, review decision, general comments, reviews, and inline comments. External activity remains pending until it is explicitly resolved after action.
+
+When both workspace registries exist, intersect active/self follow scope with
+enabled maintained authority to select the owner/maintainer quick path. Do not
+refresh a repository merely because verified authority exists.
 
 Import the authenticated contributor's accessible PR history once before the first maintenance pass. Terminal PRs become history; open PRs receive a detailed refresh:
 
@@ -301,6 +337,12 @@ python scripts/pr_tracker.py notifications --repo owner/repo
 
 Never resolve unread or unhandled activity. Read [references/pr-maintenance.md](references/pr-maintenance.md) before responding to reviews, resolving conflicts, diagnosing CI, replying to inline threads, or producing the maintenance table.
 
+For recurring notification, new-issue, missed-comment, CI reconciliation, and
+terminal-resource cleanup examples, read
+[references/scheduled-maintenance.md](references/scheduled-maintenance.md).
+Scheduled maintenance must not expand into a comprehensive repository audit or
+proactive audit-driven issue filing; those require a separate explicit request.
+
 ## Sustain contributed repositories
 
 Every tracked PR automatically registers its repository. Record filed issues and repositories intentionally adopted for continued stewardship:
@@ -325,6 +367,26 @@ prevents paused historical contributions from being reintroduced by the
 default full contribution registry.
 
 The output always includes per-repository counts for candidates, filtered issues, previously seen issues, detail-fetch failures, and whether the result window was truncated. Use `--include-decisions` when an all-issues audit needs one record per listed issue, including the mechanical filter reason. A detail-fetch failure or truncated result prevents checkpoint advancement so omitted work remains retryable; rerun a truncated repository with a larger `--issue-limit`. Treat candidates as leads, not claims. Reapply repository policy, duplicate, assignment, linked-PR, taste, and scope checks. Prior participation grants context but no maintainer authority. Audit a contributed repository and file a new issue only when evidence is reproducible, non-duplicate, useful, and allowed by the active operating mode; record the resulting issue URL.
+
+## Retire terminal local resources safely
+
+Local cleanup is dry-run first and limited to explicitly registered RepoStew
+linked worktrees whose tracked PR is `MERGED` or `CLOSED`. The deterministic
+helper validates the exact workspace boundary, canonical clone, branch,
+repository remotes, pushed tip, clean status, ignored output, and current
+worktree ownership before it can remove the linked worktree and exact local
+branch. It never deletes a canonical clone, remote branch, fork, active-PR
+resource, credential, unknown ignored data, or uncommitted/unpushed work.
+
+```bash
+python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace
+python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace --apply --json
+```
+
+Read [references/workspace-cleanup.md](references/workspace-cleanup.md) before
+registering or applying cleanup. Preserve `workspace_resources.json` as the
+ownership and cleanup-history ledger, and report estimated and actual freed
+logical bytes.
 
 ## Run the optional autonomous dispatcher
 
