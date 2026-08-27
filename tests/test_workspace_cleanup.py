@@ -212,6 +212,68 @@ class WorkspaceCleanupTests(unittest.TestCase):
             self.assertIn("unpushed_or_unverified_tip", inventory["resources"][0]["blockers"])
             self.assertTrue(fixture.worktree.exists())
 
+    def test_rebind_refreshes_only_a_pushed_rewritten_tip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                (fixture.worktree / "follow-up.txt").write_text("review fix\n", encoding="utf-8")
+                git(fixture.worktree, "add", "follow-up.txt")
+                git(fixture.worktree, "commit", "-m", "address review")
+                updated_head = git(fixture.worktree, "rev-parse", "HEAD").stdout.strip()
+
+                with self.assertRaisesRegex(
+                    workspace_cleanup.CleanupError, "no matching PR head or remote-tracking ref"
+                ):
+                    workspace_cleanup.rebind_resource(self._args(fixture, tracker))
+
+                git(fixture.worktree, "push", "origin", "fix/42")
+                rebound = workspace_cleanup.rebind_resource(self._args(fixture, tracker))
+
+            self.assertTrue(rebound["rebound"])
+            self.assertEqual(rebound["previous_registered_head"], fixture.head)
+            self.assertEqual(rebound["registered_head"], updated_head)
+            state = json.loads(
+                (state_home / "workspace_resources.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(state["resources"][0]["registered_head"], updated_head)
+            self.assertEqual(state["history"][0]["status"], "rebound")
+            self.assertEqual(state["history"][0]["previous_registered_head"], fixture.head)
+
+    def test_rebind_cannot_change_the_registered_pr(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            entries = fixture.tracker(state="OPEN")
+            entries.append(
+                {
+                    **entries[0],
+                    "pr_number": 43,
+                    "pr_url": "https://github.com/owner/repo/pull/43",
+                }
+            )
+            tracker = self._write_tracker(state_home, entries)
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                args = self._args(
+                    fixture,
+                    tracker,
+                    pr_url="https://github.com/owner/repo/pull/43",
+                )
+                with self.assertRaisesRegex(
+                    workspace_cleanup.CleanupError,
+                    "cannot change the recorded worktree, PR, branch, or repository",
+                ):
+                    workspace_cleanup.rebind_resource(args)
+
     def test_broken_worktree_metadata_is_pruned_without_touching_remote_branch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

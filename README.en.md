@@ -364,6 +364,20 @@ python scripts/workspace_cleanup.py register \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
+If the same PR branch is later rebased, amended, or force-pushed, refresh the PR
+tracker, push the replacement tip, and explicitly refresh the ownership record:
+
+```bash
+python scripts/workspace_cleanup.py rebind \
+  --workspace /absolute/path/to/workspace \
+  --worktree /absolute/path/to/workspace/repo-issue \
+  --pr-url https://github.com/owner/repo/pull/123
+```
+
+`rebind` cannot transfer the worktree, branch, repository, or PR. It updates the
+commit only after revalidating the same tracked PR and pushed tip, and retains
+the previous and replacement commits in history.
+
 Cleanup is a dry run unless `--apply` is present:
 
 ```bash

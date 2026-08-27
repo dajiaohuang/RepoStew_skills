@@ -295,6 +295,11 @@ ownership from a directory name. Read
 [references/workspace-cleanup.md](references/workspace-cleanup.md) before
 registration or cleanup.
 
+If later review work rebases, amends, or force-pushes that same PR branch,
+refresh the tracker and use the guarded `workspace_cleanup.py rebind` command.
+Never hand-edit `workspace_resources.json`; rebind must revalidate the exact PR,
+branch, repository remotes, linked worktree, and pushed replacement tip.
+
 ## Maintain pull requests
 
 Treat maintenance as a durable, notification-first inbox. Use GitHub Notifications as the default trigger and refresh only the tracked PRs named by those notifications. A notification is a wake-up signal, not the complete review record: after a hit, read the full PR state, CI, mergeability, review decision, general comments, reviews, and inline comments. External activity remains pending until it is explicitly resolved after action.

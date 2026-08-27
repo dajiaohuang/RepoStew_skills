@@ -359,6 +359,17 @@ python scripts/workspace_cleanup.py register \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
+如果同一个 PR 分支随后经过 rebase、amend 或 force-push，应先刷新 PR tracker 并推送新 tip，再显式更新原所有权记录：
+
+```bash
+python scripts/workspace_cleanup.py rebind \
+  --workspace /absolute/path/to/workspace \
+  --worktree /absolute/path/to/workspace/repo-issue \
+  --pr-url https://github.com/owner/repo/pull/123
+```
+
+`rebind` 不能转移 worktree、分支、仓库或 PR；它只会在重新核验同一 PR 和已推送 tip 后更新 commit，并把旧、新 commit 保留在历史中。
+
 不带 `--apply` 时，清理只执行 dry run：
 
 ```bash

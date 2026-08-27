@@ -275,7 +275,7 @@ def _has_pushed_provenance(entry: dict, canonical: Path, branch: str, head: str)
     return (bool(tracked_head) and tracked_head == head) or _remote_tip_matches(canonical, branch, head)
 
 
-def register_resource(args) -> dict:
+def _validated_resource(args) -> dict:
     workspace = validate_workspace(args.workspace)
     target = validate_target(args.worktree, workspace, require_exists=True)
     info = inspect_worktree(target)
@@ -301,7 +301,7 @@ def register_resource(args) -> dict:
     if not _has_pushed_provenance(tracker, canonical, info["branch"], info["head"]):
         raise CleanupError("worktree tip has no matching PR head or remote-tracking ref")
 
-    resource = {
+    return {
         "worktree": str(target),
         "canonical": str(canonical),
         "common_git_dir": info["common_git_dir"],
@@ -313,6 +313,11 @@ def register_resource(args) -> dict:
         "ownership": "explicit",
         "status": "active",
     }
+
+
+def register_resource(args) -> dict:
+    resource = _validated_resource(args)
+    target = Path(resource["worktree"])
     state = _state()
     existing = next(
         (
@@ -326,12 +331,67 @@ def register_resource(args) -> dict:
         stable = {key: value for key, value in resource.items() if key != "registered_at"}
         prior = {key: existing.get(key) for key in stable}
         if prior != stable:
-            raise CleanupError("worktree is already registered with different provenance")
+            raise CleanupError(
+                "worktree is already registered with different provenance; "
+                "use rebind only after refreshing the same tracked PR"
+            )
         resource = existing
     else:
         state["resources"].append(resource)
         _save_state(state)
     return resource
+
+
+def rebind_resource(args) -> dict:
+    """Refresh an active ownership record after a verified branch rewrite."""
+
+    resource = _validated_resource(args)
+    target = Path(resource["worktree"])
+    state = _state()
+    existing = next(
+        (
+            item
+            for item in state["resources"]
+            if item.get("status") == "active"
+            and _path_key(item.get("worktree", "")) == _path_key(target)
+        ),
+        None,
+    )
+    if existing is None:
+        raise CleanupError("worktree has no active ownership record; register it first")
+
+    mutable = {"registered_head", "registered_at"}
+    expected = {key: value for key, value in resource.items() if key not in mutable}
+    prior = {key: existing.get(key) for key in expected}
+    if prior != expected:
+        raise CleanupError("rebind cannot change the recorded worktree, PR, branch, or repository")
+
+    previous_head = str(existing.get("registered_head") or "")
+    current_head = resource["registered_head"]
+    if previous_head == current_head:
+        return {**existing, "previous_registered_head": previous_head, "rebound": False}
+
+    timestamp = resource["registered_at"]
+    existing.update(
+        {
+            "registered_head": current_head,
+            "registered_at": timestamp,
+        }
+    )
+    state["history"].append(
+        {
+            "timestamp": timestamp,
+            "status": "rebound",
+            "worktree": existing["worktree"],
+            "canonical": existing["canonical"],
+            "branch": existing["branch"],
+            "pr_url": existing["pr_url"],
+            "previous_registered_head": previous_head,
+            "registered_head": current_head,
+        }
+    )
+    _save_state(state)
+    return {**existing, "previous_registered_head": previous_head, "rebound": True}
 
 
 def _root_is_reparse_point(path: Path) -> bool:
@@ -821,6 +881,15 @@ def build_parser() -> argparse.ArgumentParser:
     register.add_argument("--tracker", help="override pr_tracker.json")
     register.add_argument("--json", action="store_true")
 
+    rebind = subparsers.add_parser(
+        "rebind", help="refresh a registered worktree after a verified branch rewrite"
+    )
+    rebind.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    rebind.add_argument("--worktree", required=True, help="exact linked-worktree path")
+    rebind.add_argument("--pr-url", required=True, help="same tracked pull-request URL")
+    rebind.add_argument("--tracker", help="override pr_tracker.json")
+    rebind.add_argument("--json", action="store_true")
+
     cleanup = subparsers.add_parser("cleanup", help="plan cleanup; pass --apply to execute")
     cleanup.add_argument("--workspace", required=True, help="exact maintenance workspace root")
     cleanup.add_argument("--tracker", help="override pr_tracker.json")
@@ -840,6 +909,17 @@ def main() -> int:
                 print(json.dumps(payload, indent=2, ensure_ascii=False))
             else:
                 print(f"Registered {payload['worktree']} for {payload['pr_url']}")
+        elif args.command == "rebind":
+            payload = rebind_resource(args)
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            elif payload["rebound"]:
+                print(
+                    f"Rebound {payload['worktree']} from "
+                    f"{payload['previous_registered_head']} to {payload['registered_head']}"
+                )
+            else:
+                print(f"Ownership already matches {payload['registered_head']}")
         else:
             payload = apply_cleanup(args)
             if args.json:

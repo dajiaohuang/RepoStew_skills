@@ -59,6 +59,26 @@ Registration creates `workspace_resources.json` in `REPOSTEW_HOME`. Back up
 that file with the other RepoStew state files; it is the durable ownership and
 cleanup history ledger.
 
+### Refresh ownership after a branch rewrite
+
+If review maintenance rebases, amends, or force-pushes the same PR branch, first
+refresh that PR in `pr_tracker.json`, push the new tip, and then explicitly
+refresh the existing ownership record:
+
+```bash
+python scripts/workspace_cleanup.py rebind \
+  --workspace /absolute/path/to/maintenance-workspace \
+  --worktree /absolute/path/to/maintenance-workspace/repo-issue \
+  --pr-url https://github.com/owner/repo/pull/123
+```
+
+`rebind` repeats the full workspace, linked-worktree, branch, repository-remote,
+tracked-PR, and pushed-tip checks used by initial registration. It can update
+only `registered_head` and its timestamp for the same active worktree and PR;
+it cannot transfer ownership to another path, branch, repository, or PR. The
+previous and replacement commits are retained as a `rebound` history event.
+An unpushed rewrite is rejected.
+
 ## Inventory before deletion
 
 The cleanup command is a dry run unless `--apply` is explicit:
