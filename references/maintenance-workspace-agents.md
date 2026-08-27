@@ -57,6 +57,12 @@ This workspace maintains third-party repositories with RepoStew and may also con
 - Keep public documentation platform-neutral and label platform-specific examples.
 - Commit and push RepoStew changes separately from target-repository and private-state work.
 
+## Local resource cleanup
+
+- Register a linked worktree against its tracked PR when RepoStew creates it; do not infer task ownership later from a directory or branch name.
+- Preview terminal-resource cleanup before applying it. Remove only worktrees and local branches for tracked `MERGED` or `CLOSED` PRs after exact-path, canonical-clone, clean-state, pushed-tip, remote-provenance, and branch-ownership checks all pass.
+- Preserve canonical clones, remote branches, forks, active-PR resources, uncommitted or unpushed work, credentials, unknown ignored data, and the durable cleanup history.
+
 ## Safety
 
 - Never expose credentials or tokens in files, logs, commits, issues, pull requests, or state backups.

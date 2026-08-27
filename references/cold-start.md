@@ -73,6 +73,7 @@ If a private backup repository exists (`~/.repostew_backup`), sync state periodi
 cp ~/.repostew/contributions.json ~/.repostew_backup/.repostew/
 cp ~/.repostew/notification_inbox.json ~/.repostew_backup/.repostew/
 cp ~/.repostew/pr_tracker.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
+cp ~/.repostew/workspace_resources.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
 
 # Commit and push
 cd ~/.repostew_backup

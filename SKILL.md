@@ -7,7 +7,8 @@ description: >-
   a GitHub issue, scan a repository, find open-source work or active high-star
   repositories in a technical direction, audit a repo, contribute a patch,
   maintain submitted PRs, respond to reviews, or follow repositories already
-  contributed to. Also use when the user invokes RepoStew/repostew.
+  contributed to, including safe local cleanup after terminal contributions.
+  Also use when the user invokes RepoStew/repostew.
   Apply before cloning, editing, commenting, filing issues, or opening PRs
   because this skill defines authority, safety, verification, and contribution
   workflow.
@@ -263,6 +264,12 @@ python scripts/pr_tracker.py add \
   "https://github.com/owner/repo/issues/M"
 ```
 
+When RepoStew created a linked worktree for the contribution, record its exact
+ownership after tracking the PR. This enables later cleanup without inferring
+ownership from a directory name. Read
+[references/workspace-cleanup.md](references/workspace-cleanup.md) before
+registration or cleanup.
+
 ## Maintain pull requests
 
 Treat maintenance as a durable, notification-first inbox. Use GitHub Notifications as the default trigger and refresh only the tracked PRs named by those notifications. A notification is a wake-up signal, not the complete review record: after a hit, read the full PR state, CI, mergeability, review decision, general comments, reviews, and inline comments. External activity remains pending until it is explicitly resolved after action.
@@ -301,6 +308,12 @@ python scripts/pr_tracker.py notifications --repo owner/repo
 
 Never resolve unread or unhandled activity. Read [references/pr-maintenance.md](references/pr-maintenance.md) before responding to reviews, resolving conflicts, diagnosing CI, replying to inline threads, or producing the maintenance table.
 
+For recurring notification, new-issue, missed-comment, CI reconciliation, and
+terminal-resource cleanup examples, read
+[references/scheduled-maintenance.md](references/scheduled-maintenance.md).
+Scheduled maintenance must not expand into a comprehensive repository audit or
+proactive audit-driven issue filing; those require a separate explicit request.
+
 ## Sustain contributed repositories
 
 Every tracked PR automatically registers its repository. Record filed issues and repositories intentionally adopted for continued stewardship:
@@ -325,6 +338,26 @@ prevents paused historical contributions from being reintroduced by the
 default full contribution registry.
 
 The output always includes per-repository counts for candidates, filtered issues, previously seen issues, detail-fetch failures, and whether the result window was truncated. Use `--include-decisions` when an all-issues audit needs one record per listed issue, including the mechanical filter reason. A detail-fetch failure or truncated result prevents checkpoint advancement so omitted work remains retryable; rerun a truncated repository with a larger `--issue-limit`. Treat candidates as leads, not claims. Reapply repository policy, duplicate, assignment, linked-PR, taste, and scope checks. Prior participation grants context but no maintainer authority. Audit a contributed repository and file a new issue only when evidence is reproducible, non-duplicate, useful, and allowed by the active operating mode; record the resulting issue URL.
+
+## Retire terminal local resources safely
+
+Local cleanup is dry-run first and limited to explicitly registered RepoStew
+linked worktrees whose tracked PR is `MERGED` or `CLOSED`. The deterministic
+helper validates the exact workspace boundary, canonical clone, branch,
+repository remotes, pushed tip, clean status, ignored output, and current
+worktree ownership before it can remove the linked worktree and exact local
+branch. It never deletes a canonical clone, remote branch, fork, active-PR
+resource, credential, unknown ignored data, or uncommitted/unpushed work.
+
+```bash
+python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace
+python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace --apply --json
+```
+
+Read [references/workspace-cleanup.md](references/workspace-cleanup.md) before
+registering or applying cleanup. Preserve `workspace_resources.json` as the
+ownership and cleanup-history ledger, and report estimated and actual freed
+logical bytes.
 
 ## Run the optional autonomous dispatcher
 

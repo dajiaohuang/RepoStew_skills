@@ -20,6 +20,7 @@ This repository contains the canonical RepoStew skill for Trae/mcp-code.
 - `scripts/` - Python helper scripts
   - `contribution_tracker.py` - Track contributed repositories and issues
   - `pr_tracker.py` - Track submitted pull requests
+  - `workspace_cleanup.py` - Safely retire verified terminal-PR worktrees
   - `scan_known_repos.py` - Scan tracked repositories for new issues
   - `discover.py` - Discover relevant repositories
   - `loop.py` - Broadened discovery loop
