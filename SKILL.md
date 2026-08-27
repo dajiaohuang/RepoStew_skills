@@ -6,9 +6,10 @@ description: >-
   pull requests, or draft evidence-backed issues. Use when the user asks to fix
   a GitHub issue, scan a repository, find open-source work or active high-star
   repositories in a technical direction, audit a repo, contribute a patch,
-  maintain submitted PRs, respond to reviews, or follow repositories already
-  contributed to, including safe local cleanup after terminal contributions.
-  Also use when the user invokes RepoStew/repostew.
+  maintain submitted PRs, maintain repositories the user owns or administers,
+  respond to reviews, or follow repositories already contributed to, including
+  safe local cleanup after terminal contributions. Also use when the user
+  invokes RepoStew/repostew.
   Apply before cloning, editing, commenting, filing issues, or opening PRs
   because this skill defines authority, safety, verification, and contribution
   workflow.
@@ -46,7 +47,7 @@ Autonomy does not grant maintainer authority and does not override repository ru
 ## Apply non-negotiable rules
 
 1. Read applicable repository instructions before editing. Check `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `CONTRIBUTING.md`, `DEVELOPMENT.md`, `BUILDING.md`, `FAQ.md`, code-of-conduct files, PR templates, issue templates, formatter/linter configuration, and build scripts. Follow the most specific instruction for the files being changed.
-2. Work as an outside contributor unless repository permissions or explicit delegation prove maintainer authority. Do not close issues, apply labels, merge PRs, reject proposals, or speak for maintainers without that authority.
+2. Work as an outside contributor unless current repository permissions, an enabled verified maintained-repository row, or explicit delegation proves authority. Verified owner/admin/maintain authority enables the focused quick path below; it does not itself authorize merging, closing, remote deletion, governance, releases, secrets, or speaking for other maintainers.
 3. Verify every issue is still open, unassigned or available, not already fixed, and not covered by an open or merged PR.
 4. Prefer the smallest complete change. Avoid drive-by refactors, broad formatting, speculative features, and unrelated dependency updates.
 5. Never expose secrets or use paid/privileged services outside the granted scope.
@@ -67,6 +68,7 @@ Choose one workflow:
 - **GitHub discovery:** the user asks for suitable issues across repositories.
 - **Repository audit:** the user asks to inspect a repository and propose or file issues.
 - **PR maintenance:** the user asks to check or respond to existing pull requests.
+- **Owned/maintained repository maintenance:** the user asks to maintain repositories they own or administer.
 - **Contribution follow-up:** the user asks to revisit participated repositories or their new issues.
 
 Authenticate read-only before beginning:
@@ -78,6 +80,29 @@ python --version
 ```
 
 If `gh` is unavailable, use an available GitHub connector or API. Do not silently downgrade mechanical verification.
+
+## Use verified owner or maintainer authority
+
+Keep maintenance intake and authority separate. An active/self row in
+`FOLLOWED_REPOSITORIES.md` selects routine events; it does not prove permission.
+An enabled, recently verified row in `MAINTAINED_REPOSITORIES.md` proves
+owner/admin/maintain capability; it does not automatically add the repository
+to intake.
+
+For the intersection—or an explicitly named maintained repository—reuse the
+verified authority instead of repeating external-contributor eligibility, CLA,
+PR-acceptance, or push-permission questions for every cycle. Still act only on
+a notification or state change, an explicit request, or due low-frequency
+reconciliation. On a hit, read one complete current issue/PR snapshot including
+comments, reviews, inline threads, commits, checks, mergeability, and head state
+before acting. Repository instructions, focused validation, scope, checkpoint,
+and secret-safety checks remain required.
+
+Never infer authority from a contribution, follow row, organization affiliation,
+fork, or local clone. Pause and retain a registry row when permission disappears
+or cannot be reverified, then fall back to external-contributor rules. Read
+[references/maintaining-owned-repositories.md](references/maintaining-owned-repositories.md)
+before creating, verifying, changing, or relying on the authority registry.
 
 ## Route by complexity
 
@@ -273,6 +298,10 @@ registration or cleanup.
 ## Maintain pull requests
 
 Treat maintenance as a durable, notification-first inbox. Use GitHub Notifications as the default trigger and refresh only the tracked PRs named by those notifications. A notification is a wake-up signal, not the complete review record: after a hit, read the full PR state, CI, mergeability, review decision, general comments, reviews, and inline comments. External activity remains pending until it is explicitly resolved after action.
+
+When both workspace registries exist, intersect active/self follow scope with
+enabled maintained authority to select the owner/maintainer quick path. Do not
+refresh a repository merely because verified authority exists.
 
 Import the authenticated contributor's accessible PR history once before the first maintenance pass. Terminal PRs become history; open PRs receive a detailed refresh:
 

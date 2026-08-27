@@ -21,6 +21,14 @@ This workspace maintains third-party repositories with RepoStew and may also con
 - Update the registry when the user follows, pauses, resumes, or stops following a repository.
 - Preserve paused entries as history so broad tracker imports cannot silently reactivate them.
 
+## Maintained repository authority registry
+
+- `[maintained-repositories-file]` is the canonical verified owner/admin/maintain registry. Keep it separate from `[followed-repositories-file]`: follow status selects intake, while maintained status records authority and capability.
+- Add a row only after `gh repo view <owner/repo> --json viewerPermission,owner` verifies that the authenticated viewer owns the personal repository or has organization `ADMIN` or `MAINTAIN` permission. Historical contributions, organization affiliation, forks, and local clones do not prove authority.
+- Use an enabled maintained row to avoid repeating external-contributor eligibility, CLA, PR-acceptance, and branch-push checks for the user's own maintenance work. Repository instructions, current-state verification, focused validation, and checkpoint rules remain required.
+- When permission disappears or cannot be reverified, move the row to `paused`, record why, retain the history, and fall back to external-contributor rules.
+- A maintained row does not authorize automatic merge/close, remote branch or fork deletion, governance, releases, credentials, secrets, or speaking for other maintainers.
+
 ## Maintenance inbox
 
 - Use GitHub Notifications as the primary trigger for PR and comment follow-up. Use any configured mail source only as a secondary notification source.
@@ -33,7 +41,7 @@ This workspace maintains third-party repositories with RepoStew and may also con
 ## Private state backup
 
 - If durable state is backed up to GitHub, use a dedicated private repository and verify its visibility before the first push and periodically afterward.
-- Back up workspace instructions, the active-follow registry, RepoStew cursors and trackers, maintenance-batch records, plans, and retained comment or investigation records.
+- Back up workspace instructions, the active-follow registry, the maintained-authority registry, RepoStew cursors and trackers, maintenance-batch records, plans, and retained comment or investigation records.
 - Generate a deterministic manifest with file paths, sizes, and SHA-256 digests so a restore can be verified.
 - Before every push, review the staged diff and scan for credentials or private keys.
 - Exclude credentials, browser sessions, SSH keys, package-manager authentication, dependency directories, virtual environments, caches, target-repository clones, and temporary build output.
@@ -45,7 +53,7 @@ This workspace maintains third-party repositories with RepoStew and may also con
 1. Read the target repository's local instructions and contribution documents before editing.
 2. Verify that an issue is still open, available, and not already fixed by commits or pull requests.
 3. Prefer the smallest complete, reviewable change with focused validation; avoid unrelated refactors.
-4. Work as an external contributor unless explicit authority proves otherwise.
+4. Work as an external contributor unless current permissions, an enabled verified maintained-repository row, or explicit delegation proves otherwise. Apply the owner/maintainer quick path only within that recorded authority.
 5. Follow the target repository's disclosure policy and never add fabricated authorship or unsolicited generated-by advertising.
 6. In confirm mode, present the implementation plan before editing and obtain confirmation before external submission.
 7. In autonomous mode, proceed without intermediate confirmation only within the user's granted scope and repository policy.

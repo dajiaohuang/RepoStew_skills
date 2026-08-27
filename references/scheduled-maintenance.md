@@ -6,6 +6,11 @@ use. Test each prompt manually before enabling unattended runs, keep the
 machine and host application running when local files are required, and grant
 only the minimum permissions needed for the requested actions.
 
+For authority-aware maintenance, apply
+[maintaining-owned-repositories.md](maintaining-owned-repositories.md); the task
+prompt below delegates owner/admin/maintain semantics to that reference rather
+than redefining them.
+
 Codex desktop supports scheduled tasks in local projects or isolated
 worktrees; advanced schedules use RFC 5545 recurrence rules. A GitHub PR
 activity trigger cannot be combined with a time schedule in one task. See the
@@ -31,7 +36,11 @@ Use $repostew in autonomous mode for one bounded maintenance batch in this
 workspace. Capture the batch-start UTC timestamp before fetching. Use GitHub
 Notifications first and select events later than the last successful source
 checkpoint; never use unread state as a cursor. Scope routine work to the
-workspace's active/self registry.
+workspace's active/self follow registry. Read and validate the separate
+maintained-repository authority registry, then use the verified enabled
+intersection under the owner/maintainer quick path defined by RepoStew. Do not
+infer authority from follow status or contribution history, and do not refresh
+a repository merely because it is maintained.
 
 After notification intake, scan newly created issues in the active/self set
 from each repository partition's last successful issue checkpoint through the
@@ -43,7 +52,11 @@ For every selected new issue, PR comment, review, inline comment, commit, or CI
 event, verify the complete current GitHub state: issue/PR status, full thread,
 reviews, inline comments, commits, mergeability, and checks. Handle valid
 in-scope review feedback and patch-caused CI failures on the existing branch,
-with focused validation and one evidence-backed reply. Triage genuinely new
+with focused validation and one evidence-backed reply. For a verified
+owner/admin/maintain repository, reuse the recorded authority instead of
+repeating external-contributor eligibility, CLA, PR-acceptance, or branch-push
+questions, while preserving every required current-state and engineering check
+from the maintained-repository reference. Triage genuinely new
 issues under the normal RepoStew availability, duplicate, policy, taste, and
 direct-PR gates; use an isolated linked worktree and the smallest tested PR only
 when the standing autonomous scope authorizes it. Do not merge or close.

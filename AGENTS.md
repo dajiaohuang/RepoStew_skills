@@ -15,11 +15,13 @@ This repository contains the canonical RepoStew skill for Trae/mcp-code.
 - `references/` - Additional reference documents
   - `cold-start.md` - First-time setup including private state backup
   - `pr-maintenance.md` - PR follow-up workflow
+  - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
   - `taste-and-permissions.md` - Contribution guidelines
   - `maintenance-workspace-agents.md` - Workspace agent instructions
 - `scripts/` - Python helper scripts
   - `contribution_tracker.py` - Track contributed repositories and issues
   - `pr_tracker.py` - Track submitted pull requests
+  - `maintained_repositories.py` - Validate maintained-repository authority
   - `workspace_cleanup.py` - Safely retire verified terminal-PR worktrees
   - `scan_known_repos.py` - Scan tracked repositories for new issues
   - `discover.py` - Discover relevant repositories
