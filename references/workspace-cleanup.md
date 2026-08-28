@@ -28,8 +28,8 @@ resource while its remote provenance is easy to verify:
 
 ```bash
 python scripts/workspace_cleanup.py register \
-  --workspace /absolute/path/to/maintenance-workspace \
-  --worktree /absolute/path/to/maintenance-workspace/repo-issue \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
@@ -67,8 +67,8 @@ refresh the existing ownership record:
 
 ```bash
 python scripts/workspace_cleanup.py rebind \
-  --workspace /absolute/path/to/maintenance-workspace \
-  --worktree /absolute/path/to/maintenance-workspace/repo-issue \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
@@ -85,10 +85,10 @@ The cleanup command is a dry run unless `--apply` is explicit:
 
 ```bash
 python scripts/workspace_cleanup.py cleanup \
-  --workspace /absolute/path/to/maintenance-workspace
+  --workspace "$REPOSTEW_REPOS_HOME"
 
 python scripts/workspace_cleanup.py cleanup \
-  --workspace /absolute/path/to/maintenance-workspace \
+  --workspace "$REPOSTEW_REPOS_HOME" \
   --json
 ```
 
@@ -116,7 +116,7 @@ After reviewing the dry run, repeat the same command with `--apply`:
 
 ```bash
 python scripts/workspace_cleanup.py cleanup \
-  --workspace /absolute/path/to/maintenance-workspace \
+  --workspace "$REPOSTEW_REPOS_HOME" \
   --apply --json
 ```
 

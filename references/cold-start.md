@@ -1,58 +1,104 @@
 # Cold Start Initialization
 
-When RepoStew is first invoked for a user (no existing state in `~/.repostew` or fresh workspace):
+Cold start is incomplete until the user has selected and RepoStew has validated
+three storage roots. Do not silently fall back to a home-directory path, the
+current directory, a platform example, or a previous machine's layout.
 
-## 1. Check authentication
+## 1. Select the storage roots
 
-```bash
+Ask the user to choose three distinct absolute paths:
+
+1. **Skill home** (`REPOSTEW_SKILL_HOME`): the canonical RepoStew skill
+   checkout. It must be directly discoverable by the selected agent, or have a
+   user-approved platform discovery link that points to it.
+2. **State home** (`REPOSTEW_HOME`): all mutable trackers, notification
+   checkpoints, registries, batch records, plans, and resource ledgers.
+3. **Managed-repository home** (`REPOSTEW_REPOS_HOME`): canonical target clones,
+   linked worktrees, and other persistent repository workspaces managed by
+   RepoStew.
+
+Explain the role of each path, show any existing candidate directories, and
+wait for the user's selection before creating or migrating anything. Platform
+discovery paths are compatibility constraints and suggestions, not RepoStew
+defaults. The selected roots may share a parent, but none may be the same path.
+
+After confirmation, validate that all paths are absolute and writable. Record
+the selection deterministically:
+
+```text
+python <selected-skill-home>/scripts/configure_paths.py \
+  --skill-home <selected-skill-home> \
+  --state-home <selected-state-home> \
+  --repos-home <selected-managed-repository-home>
+```
+
+Persist the three environment variables using the host's supported settings
+only with the user's approval. Make sure scheduled tasks receive the same
+values. `paths.json` in the selected state home is the audit and restore copy;
+it does not replace environment configuration needed to locate that directory.
+
+If the current checkout is not the selected skill home, prepare a verified
+clone or move and update the agent's discovery link. Do not delete the loaded
+checkout during the same run. Verify activation from the selected location
+after the agent reloads, then archive or remove the old copy only with explicit
+approval.
+
+## 2. Reconcile existing installations and state
+
+Before writing new state, inventory known RepoStew skill checkouts, mutable
+state directories, and managed-repository roots. If more than one state set
+exists:
+
+- compare file identities and record counts;
+- merge domain records by stable identity instead of choosing the newest file;
+- choose the earlier notification checkpoint when cursors disagree so work is
+  replayed rather than skipped;
+- preserve both originals with paths, sizes, and SHA-256 hashes before writing;
+- verify the merged JSON and retain a reversible migration archive;
+- remove or archive obsolete roots only after the selected state is verified.
+
+Use `scripts/merge_state.py` for its supported JSON files. It is dry-run by
+default; `--apply` requires an empty backup directory. Stop on an unknown
+conflicting file rather than guessing.
+
+## 3. Check authentication and tools
+
+```text
 gh auth status
 git --version
 python --version
 ```
 
-If `gh` is unavailable, install it first:
-- macOS: download from https://github.com/cli/cli/releases
-- Linux: use package manager or download release tarball
-- Authenticate with `gh auth login`
+If GitHub CLI is unavailable, direct the user to
+<https://github.com/cli/cli/releases> or their package manager, then authenticate
+with `gh auth login`.
 
-## 2. Offer private state backup repository
+## 4. Offer a private state-backup repository
 
-RepoStew maintains mutable state (contribution tracker, PR tracker, notification inbox, checkpoints). Offer to create a private GitHub repository for durable backup:
+RepoStew maintains contribution history, PR tracking, notifications, cursors,
+registries, and workspace ownership state. Ask whether the user wants a private
+GitHub repository for durable, cross-device backup. Explain that credentials,
+browser sessions, keys, caches, dependencies, target clones, and temporary
+build output are always excluded.
 
-**Ask the user:**
-> RepoStew需要维护持久状态（贡献追踪、PR追踪、通知收件箱等）。是否要创建一个私有GitHub仓库来备份这些状态？
-> - 这样可以跨设备同步，在新环境中恢复追踪历史
-> - 状态包括：你追踪的仓库、已处理的PR/Issue、通知记录等
-> - 仅你可见，不会暴露任何token或凭证
+If the user agrees:
 
-**If user agrees:**
-1. Create a private repository:
-   ```bash
-   gh repo create repostew-state --private --clone=false
-   ```
-2. Clone it locally:
-   ```bash
-   gh repo clone <your-handle>/repostew-state ~/.repostew_backup
-   ```
-3. Initialize state structure:
-   ```bash
-   mkdir -p ~/.repostew_backup/.repostew
-   mkdir -p ~/.repostew_backup/.repostew-comments
-   cp ~/.repostew/*.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
-   ```
-4. Commit and push:
-   ```bash
-   cd ~/.repostew_backup
-   git add .repostew/ .repostew-comments/
-   git commit -m "Initial RepoStew state backup"
-   git push origin main
-   ```
+1. Ask for or confirm the private GitHub repository name and the local backup
+   checkout path; neither has a RepoStew default.
+2. Create or validate the repository as private before the first push and
+   periodically afterward.
+3. Keep synchronization one-way from the selected state and workspace into the
+   backup checkout.
+4. Generate a deterministic path/size/SHA-256 manifest, review the staged diff,
+   scan for credentials and private keys, then commit and push.
 
-**If user declines:** Continue without durable backup; state remains local only.
+If the user declines, continue with local state only. Do not treat the backup
+checkout as a followed or managed target repository.
 
-## 3. Set up FOLLOWED_REPOSITORIES.md
+## 5. Set up workspace registries
 
-If the workspace contains a `FOLLOWED_REPOSITORIES.md`, keep it updated. If not, create a template:
+Create `FOLLOWED_REPOSITORIES.md` in the selected managed-repository workspace
+when absent, preserving paused entries as history:
 
 ```markdown
 # Followed Repositories
@@ -64,52 +110,28 @@ If the workspace contains a `FOLLOWED_REPOSITORIES.md`, keep it updated. If not,
 - owner/paused-repo
 ```
 
-## 4. Set up MAINTAINED_REPOSITORIES.md
-
-Keep authority separate from follow intake. Create the registry even when it is
-initially empty:
+Keep authority separate in `MAINTAINED_REPOSITORIES.md`, even when initially
+empty:
 
 ```markdown
 # Maintained Repositories
-
-This registry records verified owner/admin/maintain authority. Follow status
-and contribution history do not establish permission.
 
 | Repository | Role | Maintenance status | Verified at | Source | Notes |
 |---|---|---|---|---|---|
 ```
 
 Consider only active/self followed repositories and repositories the user
-explicitly names. Verify each candidate rather than enumerating every repository
-accessible to the account:
-
-```bash
-gh api user --jq .login
-gh repo view owner/repo --json nameWithOwner,viewerPermission,owner
-python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
-```
-
-Use `owner` only when the owner login matches the viewer; use `admin` or
-`maintain` only for organization `ADMIN` or `MAINTAIN` permission. Preserve a
-lost or uncertain authority row as `paused` history and fall back to ordinary
-external-contributor rules. Read
+explicitly names. Verify each authority candidate with `gh repo view` and
+validate the registry with `scripts/maintained_repositories.py`. Historical
+contributions, organization membership, forks, and local clones do not prove
+authority. Read
 [maintaining-owned-repositories.md](maintaining-owned-repositories.md) before
 relying on the registry.
 
-## Periodic State Sync
+## 6. Periodic state synchronization
 
-If a private backup repository exists (`~/.repostew_backup`), sync state periodically or after significant changes:
-
-```bash
-# Sync state files to backup
-cp ~/.repostew/contributions.json ~/.repostew_backup/.repostew/
-cp ~/.repostew/notification_inbox.json ~/.repostew_backup/.repostew/
-cp ~/.repostew/pr_tracker.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
-cp ~/.repostew/workspace_resources.json ~/.repostew_backup/.repostew/ 2>/dev/null || true
-
-# Commit and push
-cd ~/.repostew_backup
-git add .repostew/*.json
-git commit -m "Sync: $(date '+%Y-%m-%d %H:%M:%S')"
-git push origin main
-```
+When a private backup is configured, synchronize from the selected paths rather
+than reconstructing paths from the user profile or current directory. Back up
+workspace instructions, registries, all state JSON, maintenance batches,
+plans, and retained investigation/comment records. Verify the manifest and
+visibility before each push, and retain Git history as the recovery log.

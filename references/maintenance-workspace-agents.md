@@ -7,10 +7,18 @@ Use this as a starting point for a workspace that maintains several third-party 
 
 This workspace maintains third-party repositories with RepoStew and may also contain a canonical RepoStew skill checkout.
 
+## Selected storage roots
+
+- `REPOSTEW_SKILL_HOME` is `[selected-absolute-skill-home]`.
+- `REPOSTEW_HOME` is `[selected-absolute-state-home]`.
+- `REPOSTEW_REPOS_HOME` is `[selected-absolute-managed-repository-home]`.
+- These roots were selected during cold start. Do not replace them with a user-profile, current-directory, or example-path default.
+- Stop stateful work if an environment value is missing or disagrees with `paths.json` in the selected state home.
+
 ## Workspace layout
 
-- Keep the canonical RepoStew skill checkout in `[skill-directory]/`.
-- Clone each target repository into its own sibling directory.
+- Keep the canonical RepoStew skill checkout at `[selected-absolute-skill-home]`.
+- Clone each target repository under `[selected-absolute-managed-repository-home]`.
 - Keep target-repository changes, RepoStew self-maintenance, and state-backup commits separate.
 
 ## Followed repository registry
@@ -32,11 +40,13 @@ This workspace maintains third-party repositories with RepoStew and may also con
 ## Maintenance inbox
 
 - Use GitHub Notifications as the primary trigger for PR and comment follow-up. Use any configured mail source only as a secondary notification source.
+- Verify repository metadata before scheduled intake. Exclude archived repositories and forks, but do not exclude any organization by name; eligible ByteDance repositories remain in scope.
 - Maintain a separate successful timestamp checkpoint for each source. Never use read/unread state as a cursor because the user may read notifications independently.
 - Capture the batch-start timestamp before fetching. Select events later than the source's previous successful checkpoint.
 - When a batch is partitioned by organization, repository group, or another scope, process and record each partition independently. Advance the source's shared checkpoint only after every partition is complete or durably retained; one partition must not hide events from another.
 - After a notification hit, verify the complete current GitHub state, including issue or PR status, comments, reviews, commits, and checks, before acting.
 - Keep low-frequency open-PR reconciliation only as a missed-event safety net.
+- A bounded run may delegate independent repository partitions to subagents or child tasks when supported. The parent owns the shared checkpoint and advances it only after every child result is complete or durably retained.
 
 ## Private state backup
 

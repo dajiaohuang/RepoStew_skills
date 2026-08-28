@@ -56,95 +56,40 @@ gh auth status
 
 如果系统用 `python3` 表示 Python 3，请将示例中的 `python` 替换为 `python3`。
 
-## 安装
+## 安装与首次路径选择
 
-始终克隆到名为 `repostew` 的目录；目录名必须与 skill 的 `name` 一致。
-
-### 推荐：为单个仓库安装
-
-这种方式让 RepoStew 与目标工作区一起版本化，并只在该工作区生效。
+安装前先让用户选择 skill 的绝对存储路径，并确认该路径符合所用智能体在上表列出的发现规则；表中的路径只是兼容位置，不是 RepoStew 的默认值。最终目录名应为 `repostew`，与 skill 的 `name` 一致。
 
 macOS/Linux：
 
 ```bash
-mkdir -p .agents/skills
-git clone https://github.com/dajiaohuang/RepoStew_skills.git .agents/skills/repostew
+read -r -p "RepoStew skill 的绝对安装路径: " REPOSTEW_SKILL_HOME
+git clone https://github.com/dajiaohuang/RepoStew_skills.git "$REPOSTEW_SKILL_HOME"
 ```
 
 Windows PowerShell：
 
 ```powershell
-New-Item -ItemType Directory -Force -Path ".agents\skills" | Out-Null
-git clone https://github.com/dajiaohuang/RepoStew_skills.git ".agents\skills\repostew"
+$env:REPOSTEW_SKILL_HOME = Read-Host "RepoStew skill 的绝对安装路径"
+git clone https://github.com/dajiaohuang/RepoStew_skills.git $env:REPOSTEW_SKILL_HOME
 ```
 
-这个项目级安装可被 Codex、Cursor、Gemini CLI 和 GitHub Copilot 发现。Claude Code 请将上述路径中的 `.agents/skills/repostew` 换成 `.claude/skills/repostew`。
+第一次调用 RepoStew 时，它还会要求用户选择独立的状态目录和受管理仓库目录；三者都没有内置默认值。确认后记录配置：
 
-macOS/Linux：
-
-```bash
-mkdir -p .claude/skills
-git clone https://github.com/dajiaohuang/RepoStew_skills.git .claude/skills/repostew
+```text
+python <selected-skill-home>/scripts/configure_paths.py \
+  --skill-home <selected-skill-home> \
+  --state-home <selected-state-home> \
+  --repos-home <selected-managed-repository-home>
 ```
 
-Windows PowerShell：
+如果 skill 的实际存储路径不在智能体支持的发现位置，可在获得用户同意后，从平台发现目录创建指向所选路径的链接。不要为了套用示例而另建第二份 checkout。更新时始终使用已选路径：
 
-```powershell
-New-Item -ItemType Directory -Force -Path ".claude\skills" | Out-Null
-git clone https://github.com/dajiaohuang/RepoStew_skills.git ".claude\skills\repostew"
+```text
+git -C <selected-skill-home> pull --ff-only
 ```
 
-### 为当前用户安装
-
-Codex、Cursor、Gemini CLI 和 GitHub Copilot 可共用用户级目录。
-
-macOS/Linux：
-
-```bash
-mkdir -p ~/.agents/skills
-git clone https://github.com/dajiaohuang/RepoStew_skills.git ~/.agents/skills/repostew
-```
-
-Windows PowerShell：
-
-```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills" | Out-Null
-git clone https://github.com/dajiaohuang/RepoStew_skills.git "$env:USERPROFILE\.agents\skills\repostew"
-```
-
-Claude Code 请把命令中的 `.agents` 替换为 `.claude`。
-
-### 使用 Gemini CLI 安装器
-
-Gemini CLI 也可以直接安装仓库：
-
-```bash
-gemini skills install https://github.com/dajiaohuang/RepoStew_skills.git
-```
-
-添加 `--scope workspace` 可安装到当前工作区。启用前应先审查任何第三方 skill。
-
-### 更新现有安装
-
-项目级安装：
-
-```bash
-git -C .agents/skills/repostew pull --ff-only
-```
-
-macOS/Linux 用户级安装：
-
-```bash
-git -C ~/.agents/skills/repostew pull --ff-only
-```
-
-Windows PowerShell 用户级安装：
-
-```powershell
-git -C "$env:USERPROFILE\.agents\skills\repostew" pull --ff-only
-```
-
-如果使用平台专属目录，请替换为实际安装路径。更新后若智能体未检测到变化，请重新加载或重启其 skill 列表。
+完整的首次配置、旧状态合并和私有备份流程见 [`references/cold-start.md`](references/cold-start.md)。更新后若智能体未检测到变化，请重新加载或重启其 skill 列表。
 
 ## 使用 RepoStew
 
@@ -359,8 +304,8 @@ python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
 
 ```bash
 python scripts/workspace_cleanup.py register \
-  --workspace /absolute/path/to/workspace \
-  --worktree /absolute/path/to/workspace/repo-issue \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
@@ -368,8 +313,8 @@ python scripts/workspace_cleanup.py register \
 
 ```bash
 python scripts/workspace_cleanup.py rebind \
-  --workspace /absolute/path/to/workspace \
-  --worktree /absolute/path/to/workspace/repo-issue \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
@@ -378,8 +323,8 @@ python scripts/workspace_cleanup.py rebind \
 不带 `--apply` 时，清理只执行 dry run：
 
 ```bash
-python scripts/workspace_cleanup.py cleanup --workspace /absolute/path/to/workspace
-python scripts/workspace_cleanup.py cleanup --workspace /absolute/path/to/workspace --apply --json
+python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME"
+python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --apply --json
 ```
 
 只有显式登记、且跟踪 PR 为 `MERGED` 或 `CLOSED` 的 linked worktree 才可能符合条件。RepoStew 会在删除前再次核验精确路径、canonical clone 边界、分支、GitHub remote 身份、已推送 tip、tracked/untracked 状态、ignored 输出和 worktree 所有权。
@@ -392,34 +337,11 @@ Canonical clone、fork、远端分支、活动 PR、凭据、未知 ignored 数�
 
 全面仓库审计和审计驱动的主动 issue 提交被明确排除在定时任务之外，必须由用户单独发起。
 
-### 可变状态
+### 可变状态和仓库位置
 
-RepoStew 将个人可变状态保存在 skill 安装目录之外：
+RepoStew 只使用冷启动时由用户明确选择的三个绝对根路径：`REPOSTEW_SKILL_HOME`、`REPOSTEW_HOME` 和 `REPOSTEW_REPOS_HOME`。状态文件保存在 `<selected-state-home>` 下，包括 `seen_issues.json`、`pr_tracker.json`、`contributions.json`、通知文件和 `workspace_resources.json`。受管理的 canonical clone 与 linked worktree 放在 `<selected-managed-repository-home>` 下。
 
-```text
-~/.repostew/seen_issues.json
-~/.repostew/pr_tracker.json
-~/.repostew/contributions.json
-~/.repostew/notification_checkpoints.json
-~/.repostew/notification_inbox.json
-~/.repostew/workspace_resources.json
-```
-
-需要时可覆盖目录：
-
-macOS/Linux：
-
-```bash
-export REPOSTEW_HOME=/path/to/repostew-state
-```
-
-Windows PowerShell：
-
-```powershell
-$env:REPOSTEW_HOME = "D:\path\to\repostew-state"
-```
-
-不要把这些个人跟踪文件提交到 skill 仓库。
+脚本不会回退到用户主目录或当前目录。若缺少配置，RepoStew 会停止并要求完成冷启动选择。不要把个人跟踪文件提交到 skill 仓库。
 
 ### 可选的非交互调度器
 
@@ -427,7 +349,7 @@ $env:REPOSTEW_HOME = "D:\path\to\repostew-state"
 
 ```bash
 python scripts/auto_fix.py \
-  --workspace /path/to/workspace \
+  --workspace "$REPOSTEW_REPOS_HOME" \
   --max 3 \
   --agent-command <client> <args...>
 ```

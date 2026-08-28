@@ -21,8 +21,8 @@ activity trigger cannot be combined with a time schedule in one task. See the
 - **Title:** `RepoStew maintenance inbox`
 - **Cadence:** every two hours
 - **RRULE:** `RRULE:FREQ=HOURLY;INTERVAL=2`
-- **Project mode:** local project, using the persistent maintenance workspace
-  (for example `D:\repo\repostew`) so checkpoints and trackers survive runs
+- **Project mode:** local project, using the user-selected persistent
+  `REPOSTEW_REPOS_HOME` workspace so checkpoints and trackers survive runs
 - **Permissions:** minimum GitHub read/write and local-workspace access needed
   for already-authorized contribution maintenance; no merge, close, fork
   deletion, governance, credential, or broad repository-audit authority
@@ -33,10 +33,15 @@ Prompt:
 
 ```text
 Use $repostew in autonomous mode for one bounded maintenance batch in this
-workspace. Capture the batch-start UTC timestamp before fetching. Use GitHub
+workspace. Before intake, verify that REPOSTEW_SKILL_HOME, REPOSTEW_HOME, and
+REPOSTEW_REPOS_HOME match the cold-start path record; stop without writing if
+they are absent or disagree. Capture the batch-start UTC timestamp before fetching. Use GitHub
 Notifications first and select events later than the last successful source
 checkpoint; never use unread state as a cursor. Scope routine work to the
-workspace's active/self follow registry. Read and validate the separate
+workspace's active/self follow registry. Verify repository metadata before
+intake and exclude archived repositories and forks; do not exclude an
+organization by name, so eligible ByteDance repositories remain in scope. Read
+and validate the separate
 maintained-repository authority registry, then use the verified enabled
 intersection under the owner/maintainer quick path defined by RepoStew. Do not
 infer authority from follow status or contribution history, and do not refresh
@@ -68,6 +73,11 @@ source checkpoint to the batch-start timestamp only after every partition and
 tail event is handled or durably retained. Persist the batch record and state
 backup according to workspace policy.
 
+When the host supports subagents or child tasks, independent repository
+partitions may run in parallel. The parent task remains responsible for result
+collection, durable retention, and the shared checkpoint; a failed, missing,
+or unfinished child must prevent that checkpoint from advancing.
+
 Do not perform a comprehensive repository audit, proactively hunt for defects,
 or create audit-driven issues. Those actions require a separate explicit human
 request and are outside every scheduled maintenance run.
@@ -86,8 +96,9 @@ request and are outside every scheduled maintenance run.
 Prompt:
 
 ```text
-Use $repostew to run the safe local workspace-cleanup workflow. Start with the
-deterministic inventory/dry run and review every reported safety check. Apply
+Use $repostew to run the safe local workspace-cleanup workflow in the selected
+REPOSTEW_REPOS_HOME. Verify all three cold-start path variables before writing.
+Start with the deterministic inventory/dry run and review every reported safety check. Apply
 cleanup only to explicitly registered RepoStew-owned linked worktrees whose PR
 tracker state is MERGED or CLOSED and whose exact absolute path, canonical-clone
 boundary, clean tracked/untracked state, pushed tip, remote provenance, branch

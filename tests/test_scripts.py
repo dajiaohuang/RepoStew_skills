@@ -25,6 +25,16 @@ import scan_known_repos
 
 
 class StateTests(unittest.TestCase):
+    def test_state_home_requires_cold_start_configuration(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "cold-start"):
+                repostew_state.state_dir()
+
+    def test_state_home_must_be_absolute(self):
+        with mock.patch.dict(os.environ, {"REPOSTEW_HOME": "relative"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "absolute"):
+                repostew_state.state_dir()
+
     def test_json_round_trip_uses_configured_state_home(self):
         with tempfile.TemporaryDirectory() as directory:
             with mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}):

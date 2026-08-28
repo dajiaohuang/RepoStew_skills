@@ -59,6 +59,12 @@ Read [references/taste-and-permissions.md](references/taste-and-permissions.md) 
 
 Read [references/cold-start.md](references/cold-start.md) for first-time setup including private state backup repository creation.
 
+Before running any stateful helper, require explicit, validated selections for
+`REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. If any is
+missing or conflicts with the recorded `paths.json`, stop normal work and
+complete the cold-start path selection. Never infer these roots from the user
+profile, current directory, an example path, or an earlier installation.
+
 ## Intake the request
 
 Choose one workflow:
@@ -230,7 +236,10 @@ python scripts/loop.py --dry-rounds 3 --max-candidates 5
 python scripts/loop.py --focus agent --focus harness --dry-rounds 3
 ```
 
-Mutable state is stored under `~/.repostew` by default. Set `REPOSTEW_HOME` to use another directory.
+Mutable state is stored only under the user-selected absolute
+`REPOSTEW_HOME`. RepoStew has no implicit mutable-state default. The canonical
+skill checkout and managed repositories likewise use the selected
+`REPOSTEW_SKILL_HOME` and `REPOSTEW_REPOS_HOME` roots.
 
 ## Audit repositories and contribute findings
 

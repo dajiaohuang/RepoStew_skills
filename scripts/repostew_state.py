@@ -12,12 +12,21 @@ from typing import Any
 def state_dir() -> Path:
     """Return the writable RepoStew state directory.
 
-    REPOSTEW_HOME makes the location explicit. The default keeps mutable state
-    outside an installed skill, which may be read-only or managed by Git.
+    REPOSTEW_HOME is selected during cold start. There is deliberately no
+    implicit home-directory fallback because it can split one installation's
+    mutable state across multiple locations.
     """
 
     configured = os.environ.get("REPOSTEW_HOME")
-    return Path(configured).expanduser() if configured else Path.home() / ".repostew"
+    if not configured:
+        raise RuntimeError(
+            "REPOSTEW_HOME is not configured. Run the RepoStew cold-start path "
+            "selection before using mutable state."
+        )
+    path = Path(configured).expanduser()
+    if not path.is_absolute():
+        raise RuntimeError("REPOSTEW_HOME must be an absolute path")
+    return path
 
 
 def state_file(name: str) -> Path:

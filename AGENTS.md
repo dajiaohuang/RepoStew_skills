@@ -31,9 +31,12 @@ This repository contains the canonical RepoStew skill for Trae/mcp-code.
 ## Cold Start
 
 On first invocation, agents should:
-1. Check gh CLI authentication
-2. Offer to create a private backup repository for persistent state
-3. Set up FOLLOWED_REPOSITORIES.md if not present
+1. Ask the user to choose distinct absolute skill, state, and managed-repository roots
+2. Validate and record those roots without applying an implicit default
+3. Reconcile any existing installations or state with a reversible merge
+4. Check gh CLI authentication
+5. Offer to create a private backup repository for persistent state
+6. Set up FOLLOWED_REPOSITORIES.md and MAINTAINED_REPOSITORIES.md if absent
 
 See `references/cold-start.md` for details.
 

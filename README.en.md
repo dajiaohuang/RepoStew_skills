@@ -59,95 +59,40 @@ gh auth status
 
 Use `python3` instead of `python` on systems where that is the Python 3 command.
 
-## Install
+## Install and select paths
 
-Always clone into a directory named `repostew`; the directory name must match the skill's `name`.
-
-### Recommended: install for one repository
-
-This keeps RepoStew versioned with, and scoped to, the workspace where it will be used.
+Before installation, ask the user to choose an absolute skill-storage path and confirm that it satisfies the selected agent's discovery rules in the table above. Those paths are compatibility locations, not RepoStew defaults. The final directory should be named `repostew` to match the skill's `name`.
 
 macOS/Linux:
 
 ```bash
-mkdir -p .agents/skills
-git clone https://github.com/dajiaohuang/RepoStew_skills.git .agents/skills/repostew
+read -r -p "Absolute RepoStew skill path: " REPOSTEW_SKILL_HOME
+git clone https://github.com/dajiaohuang/RepoStew_skills.git "$REPOSTEW_SKILL_HOME"
 ```
 
 Windows PowerShell:
 
 ```powershell
-New-Item -ItemType Directory -Force -Path ".agents\skills" | Out-Null
-git clone https://github.com/dajiaohuang/RepoStew_skills.git ".agents\skills\repostew"
+$env:REPOSTEW_SKILL_HOME = Read-Host "Absolute RepoStew skill path"
+git clone https://github.com/dajiaohuang/RepoStew_skills.git $env:REPOSTEW_SKILL_HOME
 ```
 
-This project-local installation is discovered by Codex, Cursor, Gemini CLI, and GitHub Copilot. For Claude Code, use the same commands with `.claude/skills/repostew` instead:
+On first invocation, RepoStew also asks the user to select separate state and managed-repository roots. None of the three paths has a built-in default. Record the confirmed selection with:
 
-macOS/Linux:
-
-```bash
-mkdir -p .claude/skills
-git clone https://github.com/dajiaohuang/RepoStew_skills.git .claude/skills/repostew
+```text
+python <selected-skill-home>/scripts/configure_paths.py \
+  --skill-home <selected-skill-home> \
+  --state-home <selected-state-home> \
+  --repos-home <selected-managed-repository-home>
 ```
 
-Windows PowerShell:
+If the selected skill storage is outside a supported discovery location, create a user-approved link from the platform discovery directory instead of making a second checkout. Always update using the selected path:
 
-```powershell
-New-Item -ItemType Directory -Force -Path ".claude\skills" | Out-Null
-git clone https://github.com/dajiaohuang/RepoStew_skills.git ".claude\skills\repostew"
+```text
+git -C <selected-skill-home> pull --ff-only
 ```
 
-### Install for the current user
-
-For Codex, Cursor, Gemini CLI, and GitHub Copilot, install once in the shared personal location.
-
-macOS/Linux:
-
-```bash
-mkdir -p ~/.agents/skills
-git clone https://github.com/dajiaohuang/RepoStew_skills.git ~/.agents/skills/repostew
-```
-
-Windows PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills" | Out-Null
-git clone https://github.com/dajiaohuang/RepoStew_skills.git "$env:USERPROFILE\.agents\skills\repostew"
-```
-
-For Claude Code, replace `.agents` with `.claude` in those commands.
-
-### Gemini CLI installer
-
-Gemini CLI can also install the repository directly:
-
-```bash
-gemini skills install https://github.com/dajiaohuang/RepoStew_skills.git
-```
-
-Use `--scope workspace` for a workspace-scoped Gemini installation. Review any third-party skill before approving activation.
-
-### Update an installation
-
-Project installation:
-
-```bash
-git -C .agents/skills/repostew pull --ff-only
-```
-
-Personal installation on macOS/Linux:
-
-```bash
-git -C ~/.agents/skills/repostew pull --ff-only
-```
-
-Personal installation on Windows PowerShell:
-
-```powershell
-git -C "$env:USERPROFILE\.agents\skills\repostew" pull --ff-only
-```
-
-Use the actual installed path when using a platform-specific directory. Restart or reload the agent's skill list if it does not detect the update automatically.
+See [`references/cold-start.md`](references/cold-start.md) for first configuration, old-state reconciliation, and private backup. Restart or reload the agent's skill list if it does not detect an update automatically.
 
 ## Use RepoStew
 
@@ -400,8 +345,8 @@ names:
 
 ```bash
 python scripts/workspace_cleanup.py register \
-  --workspace /absolute/path/to/workspace \
-  --worktree /absolute/path/to/workspace/repo-issue \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
@@ -410,8 +355,8 @@ tracker, push the replacement tip, and explicitly refresh the ownership record:
 
 ```bash
 python scripts/workspace_cleanup.py rebind \
-  --workspace /absolute/path/to/workspace \
-  --worktree /absolute/path/to/workspace/repo-issue \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
@@ -422,8 +367,8 @@ the previous and replacement commits in history.
 Cleanup is a dry run unless `--apply` is present:
 
 ```bash
-python scripts/workspace_cleanup.py cleanup --workspace /absolute/path/to/workspace
-python scripts/workspace_cleanup.py cleanup --workspace /absolute/path/to/workspace --apply --json
+python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME"
+python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --apply --json
 ```
 
 Only explicitly registered linked worktrees with a tracked `MERGED` or `CLOSED`
@@ -445,34 +390,11 @@ checkpoints, minimum permissions, and bounded standalone runs. Comprehensive
 repository audits and proactive audit-driven issue filing are explicitly
 excluded from scheduled work and require a separate human request.
 
-### Mutable state
+### Mutable state and repository locations
 
-RepoStew stores mutable personal state outside the installed skill:
+RepoStew uses only the three absolute roots explicitly selected during cold start: `REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. State files under `<selected-state-home>` include `seen_issues.json`, `pr_tracker.json`, `contributions.json`, notification files, and `workspace_resources.json`. Managed canonical clones and linked worktrees live under `<selected-managed-repository-home>`.
 
-```text
-~/.repostew/seen_issues.json
-~/.repostew/pr_tracker.json
-~/.repostew/contributions.json
-~/.repostew/notification_checkpoints.json
-~/.repostew/notification_inbox.json
-~/.repostew/workspace_resources.json
-```
-
-Override the location when needed:
-
-macOS/Linux:
-
-```bash
-export REPOSTEW_HOME=/path/to/repostew-state
-```
-
-Windows PowerShell:
-
-```powershell
-$env:REPOSTEW_HOME = "D:\path\to\repostew-state"
-```
-
-Do not commit these personal tracking files to the skill repository.
+Scripts do not fall back to the user profile or current directory. When configuration is missing, RepoStew stops and asks for cold-start selection. Do not commit personal tracking files to the skill repository.
 
 ### Optional non-interactive dispatcher
 
@@ -480,7 +402,7 @@ Do not commit these personal tracking files to the skill repository.
 
 ```bash
 python scripts/auto_fix.py \
-  --workspace /path/to/workspace \
+  --workspace "$REPOSTEW_REPOS_HOME" \
   --max 3 \
   --agent-command <client> <args...>
 ```
