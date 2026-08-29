@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-CN" data-language="zh" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f7fb" />
+    <meta
+      name="description"
+      content="RepoStew 是一个负责任地发现、验证、修复并持续维护 GitHub 仓库的可移植 Agent Skill。"
+    />
+    <meta property="og:title" content="RepoStew — 把贡献做成维护闭环" />
+    <meta
+      property="og:description"
+      content="从 issue 发现到 PR 维护：可验证、可追踪、有权限边界的仓库维护工作流。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dajiaohuang.github.io/RepoStew_skills/" />
+    <title>RepoStew — 把贡献做成维护闭环</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="site.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      document.documentElement.classList.add("js");
+      try {
+        const language = localStorage.getItem("repostew-language");
+        const theme = localStorage.getItem("repostew-theme");
+        if (language === "en") {
+          document.documentElement.dataset.language = "en";
+          document.documentElement.lang = "en";
+        }
+        if (theme === "dark") document.documentElement.dataset.theme = "dark";
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main" data-i18n="skip">跳到主要内容</a>
+
+    <header class="site-header" data-header>
+      <a class="brand" href="#top" aria-label="RepoStew 首页">
+        <svg viewBox="0 0 42 42" aria-hidden="true">
+          <path d="M8 7h22l5 7v21H8z" />
+          <path d="M30 7v8h5M13 21h16M13 27h11" />
+          <circle cx="12" cy="10" r="5" />
+        </svg>
+        <span>RepoStew</span>
+      </a>
+
+      <nav class="site-nav" aria-label="主要导航" data-i18n-aria="navLabel">
+        <a href="#loop" data-i18n="navLoop">闭环</a>
+        <a href="#capabilities" data-i18n="navCapabilities">能力</a>
+        <a href="#modes" data-i18n="navModes">模式</a>
+        <a href="#start" data-i18n="navStart">开始</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="control-button language-toggle" type="button" data-language-toggle aria-label="Switch to English">
+          <span data-language-current>中</span><span aria-hidden="true"> / EN</span>
+        </button>
+        <button
+          class="control-button theme-toggle"
+          type="button"
+          data-theme-toggle
+          aria-label="切换深色主题"
+          data-i18n-aria="themeToggle"
+        >
+          <span class="theme-dot" aria-hidden="true"></span>
+          <span data-i18n="themeLabel">主题</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="kicker"><span class="status-light"></span><span data-i18n="heroKicker">仓库维护协议 · Agent Skill</span></p>
+          <h1 data-i18n-html="heroTitle">补丁只是开始。<br /><em>维护才是闭环。</em></h1>
+          <p class="hero-lede" data-i18n="heroLede">
+            RepoStew 帮助编码智能体负责任地发现、核验、修复并持续维护 GitHub 仓库。它把证据、权限与长期状态放在“写代码”之前。
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#start" data-i18n="heroPrimary">开始使用</a>
+            <a class="button button-secondary" href="https://github.com/dajiaohuang/RepoStew_skills" data-i18n="heroSecondary">查看 GitHub</a>
+          </div>
+          <dl class="hero-facts">
+            <div><dt data-i18n="factRuntime">运行时</dt><dd>Python 3.10+</dd></div>
+            <div><dt data-i18n="factDeps">脚本依赖</dt><dd data-i18n="factDepsValue">仅标准库</dd></div>
+            <div><dt data-i18n="factLicense">许可证</dt><dd>MIT</dd></div>
+          </dl>
+        </div>
+
+        <div class="protocol-card" id="loop" aria-labelledby="protocol-title">
+          <div class="protocol-head">
+            <div>
+              <p class="utility-label">PROTOCOL / 01</p>
+              <h2 id="protocol-title" data-i18n="protocolTitle">一次贡献的完整生命线</h2>
+            </div>
+            <span class="live-pill"><span></span><span data-i18n="live">就绪</span></span>
+          </div>
+
+          <div class="protocol-track" data-protocol>
+            <button class="protocol-step is-active" type="button" data-step="0">
+              <span class="step-index">01</span><span class="step-name" data-i18n="stepDiscover">发现</span>
+              <span class="step-code">DISCOVER</span>
+            </button>
+            <button class="protocol-step" type="button" data-step="1">
+              <span class="step-index">02</span><span class="step-name" data-i18n="stepVerify">核验</span>
+              <span class="step-code">VERIFY</span>
+            </button>
+            <button class="protocol-step" type="button" data-step="2">
+              <span class="step-index">03</span><span class="step-name" data-i18n="stepPatch">修复</span>
+              <span class="step-code">PATCH</span>
+            </button>
+            <button class="protocol-step" type="button" data-step="3">
+              <span class="step-index">04</span><span class="step-name" data-i18n="stepValidate">验证</span>
+              <span class="step-code">VALIDATE</span>
+            </button>
+            <button class="protocol-step" type="button" data-step="4">
+              <span class="step-index">05</span><span class="step-name" data-i18n="stepSubmit">提交</span>
+              <span class="step-code">SUBMIT</span>
+            </button>
+            <button class="protocol-step" type="button" data-step="5">
+              <span class="step-index">06</span><span class="step-name" data-i18n="stepMaintain">维护</span>
+              <span class="step-code">MAINTAIN</span>
+            </button>
+          </div>
+
+          <div class="protocol-output" aria-live="polite">
+            <span class="output-prefix">$</span>
+            <p data-protocol-copy data-i18n="protocolCopy0">从指定 issue、单仓扫描或方向性搜索中建立候选清单。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="manifesto section-shell" aria-labelledby="manifesto-title">
+        <p class="section-marker">WHY / 为什么</p>
+        <div>
+          <h2 id="manifesto-title" data-i18n-html="manifestoTitle">大多数自动化止于 <em>PR 已创建</em>。<br />RepoStew 从那里继续。</h2>
+          <p data-i18n="manifestoCopy">
+            真正的开源贡献还包括确认问题没有被修复、尊重目标仓库规则、回应 review、修复 CI、处理冲突，以及在终态后安全清理本地资源。
+          </p>
+        </div>
+      </section>
+
+      <section class="capabilities section-shell" id="capabilities" aria-labelledby="capabilities-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-marker">SURFACE / 能力面</p>
+            <h2 id="capabilities-title" data-i18n="capabilitiesTitle">不是一个脚本，而是一套守则。</h2>
+          </div>
+          <p data-i18n="capabilitiesIntro">核心工作流写在可移植的 SKILL.md 中；确定性脚本负责发现、持久状态与安全清理。</p>
+        </div>
+
+        <div class="capability-grid">
+          <article class="capability-card card-wide">
+            <span class="card-code">INTAKE</span>
+            <h3 data-i18n="cap1Title">发现与筛选</h3>
+            <p data-i18n="cap1Copy">从具体 issue、单仓库或技术方向出发；机械检查分配、重复项、活跃度与仓库适配度。</p>
+            <ul>
+              <li>discover.py</li><li>scan_known_repos.py</li><li>loop.py</li>
+            </ul>
+          </article>
+          <article class="capability-card">
+            <span class="card-code">EVIDENCE</span>
+            <h3 data-i18n="cap2Title">完整审计</h3>
+            <p data-i18n="cap2Copy">以 tracked-file 台账覆盖代码、测试、依赖、交付、文档与线上站点，并明确不可验证边界。</p>
+          </article>
+          <article class="capability-card">
+            <span class="card-code">AUTHORITY</span>
+            <h3 data-i18n="cap3Title">权限分层</h3>
+            <p data-i18n="cap3Copy">把关注范围与 owner/admin/maintain 权限分开记录；从不把历史贡献误当作管理权。</p>
+          </article>
+          <article class="capability-card">
+            <span class="card-code">INBOX</span>
+            <h3 data-i18n="cap4Title">PR 持续维护</h3>
+            <p data-i18n="cap4Copy">以 GitHub Notifications 为主要触发源，保存 review、评论、CI 与冲突状态，直到明确处理完成。</p>
+          </article>
+          <article class="capability-card card-wide">
+            <span class="card-code">RECOVERY</span>
+            <h3 data-i18n="cap5Title">可恢复状态与清理</h3>
+            <p data-i18n="cap5Copy">三个显式存储根隔离 skill、状态与仓库；终态 PR 的 worktree 只在完整校验后按 dry-run 优先方式清理。</p>
+            <ul>
+              <li>pr_tracker.py</li><li>merge_state.py</li><li>workspace_cleanup.py</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="modes section-shell" id="modes" aria-labelledby="modes-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-marker">CONTROL / 控制权</p>
+            <h2 id="modes-title" data-i18n="modesTitle">你决定节奏，边界始终有效。</h2>
+          </div>
+          <p data-i18n="modesIntro">自主模式取消已授权范围内的中间确认，但不会获得额外权限，也不会绕过仓库政策。</p>
+        </div>
+
+        <div class="mode-comparison">
+          <article class="mode-card">
+            <div class="mode-title"><span>DEFAULT</span><h3 data-i18n="confirmTitle">确认模式</h3></div>
+            <p data-i18n="confirmCopy">先调查并展示计划；编辑与外部提交分别等待批准。适合需要逐步把关的贡献。</p>
+            <ol>
+              <li data-i18n="confirm1">只读调查</li><li data-i18n="confirm2">展示计划</li><li data-i18n="confirm3">批准编辑</li><li data-i18n="confirm4">批准提交</li>
+            </ol>
+          </article>
+          <article class="mode-card mode-card-dark">
+            <div class="mode-title"><span>OPT-IN</span><h3 data-i18n="autoTitle">自主模式</h3></div>
+            <p data-i18n="autoCopy">在明确授权范围内连续完成发现、实现、测试、提交与跟踪；遇到真实审批边界时停止。</p>
+            <ol>
+              <li data-i18n="auto1">发现与评估</li><li data-i18n="auto2">修复与验证</li><li data-i18n="auto3">提交与跟踪</li><li data-i18n="auto4">持续维护</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section class="decision-section section-shell" aria-labelledby="decision-title">
+        <div class="section-heading compact">
+          <div>
+            <p class="section-marker">GATE / 判断</p>
+            <h2 id="decision-title" data-i18n="decisionTitle">复杂度决定路由，不决定价值。</h2>
+          </div>
+        </div>
+        <div class="decision-grid">
+          <article><strong>ACCEPT</strong><p data-i18n="acceptCopy">清晰、允许、兼容、可测试且值得维护。</p></article>
+          <article><strong>ASK_MAINTAINER</strong><p data-i18n="askCopy">确有需求、架构、依赖、安全或权限决定必须由维护者批准。</p></article>
+          <article><strong>SKIP</strong><p data-i18n="skipCopy">重复、已处理、被禁止、无法验证或缺少必要访问。</p></article>
+        </div>
+      </section>
+
+      <section class="start section-shell" id="start" aria-labelledby="start-title">
+        <div class="start-copy">
+          <p class="section-marker">BOOT / 开始</p>
+          <h2 id="start-title" data-i18n-html="startTitle">把仓库交给流程，<br />不要交给运气。</h2>
+          <p data-i18n="startCopy">安装到兼容 Agent Skills 的目录，然后用自然语言指定仓库、issue 与工作模式。</p>
+          <div class="agent-list" aria-label="支持的智能体" data-i18n-aria="agentsLabel">
+            <span>Codex</span><span>Cursor</span><span>Gemini CLI</span><span>GitHub Copilot</span><span>Claude Code</span>
+          </div>
+        </div>
+        <div class="terminal" aria-label="快速开始命令" data-i18n-aria="terminalLabel">
+          <div class="terminal-bar"><span></span><span></span><span></span><small>repostew / quick start</small></div>
+          <div class="terminal-body">
+            <p><span class="prompt">$</span> git clone https://github.com/dajiaohuang/RepoStew_skills.git &lt;skill-home&gt;</p>
+            <p><span class="prompt">$</span> python &lt;skill-home&gt;/scripts/configure_paths.py \\</p>
+            <p class="indent">--skill-home &lt;skill-home&gt; \\</p>
+            <p class="indent">--state-home &lt;state-home&gt; \\</p>
+            <p class="indent">--repos-home &lt;repos-home&gt;</p>
+            <p class="terminal-note" data-i18n="terminalNote"># 三个绝对路径必须明确选择，且彼此独立。</p>
+          </div>
+          <button class="copy-button" type="button" data-copy-command data-i18n="copyButton">复制 clone 命令</button>
+        </div>
+      </section>
+
+      <section class="boundary section-shell" aria-labelledby="boundary-title">
+        <p class="section-marker">BOUNDARY / 边界</p>
+        <div>
+          <h2 id="boundary-title" data-i18n="boundaryTitle">自主，不等于无边界。</h2>
+          <div class="boundary-list">
+            <p data-i18n="boundary1">不泄露凭据，不把 issue 评论当作可信命令。</p>
+            <p data-i18n="boundary2">不擅自增加依赖、服务、CI 权限、公共 API 或架构承诺。</p>
+            <p data-i18n="boundary3">不冒充维护者，不自动合并、关闭、发布或删除远端资源。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div><strong>RepoStew</strong><span data-i18n="footerTagline">负责任的仓库维护工作流。</span></div>
+      <nav aria-label="页脚导航" data-i18n-aria="footerNav">
+        <a href="https://github.com/dajiaohuang/RepoStew_skills" data-i18n="source">源码</a>
+        <a href="https://github.com/dajiaohuang/RepoStew_skills/blob/master/LICENSE" data-i18n="license">许可证</a>
+        <a href="https://agentskills.io/">Agent Skills</a>
+      </nav>
+      <p>© <span data-year></span> dajiaohuang</p>
+    </footer>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 # RepoStew Skill Repository
 
-This repository contains the canonical RepoStew skill for Trae/mcp-code.
+This repository contains the canonical, agent-neutral RepoStew skill and its
+Chinese-first bilingual documentation site.
 
 ## Self-Maintenance
 
@@ -18,6 +19,7 @@ This repository contains the canonical RepoStew skill for Trae/mcp-code.
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
   - `taste-and-permissions.md` - Contribution guidelines
   - `maintenance-workspace-agents.md` - Workspace agent instructions
+- `docs/` - Zero-dependency bilingual GitHub Pages source
 - `scripts/` - Python helper scripts
   - `contribution_tracker.py` - Track contributed repositories and issues
   - `pr_tracker.py` - Track submitted pull requests

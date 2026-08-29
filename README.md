@@ -1,66 +1,127 @@
-# RepoStew
+<div align="center">
+  <img src="assets/readme-hero.svg" alt="RepoStew — 把贡献做成维护闭环" width="100%" />
+</div>
 
-**简体中文** | [English](README.en.md)
+<div align="center">
+  <strong>简体中文</strong> · <a href="README.en.md">English</a> · <a href="https://dajiaohuang.github.io/RepoStew_skills/">项目网站</a>
+</div>
 
-RepoStew 是一个可移植的 [Agent Skill](https://agentskills.io/)，用于负责任地维护 GitHub 仓库。它帮助编码智能体发现和评估 issue、审计仓库、实现聚焦修复、验证改动、提交 Pull Request，并持续处理审查意见和 CI。
+<br />
 
-RepoStew 与具体智能体和操作系统无关。核心工作流位于 `SKILL.md`，Python 脚本提供可选的确定性发现、状态跟踪和安全清理能力。Skill 不依赖特定模型供应商、GitHub 用户名、工作区路径或 shell。
+RepoStew 是一个可移植的 [Agent Skill](https://agentskills.io/)，用于负责任地维护 GitHub 仓库。它不把“生成补丁”视为终点，而是覆盖贡献的完整生命周期：
 
-## RepoStew 能做什么
+```text
+发现 → 核验 → 修复 → 验证 → 提交 → 维护
+  ↑                                  │
+  └──────────── 持久状态与反馈 ──────┘
+```
 
-- 在确认 issue 仍可处理后修复指定 GitHub issue。
-- 扫描单个仓库，寻找任意复杂度的高价值贡献候选。
-- 在 GitHub 上发现合适的 issue，并机械检查重复项和认领状态。
-- 用明确的覆盖台账审计所有已跟踪的代码、测试、交付、依赖、文档和网站内容。
-- 将所有 README、本地化文档、示例、GitHub Pages 和线上项目网站与代码、发行版及部署源进行交叉核对。
-- 在用户授权后，把已确认且非重复的审计发现转化为聚焦的 issue 和经过测试的 Pull Request。
-- 遵循目标仓库规则，创建最小且经过测试的改动。
-- 在确认模式或自主模式下提交并跟踪 Pull Request。
-- 持久保存未处理的 PR 评论和 review，继续完成代码修改、回复、CI 修复和冲突处理。
-- 维护已验证具有 `owner`、`admin` 或 `maintain` 权限的仓库，不在每次事件中重复外部贡献者资格检查。
-- 保存贡献记录，并跟进曾参与仓库中新开的 issue。
-- 盘点并安全清理显式登记、且关联 PR 已合并或关闭的本地 worktree 和分支。
-- 在当前对话中完成简单、局部的问题；在宿主支持时，将复杂或长期工作交接到单独的用户可见任务。
-- 在真实使用暴露陈旧、不安全、损坏或不可移植的行为时维护 RepoStew 自身。
+核心规则位于 [`SKILL.md`](SKILL.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
+
+## 为什么需要 RepoStew
+
+编码智能体很容易写出一个看起来合理的 diff；真正困难的是确认这个改动值得做、仍然可做、符合目标仓库规则，并在 PR 创建后继续承担维护责任。
+
+RepoStew 把这些容易被省略的工作变成显式门槛：
+
+- 在编辑前读取仓库说明、贡献政策与完整 issue / PR 状态；
+- 检查 issue 是否仍开放、未被认领、未被提交或竞争 PR 修复；
+- 区分外部贡献者、仓库 owner/admin/maintain 与用户临时授权；
+- 优先实现最小、完整、可逆、可测试的改动；
+- 以 GitHub Notifications 驱动 review、CI 与冲突跟进；
+- 用持久 checkpoint 保存未处理活动，不依赖 unread 状态；
+- 只清理显式登记、已推送、状态终结且重新核验过的本地资源。
+
+## 一眼了解
+
+| 维度 | RepoStew 的选择 |
+|---|---|
+| 工作单元 | issue、仓库审计、PR 维护、已验证自有/受维护仓库 |
+| 默认节奏 | 确认模式：调查与计划先行，编辑和外部提交分别确认 |
+| 可选节奏 | 自主模式：在用户明确授权的范围内连续执行 |
+| 判断结果 | `ACCEPT`、`ASK_MAINTAINER`、`SKIP` |
+| 状态模型 | 三个用户选择的独立绝对根：skill、state、repositories |
+| 运行要求 | Python 3.10+、Git、已认证 GitHub CLI |
+| 脚本依赖 | Python 标准库；不安装运行时包 |
+| 许可证 | MIT |
+
+## 能力地图
+
+### 1. 发现与核验
+
+- 修复用户指定的 GitHub issue；
+- 扫描单个仓库，寻找有价值的贡献候选；
+- 按技术方向发现近期活跃仓库和 issue；
+- 搜索关联 PR、所有状态的竞争 PR、提交与近期历史；
+- 将标签视为线索，而不是许可。
+
+### 2. 全仓库审计
+
+- 从 `git ls-files` 建立完整覆盖台账；
+- 分别检查生产代码、测试、交付、依赖、文档、网站、生成内容与不透明资产；
+- 把 README、本地化文档、示例和线上站点与代码、配置、发行版、部署源交叉核对；
+- 分开报告已确认缺陷、风险/建议与验证限制；
+- 只有在获得对应写权限后，才把发现转化为 issue 或 PR。
+
+### 3. 实现与提交
+
+- 先重现问题或取得同等强度的源码证据；
+- 遵循目标仓库既有架构与工具链；
+- 运行聚焦检查，再运行仓库要求的完整验证；
+- 复核 diff、未跟踪文件、提交范围与凭据风险；
+- 根据仓库政策选择普通 PR、Draft 或仅保留本地草稿。
+
+### 4. PR 持续维护
+
+- 首次导入贡献者可访问的 PR 历史；
+- 使用通知作为主要触发源，并为每个命中读取完整当前状态；
+- 持久保存 review、普通评论、inline 评论、CI、冲突与待处理活动；
+- 完成修改、测试、推送和回复后，才把活动标记为已处理；
+- 以低频开放 PR 对账作为防漏机制，而不是轮询主流程。
+
+### 5. 自有与受维护仓库
+
+- `FOLLOWED_REPOSITORIES.md` 决定例行接收范围；
+- `MAINTAINED_REPOSITORIES.md` 单独记录已验证的 `owner`、`admin` 或 `maintain` 权限；
+- 历史贡献、组织成员身份、fork 和本地 clone 都不能证明管理权限；
+- 维护权限不会自动授权合并、关闭、发布、远端删除、治理或 secret 访问。
+
+### 6. 安全回收本地资源
+
+- 只处理显式登记且关联 PR 已 `MERGED` 或 `CLOSED` 的 linked worktree；
+- 默认 dry run；应用前重新核验路径边界、remote、分支、已推送 tip、工作区状态与资源归属；
+- 不删除 canonical clone、远端分支、fork、活动 PR 资源、凭据或未知忽略数据；
+- 清理历史保留在持久状态中，便于恢复和审计。
 
 ## 支持的智能体
 
-RepoStew 遵循开放的 `SKILL.md` 格式。同一目录可用于实现 Agent Skills 标准的智能体。
+RepoStew 遵循开放的 `SKILL.md` 格式。同一份目录可以被多个兼容 Agent Skills 的编码智能体发现。
 
-| 智能体 | 项目级目录 | 用户级目录 | 调用方式 |
+| 智能体 | 项目级目录 | 用户级目录 | 常见调用方式 |
 |---|---|---|---|
-| OpenAI Codex | `.agents/skills/repostew` | `~/.agents/skills/repostew` | 提及 `$repostew`，或由 Codex 根据描述自动匹配 |
-| Cursor | `.agents/skills/repostew` 或 `.cursor/skills/repostew` | `~/.agents/skills/repostew` 或 `~/.cursor/skills/repostew` | `/repostew` 或自动调用 |
-| Gemini CLI | `.agents/skills/repostew` 或 `.gemini/skills/repostew` | `~/.agents/skills/repostew` 或 `~/.gemini/skills/repostew` | 自动调用或使用 Gemini skills 命令 |
-| GitHub Copilot | `.agents/skills/repostew` 或 `.github/skills/repostew` | `~/.agents/skills/repostew` 或 `~/.copilot/skills/repostew` | `/repostew` 或自动调用 |
+| OpenAI Codex | `.agents/skills/repostew` | `~/.agents/skills/repostew` | 提及 `$repostew` 或由描述自动匹配 |
+| Cursor | `.agents/skills/repostew` / `.cursor/skills/repostew` | `~/.agents/skills/repostew` / `~/.cursor/skills/repostew` | `/repostew` 或自动调用 |
+| Gemini CLI | `.agents/skills/repostew` / `.gemini/skills/repostew` | `~/.agents/skills/repostew` / `~/.gemini/skills/repostew` | 自动调用或 skills 命令 |
+| GitHub Copilot | `.agents/skills/repostew` / `.github/skills/repostew` | `~/.agents/skills/repostew` / `~/.copilot/skills/repostew` | `/repostew` 或自动调用 |
 | Claude Code | `.claude/skills/repostew` | `~/.claude/skills/repostew` | `/repostew` 或自动调用 |
 
-对于 Codex、Cursor、Gemini CLI 和 GitHub Copilot，推荐使用共享目录 `.agents/skills`。Claude Code 当前使用 `.claude/skills`。
+对于 Codex、Cursor、Gemini CLI 和 GitHub Copilot，`.agents/skills` 是推荐的共享发现位置；Claude Code 当前使用 `.claude/skills`。
 
-平台文档：[Codex skills](https://learn.chatgpt.com/docs/build-skills)、[Claude Code skills](https://code.claude.com/docs/en/skills)、[Cursor skills](https://cursor.com/docs/skills)、[Gemini CLI skills](https://geminicli.com/docs/cli/skills/) 和 [GitHub Copilot skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)。
+## 安装
 
-## 前置条件
-
-- Git
-- Python 3.10 或更高版本
-- 已使用贡献账号登录的 [GitHub CLI](https://cli.github.com/)
-- 兼容 Agent Skills 的编码智能体
-
-验证命令行环境：
+### 前置条件
 
 ```bash
 git --version
-python --version
+python --version   # 3.10+
 gh auth status
 ```
 
-如果系统用 `python3` 表示 Python 3，请将示例中的 `python` 替换为 `python3`。
+### 选择 skill 路径
 
-## 安装与首次路径选择
+RepoStew 没有隐式安装目录。先选择一个与智能体发现规则兼容的**绝对路径**，最终目录名应为 `repostew`。
 
-安装前先让用户选择 skill 的绝对存储路径，并确认该路径符合所用智能体在上表列出的发现规则；表中的路径只是兼容位置，不是 RepoStew 的默认值。最终目录名应为 `repostew`，与 skill 的 `name` 一致。
-
-macOS/Linux：
+macOS / Linux：
 
 ```bash
 read -r -p "RepoStew skill 的绝对安装路径: " REPOSTEW_SKILL_HOME
@@ -74,7 +135,9 @@ $env:REPOSTEW_SKILL_HOME = Read-Host "RepoStew skill 的绝对安装路径"
 git clone https://github.com/dajiaohuang/RepoStew_skills.git $env:REPOSTEW_SKILL_HOME
 ```
 
-第一次调用 RepoStew 时，它还会要求用户选择独立的状态目录和受管理仓库目录；三者都没有内置默认值。确认后记录配置：
+### 首次选择三个存储根
+
+第一次使用时，再选择独立的状态目录与受管理仓库目录。三个根都必须是明确、互不重叠的绝对路径：
 
 ```text
 python <selected-skill-home>/scripts/configure_paths.py \
@@ -83,21 +146,21 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
-如果 skill 的实际存储路径不在智能体支持的发现位置，可在获得用户同意后，从平台发现目录创建指向所选路径的链接。不要为了套用示例而另建第二份 checkout。更新时始终使用已选路径：
+如果 skill 位于智能体无法直接发现的位置，经用户同意后创建链接到所选路径；不要为了匹配示例再复制一份 checkout。完整的路径选择、旧状态合并和私有备份流程见 [`references/cold-start.md`](references/cold-start.md)。
+
+更新始终在已选 skill 路径执行：
 
 ```text
 git -C <selected-skill-home> pull --ff-only
 ```
 
-完整的首次配置、旧状态合并和私有备份流程见 [`references/cold-start.md`](references/cold-start.md)。更新后若智能体未检测到变化，请重新加载或重启其 skill 列表。
+## 使用
 
-## 使用 RepoStew
-
-示例：
+直接用自然语言描述目标与节奏：
 
 ```text
 使用 RepoStew 修复 https://github.com/owner/repo/issues/42
-使用 RepoStew 扫描 owner/repo，找一个值得修复的小 issue
+使用 RepoStew 扫描 owner/repo，找一个值得修复的 issue
 使用 RepoStew 全面审计 owner/repo，并起草已确认的 bug 报告
 使用 RepoStew 为我寻找 3 个范围清晰的开源 issue
 使用 RepoStew 检查并维护我跟踪的 Pull Request
@@ -105,284 +168,112 @@ git -C <selected-skill-home> pull --ff-only
 使用 RepoStew 自主运行，连续 3 轮没有候选后停止
 ```
 
-### 确认模式
-
-确认模式是默认模式：
+### 确认模式（默认）
 
 ```text
-只读调查 → 展示候选或计划 → 用户批准编辑 → 实现并测试
-→ 用户批准外部提交 → 创建 issue 或 PR → 跟踪
+只读调查 → 展示候选/计划 → 批准编辑 → 实现与测试
+→ 批准外部提交 → 创建 issue/PR → 跟踪
 ```
 
-只读调查可以立即执行；代码编辑和 GitHub 外部写操作需要等待确认。
-
-### 自主模式
-
-用户明确使用 `autonomous`、`automatic`、`continuous`、`no confirmation`、`自动` 或 `持续` 等词时启用自主模式：
+### 自主模式（显式启用）
 
 ```text
-发现 → 评估 → 核验 → 修复 → 测试 → 提交 → PR → 跟踪 → 维护
+发现 → 评估 → 核验 → 修复 → 测试 → 提交 → 跟踪 → 维护
 ```
 
-自主模式只取消已授权范围内的中间确认。它不会授予维护者权限、绕过仓库政策、自动批准新依赖或服务，也不会关闭宿主智能体的安全控制。连续三轮扩大范围后仍没有可处理候选时，RepoStew 会停止。
+使用 `自主`、`自动`、`持续`、`autonomous`、`automatic`、`continuous` 或 `no confirmation` 等明确措辞才会启用。自主模式只取消已授权范围内的中间确认；它不会授予维护者权限、绕过仓库政策、批准新依赖/服务或关闭宿主的安全控制。
 
-## 贡献质量门槛
+## 判断与路由
 
-RepoStew 使用三个内部决策：
-
-| 决策 | 含义 |
+| 判断 | 使用条件 |
 |---|---|
-| `ACCEPT` | 清晰、允许、兼容、可测试、有价值并符合仓库方向；复杂度只决定执行路径 |
-| `ASK_MAINTAINER` | 应用直接 PR 判断门槛后，仍有需求、API、架构、依赖、服务、安全、权限或兼容性决定需要维护者批准 |
-| `SKIP` | 重复、已分配、已修复、被政策禁止、纯推测、无法验证，或缺少必要访问权限 |
+| `ACCEPT` | 工作清晰、允许、兼容、可测试、有价值且符合仓库方向 |
+| `ASK_MAINTAINER` | 应用直接 PR 判断门槛后，仍有真实的需求、API、架构、依赖、服务、安全、权限或兼容性决定需要维护者批准 |
+| `SKIP` | 重复、已认领、已修复、被政策禁止、纯推测、无法验证或缺少必要访问 |
 
-标签只是发现信号，不代表许可。每个候选都需要检查 issue 讨论、提交、打开和关闭的 PR、关联 closing PR、仓库说明、贡献政策和长期维护成本。
+复杂度只决定执行位置：清晰且局部的工作留在当前对话；跨子系统审计、多 issue 活动或长期维护在宿主支持时交接到单独的用户可见任务。复杂本身不是拒绝理由。
 
-核验完成后，RepoStew 再按执行复杂度分流。清晰且局部的改动留在当前对话；跨子系统工作、全仓库审计、多 issue 活动和长期维护，在平台支持时使用单独的用户可见任务或交接。复杂本身不构成拒绝理由。交接必须包含证据和权限边界，而接收任务会重新检查 GitHub 当前状态。
-
-RepoStew 不把提问或 Draft PR 当作常规前置步骤。自主模式下，当仓库接受外部 PR、issue 仍开放且无人处理、行为可从 issue/测试/代码模式可靠推断、方案最小且保持兼容、没有跨越需审批的依赖/服务/权限/CI/安全/公共 API/架构边界、聚焦验证通过且 PR 如实记录假设时，RepoStew 会直接提交普通 PR。
-
-如果应用上述门槛后仍确实需要维护者决策，RepoStew 获得一次在现有公开 issue、discussion 或贡献者自己的 PR 上发布聚焦澄清评论的权限。它会先确认问题没有已有答案，说明阻塞决策和选项，保存评论 URL，然后等待且不重复催促。该例外不授权创建新 issue/discussion、认领工作、承诺交付或公开安全敏感信息。
-
-### 直接 PR 与受权限约束的 Draft PR
-
-RepoStew 将“允许提交 PR”与“技术方向已获批准”分开判断。普通 PR 是通过直接 PR 门槛后的默认选择；仍有实质实现不确定性时，才使用 Draft 展示假设和替代方案。
-
-| 仓库政策 | RepoStew 的动作 |
-|---|---|
-| 接受未经邀请的 PR 或早期 Draft，但尚未达到普通 PR 门槛 | 创建一个聚焦的上游 Draft PR，标明未决问题，不使用 closing keyword，等待方向确认 |
-| 外部 PR 仅限邀请、提交前必须批准，或要求先就方案达成一致 | 不用 Draft 绕过政策；推送到 fork 分支并创建 fork 内 Draft。平台不支持时，保留已测试分支和完整 PR 草稿，只在现有讨论中请求一次邀请 |
-| 当前阶段明确禁止实现或公开原型，或改动跨越安全、依赖、服务、凭据、特权权限或公共 API 门槛 | 只保留设计草稿或本地实现，并引用明确禁止条款 |
-
-对于仅限邀请的项目，公开说明可以写成：
-
-> 贡献政策说明外部 PR 仅限受邀提交，因此我没有创建上游 PR。我准备了一个经过测试的草稿：`<draft URL or fork branch>`。如果这个方向符合项目架构，获得邀请后我可以按项目的正常审查流程提交。
-
-Draft 是审查材料，不代表认领、批准或合并权限。RepoStew 会保存草稿和讨论 URL，等待且不刷屏；提交上游前重新检查政策、认领状态、竞争 PR 和默认分支。
-
-## 仓库审计工作流
-
-RepoStew 把全仓审计视为覆盖率和证据工作，而不是按扩展名抽样扫描。它从版本控制中的每个已跟踪路径开始，记录生产源码、测试、CI/构建/发布自动化、依赖文件、文档、网站源码、生成或供应商内容以及不透明资产的审查方式。大型仓库可以按风险分阶段审查，但未审查或无法语义审查的边界必须明确列为限制。
-
-文档审查是语义交叉核对。RepoStew 会读取所有已跟踪的 README、本地化副本、指南、示例、API/CLI/配置参考和网站源码，将其与代码、默认值、受支持版本、发行与部署流程对照，并检查所有公开宣传的 GitHub Pages、文档站、演示站和项目网站。报告包含文档/网站一致性矩阵，列出事实来源、核对方法、状态和具体证据；线上部署比审计提交更新时，不会被自动误判为漂移。
-
-只有在受支持的默认分支上复现缺陷或取得同等强度的源码证据，并搜索 issue、discussion、所有状态的 PR、提交和近期历史后，发现才有资格提交 issue。报告会分开列出已确认缺陷、风险/建议和审计限制；安全问题必须走仓库规定的私密报告渠道。
-
-单纯的审计请求只授予只读权限。确认模式会在发布前展示 issue 标题和正文草稿。如果用户明确授权“审计→issue→PR”活动，RepoStew 会在最新上游状态重新验证每项发现，提交一个聚焦 issue，实现带回归测试的最小完整修复，推送到已认证贡献者的 fork，创建符合仓库政策的 PR，并跟踪两个 URL。授权不代表配额：没有合格发现的仓库不会被虚构 issue 或 PR。
-
-当发现适合公开报告，但安全 PR 受平台、验证条件、仓库提交政策、维护者决策或授权修复范围阻塞时，RepoStew 可以以 `issue-only` 结束。issue 会说明证据、没有附带 PR 的原因以及解除阻塞所需的决策或验证。已有等价 issue 会被复用，安全敏感内容始终保留在私密渠道。
-
-在宿主支持时，多仓库活动为每个仓库使用一个用户可见任务，并由一个控制任务负责选择标准、任务映射、跨仓去重、优先级和最终汇总。每个任务使用隔离 checkout，并重新验证随时间变化的 GitHub 和部署状态。
-
-完整标准见 [references/repository-audit.md](references/repository-audit.md)。
+自主模式下，只有在仓库允许、问题仍可处理、预期行为证据充分、方案最小且兼容、不跨越依赖/服务/权限/安全/公共 API/架构审批边界、验证通过且假设如实披露时，RepoStew 才直接创建普通 PR。详情见 [`SKILL.md`](SKILL.md) 与 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)。
 
 ## 内置脚本
 
-脚本只使用 Python 标准库以及外部 `git`/`gh` 命令。
+所有脚本位于 [`scripts/`](scripts/)，只使用 Python 标准库以及外部 `git` / `gh`。
 
-| 脚本 | 用途 |
+| 脚本 | 作用 |
 |---|---|
-| `scripts/discover.py` | 通过全局、方向性和直接搜索排列活跃仓库或发现 issue 候选 |
-| `scripts/contribution_tracker.py` | 持久保存参与过的仓库、PR 和 issue |
-| `scripts/scan_known_repos.py` | 在参与过的仓库中寻找新的 issue 候选 |
-| `scripts/pr_tracker.py` | 持久保存 PR 状态、CI、review、评论和未处理活动 |
-| `scripts/maintained_repositories.py` | 验证独立的 owner/maintainer 权限登记表 |
-| `scripts/workspace_cleanup.py` | 以 dry-run 优先方式清理已验证终态 PR 的 worktree 和本地分支 |
-| `scripts/loop.py` | 执行有界、逐步扩大的发现轮次 |
-| `scripts/auto_fix.py` | 可选的供应商无关调度器，调用用户指定的非交互智能体命令 |
-| `scripts/auto_fix.sh` | `auto_fix.py` 的轻量 POSIX 包装脚本 |
+| `configure_paths.py` | 校验并记录三个明确选择的存储根 |
+| `discover.py` | 排列近期活跃仓库、执行方向性搜索并发现 issue 候选 |
+| `loop.py` | 运行有界、逐步扩大的发现轮次 |
+| `scan_known_repos.py` | 扫描持久贡献集合或指定仓库的新 issue |
+| `contribution_tracker.py` | 保存参与过的仓库、issue 与 PR |
+| `pr_tracker.py` | 保存 PR、通知、review、评论、CI 与未处理活动 |
+| `maintained_repositories.py` | 校验独立的 owner/admin/maintain 权限登记表 |
+| `merge_state.py` | 可恢复地合并持久状态 |
+| `workspace_cleanup.py` | dry-run 优先地回收已验证终态 PR 的本地资源 |
+| `auto_fix.py` | 可选的供应商无关非交互调度器 |
+| `auto_fix.sh` | `auto_fix.py` 的 POSIX 包装脚本 |
 
-### 发现候选
+常用命令：
 
 ```bash
-# 最近活跃的仓库
-python scripts/discover.py --min-stars 100 --max-days 7 --repo-count 10
-
-# 某个技术方向中活跃的高 star 仓库
+# 按方向寻找近期活跃仓库
 python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
-  --focus agentic --focus "agent framework" --focus "agent harness" --focus nanobot
+  --focus agentic --focus "agent framework" --focus "agent harness"
 
-# 使用全部发现策略
-python scripts/discover.py \
-  --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates 5
-
-# 隐藏进度日志，只输出 JSON
-python scripts/discover.py --direct --json-only
-```
-
-`--focus` 可重复使用，以多个相关搜索词和可选的代表性项目名表达一个宽泛方向。每个查询先贡献自己的最佳匹配，再按 star 合并排序，避免最宽泛的词挤掉相邻领域。`--min-stars` 和 `--kw-min-stars` 只设下限；RepoStew 不设 star 上限。
-
-使用 `--repos-only` 可先定位仓库，再寻找 issue。提供 `--focus` 时，发现范围限制在匹配仓库内，不会混入无关的宽泛直接 issue 流。输出只是候选清单，仍需人工或智能体核验主题相关性、仓库健康度、贡献政策和具体 issue。
-
-### PR 跟踪
-
-```bash
-# 首次使用时导入当前 GitHub 账号可访问的 PR 历史
+# 导入并查看 PR 状态
 python scripts/pr_tracker.py import-authored
-
-python scripts/pr_tracker.py add \
-  "https://github.com/owner/repo/pull/123" \
-  "https://github.com/owner/repo/issues/42"
-
 python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py list
-python scripts/pr_tracker.py check  # 低频开放 PR 对账
-```
 
-评论跟进以通知为主。GitHub Notifications 选择需要完整刷新状态、CI、review、普通评论和 inline 评论的已跟踪 PR：
+# 扫描明确选择的历史贡献仓库
+python scripts/scan_known_repos.py --repo owner/one --repo owner/two --include-decisions
 
-```bash
-python scripts/pr_tracker.py notifications
-python scripts/pr_tracker.py notifications --repo owner/repo
-```
-
-该命令使用持久时间戳 checkpoint，而不是 unread 状态。它请求上次成功批次后、当前贡献者参与或被提及的通知，保存到通用 notification inbox，并保持 GitHub 已读状态不变。因此即使用户自行阅读通知，流程仍可靠；Issue 或尚未跟踪的 PR 事件也不会丢失。
-
-如果智能体平台可以读取 Outlook，可把用户已配置的 Outlook 文件夹作为 GitHub Notifications 不可用时的备用来源。RepoStew 仍会回到 GitHub 核验每个事件。每个来源只有在整个批次已处理或持久保留后，才将 checkpoint 推进到批次开始时间。更宽泛的 `check` 只作为低频防漏机制。
-
-```bash
-python scripts/pr_tracker.py notification-inbox
-python scripts/pr_tracker.py notification-resolve <thread-id>
-```
-
-外部活动在贡献者读完、完成并测试必要修改、推送现有分支并回复前一直保持 pending。之后再解析当前活动集：
-
-```bash
-python scripts/pr_tracker.py resolve \
-  "https://github.com/owner/repo/pull/123"
-python scripts/pr_tracker.py notifications --repo owner/repo
-```
-
-### 持久贡献跟进
-
-PR 会自动登记。主动维护的仓库和提交过的 issue 可手动加入：
-
-```bash
-python scripts/contribution_tracker.py add \
-  "https://github.com/owner/repo/issues/84"
-python scripts/contribution_tracker.py add \
-  "https://github.com/owner/repo"
-python scripts/contribution_tracker.py list
-```
-
-扫描持久仓库集合或指定仓库中新开的 issue：
-
-```bash
-python scripts/scan_known_repos.py
-python scripts/scan_known_repos.py --repo owner/repo
-python scripts/scan_known_repos.py --repo owner/one --repo owner/two
-python scripts/scan_known_repos.py --since-days 30 --issue-limit 50
-python scripts/scan_known_repos.py --repo owner/repo --include-decisions
-```
-
-`--repo` 可以重复。维护工作区有明确 active-follow 表时，应传入显式集合，避免历史贡献把已暂停仓库重新加入例行维护。
-
-扫描器以一天重叠保存最后一次成功扫描。每次运行都会按仓库报告候选、过滤项、已见 issue、详情获取失败和截断状态；`--include-decisions` 会为每个列出的 issue 输出机械过滤原因。详情获取失败或结果超过 `--issue-limit` 时不推进该仓库 checkpoint，以便重试。输出仍需经过政策、重复项、分配、关联 PR、相关性和范围检查。过去参与过仓库不代表获得维护权限，也不能成为提交低置信度 issue 的理由。
-
-### 自有和受维护仓库
-
-持久工作区将“接收范围”和“权限”保存在不同文件中：
-
-- `FOLLOWED_REPOSITORIES.md` 选择例行事件中的 `active`/`self` 仓库；
-- `MAINTAINED_REPOSITORIES.md` 保存已验证的 `owner`、`admin` 或 `maintain` 权限。
-
-关注或贡献过仓库不代表拥有权限；拥有权限本身也不会把仓库加入定时接收范围。
-
-验证权限表：
-
-```bash
+# 验证维护权限登记表
 python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
+
+# 本地资源清理：先预览，再应用
+python scripts/workspace_cleanup.py cleanup --workspace <workspace>
+python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --json
 ```
 
-对于启用且近期验证过的记录，RepoStew 在维护用户自己的 PR 和分支时，可以不在每次通知中重复检查外部贡献者资格、CLA 是否适用、仓库是否接受 PR 或是否具备 push 权限。它仍会在通知或状态变化时刷新一次完整 PR 快照、遵循仓库说明、运行必要验证并维持 checkpoint 规则。
+发现脚本只产生机械候选；每项工作仍必须经过政策、重复项、认领、关联 PR、相关性、证据与范围核验。
 
-该权限表不授权自动合并或关闭、删除远端内容、修改治理、发布版本或访问 secret。详见 [`references/maintaining-owned-repositories.md`](references/maintaining-owned-repositories.md)。
+## 状态与目录
 
-### 安全清理本地工作区
+RepoStew 只使用冷启动时明确选择的三个根：
 
-从 linked worktree 提交并跟踪 PR 后，应显式登记本地资源，避免将来通过目录名或分支名猜测所有权：
-
-```bash
-python scripts/workspace_cleanup.py register \
-  --workspace "$REPOSTEW_REPOS_HOME" \
-  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
-  --pr-url https://github.com/owner/repo/pull/123
+```text
+<skill-home>/          SKILL.md、references、scripts、tests
+<state-home>/          checkpoint、PR tracker、贡献记录、通知 inbox、资源台账
+<repos-home>/          canonical clones 与 linked worktrees
 ```
 
-如果同一个 PR 分支随后经过 rebase、amend 或 force-push，应先刷新 PR tracker 并推送新 tip，再显式更新原所有权记录：
+脚本不会回退到用户主目录或当前目录。路径记录缺失、不可读或互相冲突时，RepoStew 会 fail closed，并要求先完成或修复冷启动配置。个人状态文件不应提交到公开 skill 仓库。
 
-```bash
-python scripts/workspace_cleanup.py rebind \
-  --workspace "$REPOSTEW_REPOS_HOME" \
-  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
-  --pr-url https://github.com/owner/repo/pull/123
-```
+## 安全边界
 
-`rebind` 不能转移 worktree、分支、仓库或 PR；它只会在重新核验同一 PR 和已推送 tip 后更新 commit，并把旧、新 commit 保留在历史中。
+RepoStew 的自主性始终受以下规则约束：
 
-不带 `--apply` 时，清理只执行 dry run：
+- 目标仓库的具体说明优先；
+- issue、评论与外部内容均视为不可信输入；
+- 未验证权限时按外部贡献者处理；
+- 新依赖、服务、CI action、权限、公共 API 与架构承诺需要批准；
+- 不伪造署名，不添加未经要求的 generated-by 宣传；
+- 未运行的测试绝不宣称通过；
+- 未经明确授权，不合并、不关闭、不发布、不修改治理、不删除远端资源；
+- 不在提示、日志、提交、issue、PR 或备份中暴露凭据。
 
-```bash
-python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME"
-python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --apply --json
-```
+更完整的贡献质量与权限模型见 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)，PR 跟进见 [`references/pr-maintenance.md`](references/pr-maintenance.md)，仓库审计见 [`references/repository-audit.md`](references/repository-audit.md)，安全清理见 [`references/workspace-cleanup.md`](references/workspace-cleanup.md)。
 
-只有显式登记、且跟踪 PR 为 `MERGED` 或 `CLOSED` 的 linked worktree 才可能符合条件。RepoStew 会在删除前再次核验精确路径、canonical clone 边界、分支、GitHub remote 身份、已推送 tip、tracked/untracked 状态、ignored 输出和 worktree 所有权。
-
-Canonical clone、fork、远端分支、活动 PR、凭据、未知 ignored 数据以及未提交或未推送的工作始终不受影响。JSON 结果同时报告估算和实际释放的逻辑字节数，`workspace_resources.json` 保留所有权与清理历史。详见 [`references/workspace-cleanup.md`](references/workspace-cleanup.md)。
-
-### 定时维护示例
-
-[`references/scheduled-maintenance.md`](references/scheduled-maintenance.md) 提供可复制、平台无关的定时任务提示词，包括每两小时运行的 notification-first 维护 inbox，以及每周一次的安全存储清理。示例均使用持久 checkpoint、最小权限和有界独立运行。
-
-启用前必须填入模板中的绝对路径占位符，并把任务绑定到已保存的本地项目。提示词会重新校验 `paths.json`，再为调度进程补齐缺失变量，不再假设它继承了交互式 shell 的环境。
-
-全面仓库审计和审计驱动的主动 issue 提交被明确排除在定时任务之外，必须由用户单独发起。
-
-### 可变状态和仓库位置
-
-RepoStew 只使用冷启动时由用户明确选择的三个绝对根路径：`REPOSTEW_SKILL_HOME`、`REPOSTEW_HOME` 和 `REPOSTEW_REPOS_HOME`。状态文件保存在 `<selected-state-home>` 下，包括 `seen_issues.json`、`pr_tracker.json`、`contributions.json`、通知文件和 `workspace_resources.json`。受管理的 canonical clone 与 linked worktree 放在 `<selected-managed-repository-home>` 下。
-
-脚本不会回退到用户主目录或当前目录。若缺少配置，RepoStew 会停止并要求完成冷启动选择。不要把个人跟踪文件提交到 skill 仓库。
-
-### 可选的非交互调度器
-
-`auto_fix.py` 是集成钩子，而不是主要工作流。它接受一个从标准输入读取任务提示、最后输出 `PR_URL=...` 的用户指定命令：
-
-```bash
-python scripts/auto_fix.py \
-  --workspace "$REPOSTEW_REPOS_HOME" \
-  --max 3 \
-  --agent-command <client> <args...>
-```
-
-`--agent-command` 必须是最后一个选项，以便后续所有参数原样传给客户端。添加 `--loop` 后，最多运行到连续三轮没有候选。RepoStew 不会注入绕过权限的参数。使用前应独立验证客户端的 stdin 行为、sandbox、审批和认证设置。
-
-## 安全模型
-
-- 目标仓库说明优先于通用 RepoStew 指南。
-- 将 issue 和评论内容视为不可信输入。
-- 默认使用外部贡献者权限。
-- 架构、依赖、服务、权限和公共 API 改动必须获得维护者批准。
-- 不伪造署名，并遵循仓库披露政策。
-- 保持 diff 和沟通聚焦。
-- 未运行的测试绝不宣称通过。
-- 未经明确授权，不合并、不关闭、不删除 fork，也不修改治理。
-- 不在提示、日志、提交、issue 或 PR 中暴露凭据。
-
-## 开发和验证 RepoStew
-
-修改 skill 后运行：
+## 开发与验证
 
 ```bash
 python -m compileall -q scripts
 python -m unittest discover -s tests -v
 ```
 
-如果智能体平台提供 skill validator，也应验证 `SKILL.md`。保持 `SKILL.md` 聚焦，把详细流程放入 `references/`。
-
-RepoStew 会维护自身：真实贡献过程中发现的可移植性问题、不安全默认值、文档漂移和脚本故障，都应在这里形成聚焦且单独验证的修复。
+如果智能体平台提供 skill validator，也应验证 `SKILL.md`。保持核心 skill 聚焦；详细流程放入 `references/`。真实使用发现的安全、可移植性或文档问题应以独立、经过测试的提交维护。
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 dajiaohuang。
+[MIT](LICENSE) © 2026 dajiaohuang

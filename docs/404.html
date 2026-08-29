@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>404 — RepoStew</title>
+    <link rel="icon" href="/RepoStew_skills/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/RepoStew_skills/styles.css" />
+    <style>
+      .error-page { width: min(calc(100% - 40px), 920px); min-height: 100vh; margin: auto; display: grid; align-content: center; }
+      .error-code { margin: 0; color: var(--blue); font: 800 0.75rem/1 var(--mono); letter-spacing: .12em; }
+      .error-page h1 { margin: 24px 0; font-family: var(--display); font-size: clamp(3.2rem, 10vw, 7.5rem); line-height: .95; letter-spacing: -.07em; }
+      .error-page p { max-width: 620px; color: var(--ink-soft); font-size: 1.05rem; }
+      .error-page .english { margin-top: -4px; font-size: .9rem; }
+      .error-page .button { width: fit-content; margin-top: 22px; }
+    </style>
+  </head>
+  <body>
+    <main class="error-page">
+      <p class="error-code">STATUS / 404</p>
+      <h1>这条路径<br />没有入账。</h1>
+      <p>目标页面不存在，或已经移动。返回 RepoStew，重新从维护闭环开始。</p>
+      <p class="english" lang="en">This path is not in the ledger. Return to RepoStew and restart the maintenance loop.</p>
+      <a class="button button-primary" href="/RepoStew_skills/">返回首页 / Back home</a>
+    </main>
+  </body>
+</html>
