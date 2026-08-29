@@ -335,6 +335,8 @@ Canonical clone、fork、远端分支、活动 PR、凭据、未知 ignored 数�
 
 [`references/scheduled-maintenance.md`](references/scheduled-maintenance.md) 提供可复制、平台无关的定时任务提示词，包括每两小时运行的 notification-first 维护 inbox，以及每周一次的安全存储清理。示例均使用持久 checkpoint、最小权限和有界独立运行。
 
+启用前必须填入模板中的绝对路径占位符，并把任务绑定到已保存的本地项目。提示词会重新校验 `paths.json`，再为调度进程补齐缺失变量，不再假设它继承了交互式 shell 的环境。
+
 全面仓库审计和审计驱动的主动 issue 提交被明确排除在定时任务之外，必须由用户单独发起。
 
 ### 可变状态和仓库位置

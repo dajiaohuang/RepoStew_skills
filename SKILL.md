@@ -60,10 +60,19 @@ Read [references/taste-and-permissions.md](references/taste-and-permissions.md) 
 Read [references/cold-start.md](references/cold-start.md) for first-time setup including private state backup repository creation.
 
 Before running any stateful helper, require explicit, validated selections for
-`REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. If any is
-missing or conflicts with the recorded `paths.json`, stop normal work and
-complete the cold-start path selection. Never infer these roots from the user
-profile, current directory, an example path, or an earlier installation.
+`REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. If a selected
+root conflicts with the recorded `paths.json`, stop normal work and reconcile
+the cold-start path selection. Never infer these roots from the user profile,
+current directory, an example path, or an earlier installation.
+
+A local scheduled task may start without inheriting those environment
+variables. Its prompt must contain the absolute path to the already-selected
+`paths.json` and the three absolute roots captured when the task was created.
+After validating that the record, prompt, workspace instructions, and existing
+roots all agree, initialize only missing variables for that task process from
+the verified values. An unreadable record, an unfilled placeholder, a mismatch,
+or a missing root remains a fail-closed error; missing inherited variables alone
+do not restart cold-start selection.
 
 ## Intake the request
 

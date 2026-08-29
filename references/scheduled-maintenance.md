@@ -6,6 +6,17 @@ use. Test each prompt manually before enabling unattended runs, keep the
 machine and host application running when local files are required, and grant
 only the minimum permissions needed for the requested actions.
 
+Before creating either task, replace every `<selected-...>` placeholder below
+with the absolute roots already stored by RepoStew cold start. Do not leave a
+task dependent only on environment variables inherited from the interactive
+shell: a scheduler process may not inherit them, especially when they were set
+after the host application started. Bind the task to the saved local project at
+`<selected-repos-home>`, make the prompt read
+`<selected-state-home>/paths.json` directly, and verify that required command
+line tools are available to a fresh non-interactive process. Missing inherited
+variables alone are not a cold-start failure after the fixed record and all
+three roots have been revalidated.
+
 For authority-aware maintenance, apply
 [maintaining-owned-repositories.md](maintaining-owned-repositories.md); the task
 prompt below delegates owner/admin/maintain semantics to that reference rather
@@ -33,9 +44,19 @@ Prompt:
 
 ```text
 Use $repostew in autonomous mode for one bounded maintenance batch in this
-workspace. Before intake, verify that REPOSTEW_SKILL_HOME, REPOSTEW_HOME, and
-REPOSTEW_REPOS_HOME match the cold-start path record; stop without writing if
-they are absent or disagree. Capture the batch-start UTC timestamp before fetching. Use GitHub
+workspace. Before any stateful work, read
+<selected-state-home>/paths.json directly. Require it to record exactly
+REPOSTEW_SKILL_HOME=<selected-skill-home>,
+REPOSTEW_HOME=<selected-state-home>, and
+REPOSTEW_REPOS_HOME=<selected-repos-home>. Verify that those absolute roots
+exist and that the saved local project's workspace instructions agree. If one
+of the three process environment variables is unset, initialize it for this
+run from the matching verified value before invoking RepoStew helpers. If the
+record is missing or unreadable, a placeholder remains unfilled, a variable is
+already set to a different value, the workspace disagrees, or a root is
+missing, stop without writing. Do not stop merely because the scheduler did
+not inherit an otherwise verified variable. Capture the batch-start UTC
+timestamp before fetching. Use GitHub
 Notifications first and select events later than the last successful source
 checkpoint; never use unread state as a cursor. Scope routine work to the
 workspace's active/self follow registry. Verify repository metadata before
@@ -96,8 +117,16 @@ request and are outside every scheduled maintenance run.
 Prompt:
 
 ```text
-Use $repostew to run the safe local workspace-cleanup workflow in the selected
-REPOSTEW_REPOS_HOME. Verify all three cold-start path variables before writing.
+Use $repostew to run the safe local workspace-cleanup workflow in
+<selected-repos-home>. Before writing, read
+<selected-state-home>/paths.json directly and require it to record exactly
+REPOSTEW_SKILL_HOME=<selected-skill-home>,
+REPOSTEW_HOME=<selected-state-home>, and
+REPOSTEW_REPOS_HOME=<selected-repos-home>. Verify the roots and workspace
+instructions. Initialize any unset process variable for this run from the
+matching verified value; stop on an unreadable record, an unfilled placeholder,
+a mismatch, or a missing root, but not merely because the scheduler did not
+inherit a verified variable.
 Start with the deterministic inventory/dry run and review every reported safety check. Apply
 cleanup only to explicitly registered RepoStew-owned linked worktrees whose PR
 tracker state is MERGED or CLOSED and whose exact absolute path, canonical-clone

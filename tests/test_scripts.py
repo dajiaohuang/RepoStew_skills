@@ -45,6 +45,22 @@ class StateTests(unittest.TestCase):
 
 
 class PolicyTests(unittest.TestCase):
+    def test_scheduled_tasks_bootstrap_only_from_verified_path_record(self):
+        root = Path(__file__).resolve().parents[1]
+        skill = (root / "SKILL.md").read_text(encoding="utf-8")
+        scheduled = (root / "references" / "scheduled-maintenance.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("absolute path to the already-selected", skill)
+        self.assertIn("missing inherited variables alone", skill)
+        self.assertIn("<selected-state-home>/paths.json", scheduled)
+        self.assertIn(
+            "initialize it for this\nrun from the matching verified value", scheduled
+        )
+        self.assertIn("Do not stop merely because the scheduler did", scheduled)
+        self.assertNotIn("stop without writing if\nthey are absent or disagree", scheduled)
+
     def test_complexity_routes_work_instead_of_skipping_it(self):
         root = Path(__file__).resolve().parents[1]
         skill = (root / "SKILL.md").read_text(encoding="utf-8")

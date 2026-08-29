@@ -386,7 +386,14 @@ ownership and cleanup history. See
 [`references/scheduled-maintenance.md`](references/scheduled-maintenance.md)
 contains copyable, platform-neutral prompts for a two-hour notification-first
 maintenance inbox and a weekly safe-storage cleanup. Both use persistent
-checkpoints, minimum permissions, and bounded standalone runs. Comprehensive
+checkpoints, minimum permissions, and bounded standalone runs.
+
+Before enabling one, fill its absolute path placeholders and bind it to the
+saved local project. The prompts revalidate `paths.json` and initialize missing
+variables for the scheduler process instead of assuming it inherited an
+interactive shell environment.
+
+Comprehensive
 repository audits and proactive audit-driven issue filing are explicitly
 excluded from scheduled work and require a separate human request.
 
