@@ -86,7 +86,14 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 - Prior contributions, organization membership, forks, and local clones never prove authority.
 - Maintainer authority does not itself allow merge, close, release, remote deletion, governance, or secret access.
 
-### 6. Guarded local cleanup
+### 6. Batched continuous iteration
+
+- Turn an explicitly requested continuous-maintenance scope into bounded, durable batches.
+- Isolate independent workers, then converge their reviewed output into one parent-owned integration worktree, branch, and PR.
+- Run focused validation during integration and the repository-required suite before review.
+- Merge only with explicit user authority; wait for the PR to be terminal, prove any completed workers against its frozen head, dry-run guarded cleanup, record actual reclaimed bytes, then select the next batch.
+
+### 7. Guarded local cleanup
 
 - Consider only explicitly registered linked worktrees whose PR is `MERGED` or `CLOSED`.
 - Default to dry run; before apply, recheck boundaries, remotes, branch, pushed tip, working state, and ownership.
@@ -165,6 +172,7 @@ Use RepoStew to audit owner/repo and draft confirmed bug reports
 Use RepoStew to find 3 well-scoped open-source issues
 Use RepoStew to check and maintain my tracked pull requests
 Use RepoStew to maintain my verified owned and administered repositories
+Use RepoStew to run one bounded iteration batch for my maintained repository
 Use RepoStew autonomously and stop after 3 dry discovery rounds
 ```
 
@@ -264,6 +272,8 @@ RepoStew's autonomy always remains inside these rules:
 - Never expose credentials in prompts, logs, commits, issues, pull requests, or backups.
 
 See [`references/taste-and-permissions.md`](references/taste-and-permissions.md) for the contribution and authority model, [`references/pr-maintenance.md`](references/pr-maintenance.md) for PR follow-up, [`references/repository-audit.md`](references/repository-audit.md) for audits, and [`references/workspace-cleanup.md`](references/workspace-cleanup.md) for cleanup.
+
+For explicitly requested continuous maintenance, [`references/batched-iteration.md`](references/batched-iteration.md) defines the bounded worker-to-integration-PR cycle and terminal cleanup gate.
 
 ## Develop and validate
 

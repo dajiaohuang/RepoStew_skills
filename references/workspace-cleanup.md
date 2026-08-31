@@ -7,7 +7,9 @@ step, not a general disk cleaner.
 ## Safety boundary
 
 RepoStew cleans only explicitly registered linked worktrees whose tracked pull
-request is currently `MERGED` or `CLOSED`. It never deletes:
+request is currently `MERGED` or `CLOSED`. Ordinary PR worktrees must match the
+tracked PR branch and pushed tip. Batch workers require the separate terminal
+proof described below. It never deletes:
 
 - a canonical clone, workspace root, fork, or remote branch;
 - an active PR's worktree or branch;
@@ -79,6 +81,54 @@ it cannot transfer ownership to another path, branch, repository, or PR. The
 previous and replacement commits are retained as a `rebound` history event.
 An unpushed rewrite is rejected.
 
+### Register a completed batch worker
+
+Do not register a worker with the ordinary `register` command. After the
+integration PR is terminal and refreshed, use the exact worker path and the
+full batch-start commit recorded when the batch began:
+
+```bash
+python scripts/workspace_cleanup.py register-worker \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker" \
+  --pr-url https://github.com/owner/repo/pull/123 \
+  --base-oid 0123456789abcdef0123456789abcdef01234567
+```
+
+The command requires a linked, clean worker in the same repository, a terminal
+tracked integration PR, an exact 40-character base that is an ancestor of both
+heads, and at least one worker commit. It accepts either direct ancestry into
+the integration head or a merge-free range whose every patch has an equivalent
+in that head. Patch-equivalent worker tips must also match an exact
+remote-tracking ref so the original commits are not discarded while unpushed.
+The recorded worker head, base, integration head, inclusion method, and verified
+commits are immutable cleanup provenance. There is no worker rebind: any later
+head or integration-head change blocks cleanup and requires a new explicit
+assessment.
+
+### Approve project-specific generated output
+
+Generic build directories such as `dist/` and `node_modules/` are recognized
+automatically. If a target repository documents another ignored path as wholly
+generated and reproducible, attach that exact path to an already registered
+worktree instead of broadening RepoStew's global disposable-name list:
+
+```bash
+python scripts/workspace_cleanup.py approve-output \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
+  --pr-url https://github.com/owner/repo/pull/123 \
+  --path public/generated-data \
+  --path test-results
+```
+
+Each path must exactly match a path currently reported by Git as ignored. It
+must be relative, stay outside `.git`, and not look credential-like. The
+approval is bound to the existing worktree, PR, and registered head and is
+retained in cleanup history. This is for repository-documented reproducible
+output only; source assets, downloads, user data, and uncertain caches remain
+blocked.
+
 ## Inventory before deletion
 
 The cleanup command is a dry run unless `--apply` is explicit:
@@ -98,12 +148,15 @@ rechecks:
 
 1. the exact resolved path remains below the workspace and differs from the
    canonical clone;
-2. the tracker entry is terminal and still names the same branch;
+2. the tracker entry is terminal and still names the same branch for an ordinary
+   PR worktree, or still has the exact recorded integration head for a batch
+   worker;
 3. the worktree belongs to the recorded common Git directory;
 4. tracked and ordinary untracked state is clean;
 5. ignored paths are recognizable dependency/build/cache output, with
    credential-like paths and unknown ignored data blocking cleanup;
-6. the local tip matches the tracked PR head or remote-tracking ref; and
+6. the local tip exactly matches its registered head and has the required pushed
+   PR provenance or revalidated worker-inclusion proof; and
 7. no other worktree owns the local branch.
 
 Logical file sizes include ignored dependency and build output. Symlinks are

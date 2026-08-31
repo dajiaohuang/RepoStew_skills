@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -245,10 +246,10 @@ def _tracker_entry(entries: list[dict], pr_url: str) -> dict | None:
 
 
 def _state() -> dict:
-    data = load_json(state_file(RESOURCE_STATE), {"version": 1, "resources": [], "history": []})
+    data = load_json(state_file(RESOURCE_STATE), {"version": 2, "resources": [], "history": []})
     if not isinstance(data, dict):
-        return {"version": 1, "resources": [], "history": []}
-    data.setdefault("version", 1)
+        return {"version": 2, "resources": [], "history": []}
+    data["version"] = max(2, int(data.get("version") or 1))
     data.setdefault("resources", [])
     data.setdefault("history", [])
     return data
@@ -273,6 +274,69 @@ def _repo_identity_ok(entry: dict, remotes: set[str]) -> bool:
 def _has_pushed_provenance(entry: dict, canonical: Path, branch: str, head: str) -> bool:
     tracked_head = str(entry.get("head_oid") or "")
     return (bool(tracked_head) and tracked_head == head) or _remote_tip_matches(canonical, branch, head)
+
+
+def _worker_inclusion_proof(
+    canonical: Path, integration_head: str, worker_head: str, base_oid: str | None = None
+) -> dict:
+    """Prove that every worker-only patch is represented by the tracked PR head.
+
+    Worker commits are commonly cherry-picked into an integration branch, so
+    ancestry alone is insufficient. ``git cherry`` compares stable patch IDs;
+    merge commits are rejected because they are not represented by that proof.
+    """
+
+    if not integration_head:
+        raise CleanupError("tracker is missing head_oid; refresh the PR before worker registration")
+    for label, oid in (("integration", integration_head), ("worker", worker_head)):
+        result = _run(["git", "cat-file", "-e", f"{oid}^{{commit}}"], cwd=canonical)
+        if result.returncode != 0:
+            raise CleanupError(f"{label} commit is unavailable locally: {oid}")
+
+    if not base_oid or not re.fullmatch(r"[0-9a-fA-F]{40}", base_oid):
+        raise CleanupError("worker base must be an exact 40-character commit OID")
+    merge_base = base_oid
+    for head in (integration_head, worker_head):
+        ancestor = _run(["git", "merge-base", "--is-ancestor", merge_base, head], cwd=canonical)
+        if ancestor.returncode != 0:
+            raise CleanupError("recorded worker base is not an ancestor of both worker and integration heads")
+    worker_commits = _git(
+        ["rev-list", "--reverse", f"{merge_base}..{worker_head}"], cwd=canonical
+    ).splitlines()
+    if not worker_commits:
+        raise CleanupError("worker range contains no commits")
+
+    direct = _run(["git", "merge-base", "--is-ancestor", worker_head, integration_head], cwd=canonical)
+    if direct.returncode == 0:
+        return {
+            "integration_head": integration_head,
+            "merge_base": merge_base,
+            "represented_worker_commits": worker_commits,
+            "proof": "ancestor",
+        }
+
+    merge_commits = _git(
+        ["rev-list", "--merges", f"{merge_base}..{worker_head}"], cwd=canonical
+    ).splitlines()
+    if merge_commits:
+        raise CleanupError("worker-only history contains merge commits that patch IDs cannot prove")
+
+    output = _git(["cherry", integration_head, worker_head, merge_base], cwd=canonical)
+    results = [line.split(maxsplit=1) for line in output.splitlines() if line.strip()]
+    missing = [parts[1] for parts in results if len(parts) == 2 and parts[0] == "+"]
+    if missing:
+        raise CleanupError(
+            "worker patches are not fully represented by the tracked PR head: " + ", ".join(missing)
+        )
+    represented = [parts[1] for parts in results if len(parts) == 2 and parts[0] == "-"]
+    if len(represented) != len(worker_commits):
+        raise CleanupError("worker patch proof did not account for every worker-range commit")
+    return {
+        "integration_head": integration_head,
+        "merge_base": merge_base,
+        "represented_worker_commits": represented,
+        "proof": "patch-equivalent",
+    }
 
 
 def _validated_resource(args) -> dict:
@@ -312,11 +376,72 @@ def _validated_resource(args) -> dict:
         "registered_at": now_iso(),
         "ownership": "explicit",
         "status": "active",
+        "resource_type": "pr_worktree",
     }
 
 
-def register_resource(args) -> dict:
-    resource = _validated_resource(args)
+def _validated_worker_resource(args) -> dict:
+    workspace = validate_workspace(args.workspace)
+    target = validate_target(args.worktree, workspace, require_exists=True)
+    info = inspect_worktree(target)
+    if info["kind"] != "linked_worktree":
+        raise CleanupError("canonical clones cannot be registered as disposable worktrees")
+
+    tracker_path = _absolute(args.tracker) if args.tracker else state_file("pr_tracker.json")
+    tracker = _tracker_entry(_load_tracker(tracker_path), args.pr_url)
+    if not tracker:
+        raise CleanupError("PR is not present in the RepoStew tracker")
+    if not tracker.get("head_ref") or not tracker.get("head_oid"):
+        raise CleanupError("tracker is missing head provenance; refresh the PR before registration")
+    if str(tracker.get("state") or "").upper() not in TERMINAL_STATES:
+        raise CleanupError("worker registration requires a terminal integration PR")
+    if tracker["head_ref"] == info["branch"]:
+        raise CleanupError("worker registration requires a branch distinct from the integration PR head")
+
+    records = parse_worktree_list(target)
+    canonical = _canonical_worktree(records)
+    remotes = remote_repositories(canonical)
+    if not _repo_identity_ok(tracker, remotes):
+        raise CleanupError("local GitHub remotes do not match the tracked PR repository")
+
+    status = _run(
+        ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"], cwd=target, timeout=120
+    )
+    if status.returncode != 0 or status.stdout:
+        raise CleanupError("worker worktree must be clean before registration")
+    sensitive, unknown, _ = ignored_safety(target)
+    if sensitive:
+        raise CleanupError("worker worktree contains ignored credentials or keys")
+    if unknown:
+        raise CleanupError("worker worktree contains ignored non-build data")
+
+    inclusion = _worker_inclusion_proof(
+        canonical, str(tracker["head_oid"]), info["head"], str(args.base_oid)
+    )
+    if inclusion["proof"] == "patch-equivalent" and not _remote_tip_matches(
+        canonical, info["branch"], info["head"]
+    ):
+        raise CleanupError("patch-equivalent worker tip is not preserved by a remote-tracking ref")
+    return {
+        "worktree": str(target),
+        "canonical": str(canonical),
+        "common_git_dir": info["common_git_dir"],
+        "branch": info["branch"],
+        "pr_url": str(tracker["pr_url"]).rstrip("/"),
+        "repo": tracker.get("repo"),
+        "registered_head": info["head"],
+        "registered_at": now_iso(),
+        "ownership": "explicit-batch-worker",
+        "status": "active",
+        "resource_type": "batch_worker",
+        "batch_base_oid": inclusion["merge_base"],
+        "integration_head_oid": inclusion["integration_head"],
+        "inclusion_method": inclusion["proof"],
+        "verified_worker_commits": inclusion["represented_worker_commits"],
+    }
+
+
+def _register_validated(resource: dict) -> dict:
     target = Path(resource["worktree"])
     state = _state()
     existing = next(
@@ -329,17 +454,31 @@ def register_resource(args) -> dict:
     )
     if existing:
         stable = {key: value for key, value in resource.items() if key != "registered_at"}
-        prior = {key: existing.get(key) for key in stable}
+        prior = {
+            key: (
+                existing.get(key, "pr_worktree")
+                if key == "resource_type"
+                else existing.get(key)
+            )
+            for key in stable
+        }
         if prior != stable:
             raise CleanupError(
                 "worktree is already registered with different provenance; "
                 "use rebind only after refreshing the same tracked PR"
             )
-        resource = existing
-    else:
-        state["resources"].append(resource)
-        _save_state(state)
+        return existing
+    state["resources"].append(resource)
+    _save_state(state)
     return resource
+
+
+def register_resource(args) -> dict:
+    return _register_validated(_validated_resource(args))
+
+
+def register_worker_resource(args) -> dict:
+    return _register_validated(_validated_worker_resource(args))
 
 
 def rebind_resource(args) -> dict:
@@ -359,10 +498,19 @@ def rebind_resource(args) -> dict:
     )
     if existing is None:
         raise CleanupError("worktree has no active ownership record; register it first")
+    if existing.get("resource_type", "pr_worktree") != "pr_worktree":
+        raise CleanupError("worker ownership cannot be rebound; register it only after final integration")
 
     mutable = {"registered_head", "registered_at"}
     expected = {key: value for key, value in resource.items() if key not in mutable}
-    prior = {key: existing.get(key) for key in expected}
+    prior = {
+        key: (
+            existing.get(key, "pr_worktree")
+            if key == "resource_type"
+            else existing.get(key)
+        )
+        for key in expected
+    }
     if prior != expected:
         raise CleanupError("rebind cannot change the recorded worktree, PR, branch, or repository")
 
@@ -452,13 +600,37 @@ def _sensitive_ignored(path: str) -> bool:
     return False
 
 
-def _disposable_ignored(path: str) -> bool:
+def _normalize_relative_path(raw: str) -> str:
+    if re.match(r"^[A-Za-z]:", raw) or raw.startswith(("\\", "//")):
+        raise CleanupError(f"unsafe relative path: {raw!r}")
+    relative = PurePosixPath(raw.replace("\\", "/").rstrip("/"))
+    if relative.is_absolute() or not relative.parts or ".." in relative.parts or ".git" in relative.parts:
+        raise CleanupError(f"unsafe relative path: {raw!r}")
+    return relative.as_posix()
+
+
+def _explicitly_disposable(path: str, approved: list[str] | None) -> bool:
+    candidate = _normalize_relative_path(path)
+    for raw in approved or []:
+        root = _normalize_relative_path(raw)
+        if candidate == root or candidate.startswith(root + "/"):
+            return True
+    return False
+
+
+def _disposable_ignored(path: str, approved: list[str] | None = None) -> bool:
     parts = [part.lower() for part in Path(path.rstrip("/")).parts]
     name = parts[-1] if parts else ""
-    return bool(set(parts) & DISPOSABLE_PARTS) or name in {item.lower() for item in DISPOSABLE_FILES}
+    return (
+        bool(set(parts) & DISPOSABLE_PARTS)
+        or name in {item.lower() for item in DISPOSABLE_FILES}
+        or _explicitly_disposable(path, approved)
+    )
 
 
-def ignored_safety(path: Path) -> tuple[list[str], list[str], list[str]]:
+def ignored_safety(
+    path: Path, approved: list[str] | None = None
+) -> tuple[list[str], list[str], list[str]]:
     output = _git(
         ["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"],
         cwd=path,
@@ -466,11 +638,69 @@ def ignored_safety(path: Path) -> tuple[list[str], list[str], list[str]]:
     )
     ignored = [item for item in output.split("\0") if item]
     sensitive = sorted(item for item in ignored if _sensitive_ignored(item))
-    unknown = sorted(item for item in ignored if not _sensitive_ignored(item) and not _disposable_ignored(item))
+    unknown = sorted(
+        item
+        for item in ignored
+        if not _sensitive_ignored(item) and not _disposable_ignored(item, approved)
+    )
     disposable = sorted(
-        item for item in ignored if not _sensitive_ignored(item) and _disposable_ignored(item)
+        item
+        for item in ignored
+        if not _sensitive_ignored(item) and _disposable_ignored(item, approved)
     )
     return sensitive, unknown, disposable
+
+
+def approve_ignored_output(args) -> dict:
+    workspace = validate_workspace(args.workspace)
+    target = validate_target(args.worktree, workspace, require_exists=True)
+    state = _state()
+    resource = next(
+        (
+            item
+            for item in state["resources"]
+            if item.get("status") == "active" and _path_key(item.get("worktree", "")) == _path_key(target)
+        ),
+        None,
+    )
+    if not resource:
+        raise CleanupError("worktree has no active ownership record")
+    if str(resource.get("pr_url") or "").rstrip("/").lower() != args.pr_url.rstrip("/").lower():
+        raise CleanupError("worktree ownership record belongs to a different PR")
+
+    info = inspect_worktree(target)
+    if info["kind"] != "linked_worktree" or info["head"] != resource.get("registered_head"):
+        raise CleanupError("worktree identity or registered head changed")
+    output = _git(
+        ["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"],
+        cwd=target,
+        timeout=120,
+    )
+    ignored = {_normalize_relative_path(item) for item in output.split("\0") if item}
+    requested = sorted({_normalize_relative_path(item) for item in args.path})
+    missing = [item for item in requested if item not in ignored]
+    if missing:
+        raise CleanupError("approved output is not an exact Git-ignored path: " + ", ".join(missing))
+    sensitive = [item for item in requested if _sensitive_ignored(item)]
+    if sensitive:
+        raise CleanupError("credential-like paths cannot be approved as disposable output")
+
+    previous = set(resource.get("approved_ignored_paths") or [])
+    resource["approved_ignored_paths"] = sorted(previous | set(requested))
+    timestamp = now_iso()
+    resource["ignored_outputs_approved_at"] = timestamp
+    state["history"].append(
+        {
+            "timestamp": timestamp,
+            "status": "ignored_outputs_approved",
+            "worktree": str(target),
+            "pr_url": resource["pr_url"],
+            "paths": requested,
+            "registered_head": resource["registered_head"],
+        }
+    )
+    _save_state(state)
+    return resource
 
 
 def _branch_oid(canonical: Path, branch: str) -> str | None:
@@ -484,6 +714,9 @@ def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dic
     branch = str(resource.get("branch", ""))
     blockers: list[str] = []
     tracker = _tracker_entry(tracker_entries, str(resource.get("pr_url", "")))
+    resource_type = str(resource.get("resource_type") or "pr_worktree")
+    if resource_type not in {"pr_worktree", "batch_worker"}:
+        blockers.append("unknown_resource_type")
 
     if resource.get("status") != "active":
         blockers.append("resource_not_active")
@@ -499,7 +732,7 @@ def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dic
         blockers.append("tracker_entry_missing")
     elif str(tracker.get("state", "")).upper() not in TERMINAL_STATES:
         blockers.append("pr_not_terminal")
-    if tracker and tracker.get("head_ref") != branch:
+    if tracker and resource_type == "pr_worktree" and tracker.get("head_ref") != branch:
         blockers.append("branch_no_longer_matches_tracker")
 
     exists = path.is_dir()
@@ -525,7 +758,9 @@ def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dic
                 blockers.append("worktree_status_unavailable")
             elif status_result.stdout:
                 blockers.append("tracked_or_untracked_changes_present")
-            sensitive, unknown, disposable = ignored_safety(path)
+            sensitive, unknown, disposable = ignored_safety(
+                path, list(resource.get("approved_ignored_paths") or [])
+            )
             if sensitive:
                 blockers.append("ignored_credentials_or_keys_present")
             if unknown:
@@ -546,12 +781,31 @@ def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dic
         except CleanupError:
             blockers.append("worktree_list_unavailable")
 
+    if head and head != resource.get("registered_head"):
+        blockers.append("registered_head_changed")
+
     if head and tracker and canonical.is_dir():
         try:
             remotes = remote_repositories(canonical)
             if not _repo_identity_ok(tracker, remotes):
                 blockers.append("remote_repository_mismatch")
-            if not _has_pushed_provenance(tracker, canonical, branch, head):
+            if resource_type == "batch_worker":
+                try:
+                    if tracker.get("head_oid") != resource.get("integration_head_oid"):
+                        raise CleanupError("tracked integration head changed after worker registration")
+                    _worker_inclusion_proof(
+                        canonical,
+                        str(tracker.get("head_oid") or ""),
+                        head,
+                        str(resource.get("batch_base_oid") or ""),
+                    )
+                    if resource.get("inclusion_method") == "patch-equivalent" and not _remote_tip_matches(
+                        canonical, branch, head
+                    ):
+                        raise CleanupError("worker tip remote provenance disappeared")
+                except CleanupError:
+                    blockers.append("worker_patches_not_in_tracked_pr_head")
+            elif not _has_pushed_provenance(tracker, canonical, branch, head):
                 blockers.append("unpushed_or_unverified_tip")
         except CleanupError:
             blockers.append("remote_provenance_unavailable")
@@ -578,6 +832,7 @@ def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dic
         "canonical": str(canonical),
         "kind": kind,
         "branch": branch,
+        "resource_type": resource_type,
         "pr_url": resource.get("pr_url"),
         "pr_state": str(tracker.get("state", "")).upper() if tracker else None,
         "head": head,
@@ -881,6 +1136,29 @@ def build_parser() -> argparse.ArgumentParser:
     register.add_argument("--tracker", help="override pr_tracker.json")
     register.add_argument("--json", action="store_true")
 
+    register_worker = subparsers.add_parser(
+        "register-worker", help="record a worker whose patches are represented by a tracked PR"
+    )
+    register_worker.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    register_worker.add_argument("--worktree", required=True, help="exact worker worktree path")
+    register_worker.add_argument("--pr-url", required=True, help="tracked integration pull-request URL")
+    register_worker.add_argument(
+        "--base-oid", required=True, help="exact batch starting commit shared by worker and integration"
+    )
+    register_worker.add_argument("--tracker", help="override pr_tracker.json")
+    register_worker.add_argument("--json", action="store_true")
+
+    approve_output = subparsers.add_parser(
+        "approve-output", help="attest exact Git-ignored generated output for a registered worktree"
+    )
+    approve_output.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    approve_output.add_argument("--worktree", required=True, help="exact registered worktree path")
+    approve_output.add_argument("--pr-url", required=True, help="same tracked pull-request URL")
+    approve_output.add_argument(
+        "--path", action="append", required=True, help="exact ignored relative output path; repeat as needed"
+    )
+    approve_output.add_argument("--json", action="store_true")
+
     rebind = subparsers.add_parser(
         "rebind", help="refresh a registered worktree after a verified branch rewrite"
     )
@@ -909,6 +1187,21 @@ def main() -> int:
                 print(json.dumps(payload, indent=2, ensure_ascii=False))
             else:
                 print(f"Registered {payload['worktree']} for {payload['pr_url']}")
+        elif args.command == "register-worker":
+            payload = register_worker_resource(args)
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(f"Registered worker {payload['worktree']} for {payload['pr_url']}")
+        elif args.command == "approve-output":
+            payload = approve_ignored_output(args)
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(
+                    f"Approved {len(payload.get('approved_ignored_paths', []))} ignored output path(s) "
+                    f"for {payload['worktree']}"
+                )
         elif args.command == "rebind":
             payload = rebind_resource(args)
             if args.json:

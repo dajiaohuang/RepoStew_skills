@@ -45,6 +45,28 @@ class StateTests(unittest.TestCase):
 
 
 class PolicyTests(unittest.TestCase):
+    def test_batched_iteration_converges_into_one_terminally_cleaned_pr(self):
+        root = Path(__file__).resolve().parents[1]
+        skill = (root / "SKILL.md").read_text(encoding="utf-8")
+        batched = (root / "references" / "batched-iteration.md").read_text(encoding="utf-8")
+        readme_en = (root / "README.en.md").read_text(encoding="utf-8")
+        readme_zh = (root / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("references/batched-iteration.md", skill)
+        self.assertIn("one parent-owned integration\nworktree, branch, and reviewable PR per batch", skill)
+        self.assertIn("one explicitly parent-owned integration worktree and branch", batched)
+        self.assertIn("exact integration\n   worktree", batched)
+        self.assertIn("focused validation", batched)
+        self.assertIn("repository's\n   required validation", batched)
+        self.assertIn("user explicitly authorizes that exact merge", batched)
+        self.assertIn("actual reclaimed\nlogical bytes", batched)
+        self.assertIn("Never delete a\nremote branch", batched)
+        self.assertIn("Do not begin the next batch", batched)
+        self.assertIn("register-worker", batched)
+        self.assertIn("git cherry", batched)
+        self.assertIn("Batched continuous iteration", readme_en)
+        self.assertIn("分批持续迭代", readme_zh)
+
     def test_scheduled_tasks_bootstrap_only_from_verified_path_record(self):
         root = Path(__file__).resolve().parents[1]
         skill = (root / "SKILL.md").read_text(encoding="utf-8")
