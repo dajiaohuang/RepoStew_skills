@@ -55,7 +55,9 @@ blocker first.
    ```
 
    The registration is evidence of ownership, not permission to remove a
-   worktree. Do not register worker worktrees against the integration PR.
+   worktree. Do not use ordinary `register` for worker worktrees. Retain each
+   worker's exact path, branch, head, and the batch starting commit in the batch
+   record so it can be proven after the integration PR becomes terminal.
 
 ## Terminal gate and cleanup
 
@@ -66,7 +68,27 @@ the user explicitly authorizes that exact merge and repository policy permits
 it; verified owner/admin/maintain authority alone is insufficient.
 
 After the PR is `MERGED` or `CLOSED`, refresh the tracker and run the existing
-cleanup inventory first:
+cleanup inventory first. Before that inventory, a completed worker may be
+explicitly registered only through the worker-specific proof path:
+
+```bash
+python scripts/workspace_cleanup.py register-worker \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/<exact-worker-worktree>" \
+  --pr-url https://github.com/owner/repo/pull/123 \
+  --base-oid <exact-40-character-batch-start-commit>
+```
+
+`register-worker` requires the tracked integration PR to be terminal, the base
+to be an ancestor of both heads, a non-empty worker range, and every worker
+change to be represented by the frozen PR head. Direct ancestry is accepted.
+Cherry-picked work is accepted only when the worker range has no merge commits,
+`git cherry` proves every patch equivalent, and the exact worker tip is also
+preserved by a remote-tracking ref. Dirty workers, unknown ignored data,
+credentials, changed heads, missing patches, ambiguous merge history, and
+unregistered workers remain protected.
+
+Then run:
 
 ```bash
 python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --json
@@ -80,11 +102,17 @@ tip, unregistered path, repository-mismatched worktree, credential/key, or
 unknown ignored data. Re-evaluate immediately before any apply. Never delete a
 remote branch, fork, or workspace root as part of this cycle.
 
-Worker worktrees are outside the integration-PR cleanup record. Leave any
-active, dirty, unpushed, unregistered, mismatched, or unknown-data worker
-worktree untouched. If a clean worker resource needs later retirement, handle
-it through a separately verified, explicitly authorized process; do not infer
-ownership from its directory or branch name.
+When a dry run identifies project-specific ignored output, approve it only if
+the target repository documents the exact path as wholly generated and
+reproducible. Use `workspace_cleanup.py approve-output` for each exact path;
+never turn a project convention into a global disposable-name rule or use a
+recursive deletion command as a shortcut.
+
+Never infer a worker from its directory or branch name. Leave any active,
+dirty, unpushed, unregistered, mismatched, incompletely integrated, or
+unknown-data worker worktree untouched. Worker registration does not weaken the
+normal terminal, repository, exact-head, clean-state, ignored-data, non-force
+removal, or no-remote-deletion gates.
 
 Only after the terminal state and cleanup outcome are durably recorded may the
 parent select the next bounded batch. Keep target-repository implementation,

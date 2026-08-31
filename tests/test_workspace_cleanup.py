@@ -62,6 +62,19 @@ class CleanupFixture:
         self.worktree = self.workspace / "project-42"
         git(self.canonical, "worktree", "add", str(self.worktree), "fix/42")
 
+    def add_patch_equivalent_worker(self) -> tuple[Path, str, str]:
+        base = git(self.canonical, "rev-parse", "main").stdout.strip()
+        git(self.canonical, "checkout", "-b", "worker/42", "main")
+        (self.canonical / "fix.txt").write_text("fixed\n", encoding="utf-8")
+        git(self.canonical, "add", "fix.txt")
+        git(self.canonical, "commit", "-m", "worker copy of fix")
+        worker_head = git(self.canonical, "rev-parse", "HEAD").stdout.strip()
+        git(self.canonical, "push", "-u", "origin", "worker/42")
+        git(self.canonical, "checkout", "main")
+        worker = self.workspace / "project-worker-42"
+        git(self.canonical, "worktree", "add", str(worker), "worker/42")
+        return worker, worker_head, base
+
     def tracker(self, state: str = "MERGED", *, head: str | None = None) -> list[dict]:
         return [
             {
@@ -158,6 +171,101 @@ class WorkspaceCleanupTests(unittest.TestCase):
             )
             self.assertTrue(fixture.worktree.exists())
 
+    def test_terminal_batch_worker_with_equivalent_patch_can_be_cleaned(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            worker, worker_head, base = fixture.add_patch_equivalent_worker()
+            tracker = self._write_tracker(state_home, fixture.tracker())
+            args = self._args(
+                fixture,
+                tracker,
+                worktree=str(worker),
+                base_oid=base,
+            )
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                registered = workspace_cleanup.register_worker_resource(args)
+                dry_run = workspace_cleanup.apply_cleanup(args)
+                applied = workspace_cleanup.apply_cleanup(
+                    self._args(fixture, tracker, apply=True)
+                )
+
+            self.assertEqual(registered["resource_type"], "batch_worker")
+            self.assertEqual(registered["registered_head"], worker_head)
+            self.assertEqual(registered["integration_head_oid"], fixture.head)
+            self.assertEqual(dry_run["eligible_count"], 1)
+            self.assertEqual(applied["removed_count"], 1)
+            self.assertFalse(worker.exists())
+            self.assertNotEqual(
+                git(fixture.canonical, "show-ref", "--verify", "refs/heads/worker/42", check=False).returncode,
+                0,
+            )
+
+    def test_worker_registration_rejects_open_pr_and_unrepresented_patch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            worker, _, base = fixture.add_patch_equivalent_worker()
+            open_tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            args = self._args(fixture, open_tracker, worktree=str(worker), base_oid=base)
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "terminal"):
+                    workspace_cleanup.register_worker_resource(args)
+
+                closed_tracker = self._write_tracker(state_home, fixture.tracker())
+                (worker / "fix.txt").write_text("different\n", encoding="utf-8")
+                git(worker, "add", "fix.txt")
+                git(worker, "commit", "-m", "unrepresented follow-up")
+                args = self._args(fixture, closed_tracker, worktree=str(worker), base_oid=base)
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "not fully represented"):
+                    workspace_cleanup.register_worker_resource(args)
+
+    def test_registered_head_change_blocks_cleanup_even_when_new_tip_is_pushed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                (fixture.worktree / "later.txt").write_text("later\n", encoding="utf-8")
+                git(fixture.worktree, "add", "later.txt")
+                git(fixture.worktree, "commit", "-m", "later")
+                git(fixture.worktree, "push", "origin", "fix/42")
+                inventory = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
+
+            self.assertIn("registered_head_changed", inventory["resources"][0]["blockers"])
+            self.assertTrue(fixture.worktree.exists())
+
+    def test_version_one_pr_worktree_record_remains_compatible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                state_path = state_home / "workspace_resources.json"
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state["version"] = 1
+                state["resources"][0].pop("resource_type")
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                same = workspace_cleanup.register_resource(self._args(fixture, tracker))
+                rebound = workspace_cleanup.rebind_resource(self._args(fixture, tracker))
+
+            self.assertEqual(same["registered_head"], fixture.head)
+            self.assertFalse(rebound["rebound"])
+
     def test_ignored_credentials_and_unknown_ignored_data_are_blocked(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -178,6 +286,49 @@ class WorkspaceCleanupTests(unittest.TestCase):
             self.assertIn("ignored_credentials_or_keys_present", blockers)
             self.assertIn("ignored_nonbuild_data_present", blockers)
             self.assertTrue(fixture.worktree.exists())
+
+    def test_exact_documented_ignored_output_can_be_approved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+            scratch = fixture.worktree / "scratch"
+            scratch.mkdir()
+            (scratch / "generated.bin").write_bytes(b"generated")
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                blocked = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
+                approved = workspace_cleanup.approve_ignored_output(
+                    self._args(fixture, tracker, path=["scratch"])
+                )
+                ready = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
+
+            self.assertIn("ignored_nonbuild_data_present", blocked["resources"][0]["blockers"])
+            self.assertEqual(approved["approved_ignored_paths"], ["scratch"])
+            self.assertEqual(ready["eligible_count"], 1)
+
+    def test_sensitive_or_nonignored_output_cannot_be_approved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+            (fixture.worktree / ".env").write_text("TOKEN=secret\n", encoding="utf-8")
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "credential-like"):
+                    workspace_cleanup.approve_ignored_output(
+                        self._args(fixture, tracker, path=[".env"])
+                    )
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "not an exact Git-ignored"):
+                    workspace_cleanup.approve_ignored_output(
+                        self._args(fixture, tracker, path=["not-ignored"])
+                    )
 
     def test_canonical_clone_is_never_registrable(self):
         with tempfile.TemporaryDirectory() as directory:

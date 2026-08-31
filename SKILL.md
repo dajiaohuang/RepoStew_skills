@@ -127,9 +127,11 @@ Read [references/batched-iteration.md](references/batched-iteration.md) before
 starting the first batch. It requires one durable scope record, isolated worker
 worktrees when parallel work is useful, and one parent-owned integration
 worktree, branch, and reviewable PR per batch. Do not start another batch until
-the current PR is terminal and its registered integration worktree has passed a
-reviewed dry-run cleanup; when cleanup is authorized and applied, retain the
-reported actual reclaimed bytes.
+the current PR is terminal and its registered integration worktree plus any
+explicitly proven batch-worker worktrees have passed a reviewed dry-run cleanup;
+when cleanup is authorized and applied, retain the reported actual reclaimed
+bytes. Never register a worker through the ordinary PR-worktree path; use the
+terminal `register-worker` proof in the reference workflow.
 
 Verified owner/admin/maintain authority does not authorize an automatic merge.
 Merge the batch PR into the current default branch only when the user has

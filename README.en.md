@@ -91,7 +91,7 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 - Turn an explicitly requested continuous-maintenance scope into bounded, durable batches.
 - Isolate independent workers, then converge their reviewed output into one parent-owned integration worktree, branch, and PR.
 - Run focused validation during integration and the repository-required suite before review.
-- Merge only with explicit user authority; wait for the PR to be terminal, dry-run guarded cleanup, record actual reclaimed bytes, then select the next batch.
+- Merge only with explicit user authority; wait for the PR to be terminal, prove any completed workers against its frozen head, dry-run guarded cleanup, record actual reclaimed bytes, then select the next batch.
 
 ### 7. Guarded local cleanup
 

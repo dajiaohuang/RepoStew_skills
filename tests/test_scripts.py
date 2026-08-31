@@ -62,6 +62,8 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("actual reclaimed\nlogical bytes", batched)
         self.assertIn("Never delete a\nremote branch", batched)
         self.assertIn("Do not begin the next batch", batched)
+        self.assertIn("register-worker", batched)
+        self.assertIn("git cherry", batched)
         self.assertIn("Batched continuous iteration", readme_en)
         self.assertIn("分批持续迭代", readme_zh)
 
