@@ -106,6 +106,23 @@ commits are immutable cleanup provenance. There is no worker rebind: any later
 head or integration-head change blocks cleanup and requires a new explicit
 assessment.
 
+If the clean worker already contains repository-documented, reproducible
+Git-ignored output, approve each exact path atomically with registration by
+repeating `--path`. Registration applies the same relative-path, exact-ignore
+and credential-like-path checks as `approve-output`; any remaining unknown
+ignored data still rejects the worker. This avoids deleting output merely to
+establish ownership and does not broaden the global disposable-path list:
+
+```bash
+python scripts/workspace_cleanup.py register-worker \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker" \
+  --pr-url https://github.com/owner/repo/pull/123 \
+  --base-oid 0123456789abcdef0123456789abcdef01234567 \
+  --path public/generated-data \
+  --path test-results
+```
+
 ### Approve project-specific generated output
 
 Generic build directories such as `dist/` and `node_modules/` are recognized

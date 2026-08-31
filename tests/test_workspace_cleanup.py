@@ -226,6 +226,33 @@ class WorkspaceCleanupTests(unittest.TestCase):
                 with self.assertRaisesRegex(workspace_cleanup.CleanupError, "not fully represented"):
                     workspace_cleanup.register_worker_resource(args)
 
+    def test_worker_can_atomically_approve_exact_generated_output_during_registration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            worker, worker_head, base = fixture.add_patch_equivalent_worker()
+            tracker = self._write_tracker(state_home, fixture.tracker())
+            scratch = worker / "scratch"
+            scratch.mkdir()
+            (scratch / "generated.bin").write_bytes(b"generated")
+            args = self._args(
+                fixture,
+                tracker,
+                worktree=str(worker),
+                base_oid=base,
+                path=["scratch"],
+            )
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                registered = workspace_cleanup.register_worker_resource(args)
+                dry_run = workspace_cleanup.apply_cleanup(args)
+
+            self.assertEqual(registered["registered_head"], worker_head)
+            self.assertEqual(registered["approved_ignored_paths"], ["scratch"])
+            self.assertEqual(dry_run["eligible_count"], 1)
+
     def test_registered_head_change_blocks_cleanup_even_when_new_tip_is_pushed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

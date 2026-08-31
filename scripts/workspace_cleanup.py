@@ -409,7 +409,8 @@ def _validated_worker_resource(args) -> dict:
     )
     if status.returncode != 0 or status.stdout:
         raise CleanupError("worker worktree must be clean before registration")
-    sensitive, unknown, _ = ignored_safety(target)
+    approved_outputs = validate_ignored_output_paths(target, getattr(args, "path", None))
+    sensitive, unknown, _ = ignored_safety(target, approved_outputs)
     if sensitive:
         raise CleanupError("worker worktree contains ignored credentials or keys")
     if unknown:
@@ -422,7 +423,7 @@ def _validated_worker_resource(args) -> dict:
         canonical, info["branch"], info["head"]
     ):
         raise CleanupError("patch-equivalent worker tip is not preserved by a remote-tracking ref")
-    return {
+    resource = {
         "worktree": str(target),
         "canonical": str(canonical),
         "common_git_dir": info["common_git_dir"],
@@ -439,6 +440,10 @@ def _validated_worker_resource(args) -> dict:
         "inclusion_method": inclusion["proof"],
         "verified_worker_commits": inclusion["represented_worker_commits"],
     }
+    if approved_outputs:
+        resource["approved_ignored_paths"] = approved_outputs
+        resource["ignored_outputs_approved_at"] = now_iso()
+    return resource
 
 
 def _register_validated(resource: dict) -> dict:
@@ -651,6 +656,25 @@ def ignored_safety(
     return sensitive, unknown, disposable
 
 
+def validate_ignored_output_paths(target: Path, raw_paths: list[str] | None) -> list[str]:
+    if not raw_paths:
+        return []
+    output = _git(
+        ["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"],
+        cwd=target,
+        timeout=120,
+    )
+    ignored = {_normalize_relative_path(item) for item in output.split("\0") if item}
+    requested = sorted({_normalize_relative_path(item) for item in raw_paths})
+    missing = [item for item in requested if item not in ignored]
+    if missing:
+        raise CleanupError("approved output is not an exact Git-ignored path: " + ", ".join(missing))
+    sensitive = [item for item in requested if _sensitive_ignored(item)]
+    if sensitive:
+        raise CleanupError("credential-like paths cannot be approved as disposable output")
+    return requested
+
+
 def approve_ignored_output(args) -> dict:
     workspace = validate_workspace(args.workspace)
     target = validate_target(args.worktree, workspace, require_exists=True)
@@ -671,19 +695,7 @@ def approve_ignored_output(args) -> dict:
     info = inspect_worktree(target)
     if info["kind"] != "linked_worktree" or info["head"] != resource.get("registered_head"):
         raise CleanupError("worktree identity or registered head changed")
-    output = _git(
-        ["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"],
-        cwd=target,
-        timeout=120,
-    )
-    ignored = {_normalize_relative_path(item) for item in output.split("\0") if item}
-    requested = sorted({_normalize_relative_path(item) for item in args.path})
-    missing = [item for item in requested if item not in ignored]
-    if missing:
-        raise CleanupError("approved output is not an exact Git-ignored path: " + ", ".join(missing))
-    sensitive = [item for item in requested if _sensitive_ignored(item)]
-    if sensitive:
-        raise CleanupError("credential-like paths cannot be approved as disposable output")
+    requested = validate_ignored_output_paths(target, args.path)
 
     previous = set(resource.get("approved_ignored_paths") or [])
     resource["approved_ignored_paths"] = sorted(previous | set(requested))
@@ -1144,6 +1156,11 @@ def build_parser() -> argparse.ArgumentParser:
     register_worker.add_argument("--pr-url", required=True, help="tracked integration pull-request URL")
     register_worker.add_argument(
         "--base-oid", required=True, help="exact batch starting commit shared by worker and integration"
+    )
+    register_worker.add_argument(
+        "--path",
+        action="append",
+        help="exact Git-ignored generated output to approve during worker registration; repeat as needed",
     )
     register_worker.add_argument("--tracker", help="override pr_tracker.json")
     register_worker.add_argument("--json", action="store_true")
