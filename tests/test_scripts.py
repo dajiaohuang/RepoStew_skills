@@ -715,6 +715,23 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(command[command.index("--min-stars") + 1], "5")
         self.assertNotIn("--direct", command)
 
+    def test_candidate_json_is_safe_for_restricted_stdout_encoding(self):
+        raw_stdout = io.BytesIO()
+        restricted_stdout = io.TextIOWrapper(raw_stdout, encoding="cp1252")
+        with (
+            mock.patch.object(loop, "discover_round", return_value=[{"title": "a→b"}]),
+            mock.patch.object(sys, "argv", ["loop.py", "--dry-rounds", "1"]),
+            mock.patch.object(sys, "stdout", restricted_stdout),
+        ):
+            result = loop.main()
+            restricted_stdout.flush()
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            json.loads(raw_stdout.getvalue().decode("ascii")),
+            {"round": 1, "candidates": [{"title": "a→b"}]},
+        )
+
 
 class DispatcherTests(unittest.TestCase):
     def test_dispatcher_prompt_preserves_invitation_only_policy(self):

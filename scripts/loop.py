@@ -75,7 +75,7 @@ def main() -> int:
     for round_number in range(1, args.dry_rounds + 1):
         candidates = discover_round(round_number, args.max_candidates, args.focus)
         if candidates:
-            print(json.dumps({"round": round_number, "candidates": candidates}, indent=2, ensure_ascii=False))
+            print(json.dumps({"round": round_number, "candidates": candidates}, indent=2))
             return 0
         print(f"Discovery round {round_number}/{args.dry_rounds}: no candidates", file=sys.stderr)
         if round_number < args.dry_rounds and args.interval:
