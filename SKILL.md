@@ -119,6 +119,25 @@ or cannot be reverified, then fall back to external-contributor rules. Read
 [references/maintaining-owned-repositories.md](references/maintaining-owned-repositories.md)
 before creating, verifying, changing, or relying on the authority registry.
 
+## Run a batched continuous iteration cycle
+
+For a user-owned or verified maintained repository, use a bounded iteration
+cycle only when the user explicitly asks for continuous or batched maintenance.
+Read [references/batched-iteration.md](references/batched-iteration.md) before
+starting the first batch. It requires one durable scope record, isolated worker
+worktrees when parallel work is useful, and one parent-owned integration
+worktree, branch, and reviewable PR per batch. Do not start another batch until
+the current PR is terminal and its registered integration worktree has passed a
+reviewed dry-run cleanup; when cleanup is authorized and applied, retain the
+reported actual reclaimed bytes.
+
+Verified owner/admin/maintain authority does not authorize an automatic merge.
+Merge the batch PR into the current default branch only when the user has
+explicitly authorized that merge and current repository policy, required checks,
+and PR state permit it. Never use this cycle to delete remote branches. Keep
+target-repository changes, RepoStew self-maintenance, and private-state backup
+changes in separate commits and PRs.
+
 For a repository-wide audit, multi-repository audit, documentation/site
 consistency review, or audit-to-issue-to-PR campaign, read
 [references/repository-audit.md](references/repository-audit.md) before building

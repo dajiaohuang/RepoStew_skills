@@ -86,7 +86,14 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 - 历史贡献、组织成员身份、fork 和本地 clone 都不能证明管理权限；
 - 维护权限不会自动授权合并、关闭、发布、远端删除、治理或 secret 访问。
 
-### 6. 安全回收本地资源
+### 6. 分批持续迭代
+
+- 将明确要求的持续维护范围拆成有边界、可持久记录的批次；
+- 隔离独立 worker，再将已审查的结果汇入一个由父任务拥有的 integration worktree、分支和 PR；
+- 集成期间先运行聚焦验证，再在评审前运行仓库要求的验证；
+- 只有得到用户明确授权才合并；PR 终态后先 dry-run 安全清理、记录实际回收字节，再选择下一批。
+
+### 7. 安全回收本地资源
 
 - 只处理显式登记且关联 PR 已 `MERGED` 或 `CLOSED` 的 linked worktree；
 - 默认 dry run；应用前重新核验路径边界、remote、分支、已推送 tip、工作区状态与资源归属；
@@ -165,6 +172,7 @@ git -C <selected-skill-home> pull --ff-only
 使用 RepoStew 为我寻找 3 个范围清晰的开源 issue
 使用 RepoStew 检查并维护我跟踪的 Pull Request
 使用 RepoStew 维护我已验证拥有或管理的仓库
+使用 RepoStew 为我受维护的仓库运行一个有边界的迭代批次
 使用 RepoStew 自主运行，连续 3 轮没有候选后停止
 ```
 
@@ -194,6 +202,8 @@ git -C <selected-skill-home> pull --ff-only
 复杂度只决定执行位置：清晰且局部的工作留在当前对话；跨子系统审计、多 issue 活动或长期维护在宿主支持时交接到单独的用户可见任务。复杂本身不是拒绝理由。
 
 自主模式下，只有在仓库允许、问题仍可处理、预期行为证据充分、方案最小且兼容、不跨越依赖/服务/权限/安全/公共 API/架构审批边界、验证通过且假设如实披露时，RepoStew 才直接创建普通 PR。详情见 [`SKILL.md`](SKILL.md) 与 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)。
+
+明确要求持续维护时，请遵循 [`references/batched-iteration.md`](references/batched-iteration.md)：它定义了从隔离 worker 汇入 integration PR、再经终态清理门控进入下一批的流程。
 
 ## 内置脚本
 

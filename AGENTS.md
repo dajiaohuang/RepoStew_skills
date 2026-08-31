@@ -17,6 +17,7 @@ Chinese-first bilingual documentation site.
   - `cold-start.md` - First-time setup including private state backup
   - `pr-maintenance.md` - PR follow-up workflow
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
+  - `batched-iteration.md` - Bounded integration workflow for maintained repositories
   - `taste-and-permissions.md` - Contribution guidelines
   - `maintenance-workspace-agents.md` - Workspace agent instructions
 - `docs/` - Zero-dependency bilingual GitHub Pages source
