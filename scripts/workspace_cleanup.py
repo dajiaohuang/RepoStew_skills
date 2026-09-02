@@ -1137,6 +1137,127 @@ def _print_human(payload: dict) -> None:
         print(f"  protected: {item['path']} ({item['reason']})")
 
 
+def _is_cross_platform_path(path: str) -> bool:
+    """Return True if path appears to be from a different OS family."""
+    normalized = path.replace("\\", "/")
+    # Windows drive letter pattern (C:, D:, etc.)
+    if re.match(r"^[A-Za-z]:", normalized):
+        return os.name != "nt"
+    # Unix absolute path pattern on Windows
+    if normalized.startswith("/"):
+        return os.name == "nt"
+    return False
+
+
+def _is_foreign_entry(entry: dict) -> bool:
+    """Return True if the entry's worktree or canonical path is from a different OS."""
+    worktree = entry.get("worktree", "")
+    canonical = entry.get("canonical", "")
+    return _is_cross_platform_path(worktree) or _is_cross_platform_path(canonical)
+
+
+def apply_purge_cross_platform(args) -> dict:
+    """Remove entries whose paths are from a different OS family."""
+    workspace = validate_workspace(args.workspace)
+    state = _state()
+    active = [item for item in state["resources"] if item.get("status") == "active"]
+    foreign = [item for item in active if _is_foreign_entry(item)]
+    if not args.apply:
+        return {
+            "mode": "dry-run",
+            "workspace": str(workspace),
+            "found_count": len(foreign),
+            "entries": [
+                {
+                    "worktree": item["worktree"],
+                    "canonical": item["canonical"],
+                    "pr_url": item.get("pr_url"),
+                    "status": item.get("status"),
+                }
+                for item in foreign
+            ],
+        }
+    # Move foreign entries to history before removing
+    timestamp = now_iso()
+    for item in foreign:
+        state["history"].append(
+            {
+                "timestamp": timestamp,
+                "status": "cross_platform_purged",
+                "worktree": item["worktree"],
+                "canonical": item["canonical"],
+                "pr_url": item.get("pr_url"),
+                "reason": "path is from a different OS and is unreachable on this system",
+            }
+        )
+    state["resources"] = [item for item in state["resources"] if item not in foreign]
+    _save_state(state)
+    return {
+        "mode": "apply",
+        "workspace": str(workspace),
+        "purged_count": len(foreign),
+        "entries": [
+            {
+                "worktree": item["worktree"],
+                "canonical": item["canonical"],
+                "pr_url": item.get("pr_url"),
+            }
+            for item in foreign
+        ],
+    }
+
+
+def apply_purge_terminal(args) -> dict:
+    """Remove entries already in terminal/removed state from the resources registry."""
+    workspace = validate_workspace(args.workspace)
+    state = _state()
+    active = [item for item in state["resources"] if item.get("status") == "active"]
+    terminal = [item for item in active if item.get("status") == "removed"]
+    if not args.apply:
+        return {
+            "mode": "dry-run",
+            "workspace": str(workspace),
+            "found_count": len(terminal),
+            "entries": [
+                {
+                    "worktree": item["worktree"],
+                    "canonical": item["canonical"],
+                    "pr_url": item.get("pr_url"),
+                    "status": item.get("status"),
+                    "removed_at": item.get("removed_at"),
+                }
+                for item in terminal
+            ],
+        }
+    timestamp = now_iso()
+    for item in terminal:
+        state["history"].append(
+            {
+                "timestamp": timestamp,
+                "status": "terminal_purged",
+                "worktree": item["worktree"],
+                "canonical": item["canonical"],
+                "pr_url": item.get("pr_url"),
+                "reason": "entry is already in terminal/removed state",
+            }
+        )
+    state["resources"] = [item for item in state["resources"] if item not in terminal]
+    _save_state(state)
+    return {
+        "mode": "apply",
+        "workspace": str(workspace),
+        "purged_count": len(terminal),
+    }
+
+
+def _print_purge_human(payload: dict) -> None:
+    count = payload.get("found_count") or payload.get("purged_count") or 0
+    verb = "Dry run: found" if payload.get("mode") == "dry-run" else "Purged"
+    print(f"{verb} {count} cross-platform unreachable entry(ies).")
+    for item in payload.get("entries", []):
+        print(f"  {item['worktree']} ({item.get('pr_url', 'no pr')})")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Safely retire RepoStew-owned local worktrees")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1190,6 +1311,23 @@ def build_parser() -> argparse.ArgumentParser:
     cleanup.add_argument("--tracker", help="override pr_tracker.json")
     cleanup.add_argument("--apply", action="store_true", help="execute the verified dry-run plan")
     cleanup.add_argument("--json", action="store_true")
+
+    purge_xpf = subparsers.add_parser(
+        "purge-cross-platform",
+        help="remove entries whose paths are from a different OS (e.g. Windows paths on macOS)",
+    )
+    purge_xpf.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    purge_xpf.add_argument("--apply", action="store_true", help="execute the purge instead of dry-run")
+    purge_xpf.add_argument("--json", action="store_true")
+
+    purge_terminal = subparsers.add_parser(
+        "purge-terminal",
+        help="remove entries already in terminal/removed state from the resources registry",
+    )
+    purge_terminal.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    purge_terminal.add_argument("--apply", action="store_true", help="execute the purge instead of dry-run")
+    purge_terminal.add_argument("--json", action="store_true")
+
     return parser
 
 
@@ -1230,6 +1368,20 @@ def main() -> int:
                 )
             else:
                 print(f"Ownership already matches {payload['registered_head']}")
+        elif args.command == "purge-cross-platform":
+            payload = apply_purge_cross_platform(args)
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                _print_purge_human(payload)
+        elif args.command == "purge-terminal":
+            payload = apply_purge_terminal(args)
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                count = payload.get("found_count") or payload.get("purged_count") or 0
+                verb = "Dry run: found" if payload.get("mode") == "dry-run" else "Purged"
+                print(f"{verb} {count} terminal/removed entry(ies) from registry.")
         else:
             payload = apply_cleanup(args)
             if args.json:

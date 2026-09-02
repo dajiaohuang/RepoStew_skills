@@ -35,6 +35,32 @@ python scripts/workspace_cleanup.py register \
   --pr-url https://github.com/owner/repo/pull/123
 ```
 
+## Cross-platform state migration
+
+When RepoStew runs on a different operating system from the one that registered worktrees, the stored paths become unreachable (e.g., Windows `D:\repo\...` paths on macOS). The cleanup script detects these automatically and the `purge-cross-platform` command removes them:
+
+```bash
+# Dry run first
+python scripts/workspace_cleanup.py purge-cross-platform \
+  --workspace "$REPOSTEW_REPOS_HOME"
+
+# Apply the purge
+python scripts/workspace_cleanup.py purge-cross-platform \
+  --workspace "$REPOSTEW_REPOS_HOME" --apply
+```
+
+Purged entries are moved to history with status `cross_platform_purged` before removal, preserving the audit trail.
+
+Similarly, entries that are already in `removed` state can be cleared from the registry with `purge-terminal`:
+
+```bash
+python scripts/workspace_cleanup.py purge-terminal \
+  --workspace "$REPOSTEW_REPOS_HOME" --apply
+```
+
+## Sustain contributed repositories
+
+```
 On Windows PowerShell, pass normal absolute paths:
 
 ```powershell
