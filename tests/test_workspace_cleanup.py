@@ -171,6 +171,56 @@ class WorkspaceCleanupTests(unittest.TestCase):
             )
             self.assertTrue(fixture.worktree.exists())
 
+    def test_cleanup_worktree_selector_narrows_inventory_and_apply_scope(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            worker, _, base = fixture.add_patch_equivalent_worker()
+            tracker = self._write_tracker(state_home, fixture.tracker())
+            worker_args = self._args(
+                fixture, tracker, worktree=str(worker), base_oid=base
+            )
+            cleanup_args = self._args(
+                fixture, tracker, apply=True, worktrees=[str(fixture.worktree)]
+            )
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                workspace_cleanup.register_worker_resource(worker_args)
+                dry_run = workspace_cleanup.apply_cleanup(
+                    self._args(fixture, tracker, worktrees=[str(fixture.worktree)])
+                )
+                applied = workspace_cleanup.apply_cleanup(cleanup_args)
+
+            self.assertEqual(dry_run["eligible_count"], 1)
+            self.assertEqual(
+                [workspace_cleanup._path_key(item["worktree"]) for item in dry_run["resources"]],
+                [workspace_cleanup._path_key(fixture.worktree)],
+            )
+            self.assertEqual(applied["removed_count"], 1)
+            self.assertFalse(fixture.worktree.exists())
+            self.assertTrue(worker.exists())
+
+    def test_cleanup_worktree_selector_rejects_nonregistered_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+            unregistered = fixture.workspace / "not-a-registered-worktree"
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                with self.assertRaisesRegex(
+                    workspace_cleanup.CleanupError, "no active ownership record"
+                ):
+                    workspace_cleanup.apply_cleanup(
+                        self._args(fixture, tracker, worktrees=[str(unregistered)])
+                    )
+
     def test_terminal_batch_worker_with_equivalent_patch_can_be_cleaned(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

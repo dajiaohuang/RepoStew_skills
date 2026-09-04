@@ -881,10 +881,41 @@ def discover_unregistered(workspace: Path, registered_paths: set[str]) -> list[d
     return discoveries
 
 
-def build_inventory(workspace: Path, tracker_path: Path) -> dict:
+def _selected_active_resources(workspace: Path, state: dict, raw_worktrees: list[str] | None) -> list[dict]:
+    """Return active registered resources narrowed by explicit exact paths.
+
+    A cleanup selector is a scope restriction, never an ownership shortcut:
+    every selected path must already have an active ownership record.  Missing
+    paths are permitted only when that record exists, so the normal guarded
+    broken-worktree handling can evaluate them.
+    """
+
+    active = [item for item in state["resources"] if item.get("status") == "active"]
+    if not raw_worktrees:
+        return active
+
+    by_path = {_path_key(item.get("worktree", "")): item for item in active}
+    selected: list[dict] = []
+    seen: set[str] = set()
+    for raw_worktree in raw_worktrees:
+        target = validate_target(raw_worktree, workspace, require_exists=False)
+        key = _path_key(target)
+        if key in seen:
+            continue
+        resource = by_path.get(key)
+        if resource is None:
+            raise CleanupError(f"selected worktree has no active ownership record: {target}")
+        seen.add(key)
+        selected.append(resource)
+    return selected
+
+
+def build_inventory(
+    workspace: Path, tracker_path: Path, raw_worktrees: list[str] | None = None
+) -> dict:
     tracker = _load_tracker(tracker_path)
     state = _state()
-    active = [item for item in state["resources"] if item.get("status") == "active"]
+    active = _selected_active_resources(workspace, state, raw_worktrees)
     resources = [evaluate_resource(item, workspace, tracker) for item in active]
     resources.sort(key=lambda item: _path_key(item["worktree"]))
     registered = {_path_key(item["worktree"]) for item in active}
@@ -892,10 +923,15 @@ def build_inventory(workspace: Path, tracker_path: Path) -> dict:
         "mode": "dry-run",
         "workspace": str(workspace),
         "tracker": str(_absolute(tracker_path)),
+        "selected_worktrees": [str(_absolute(item["worktree"])) for item in active]
+        if raw_worktrees
+        else None,
         "estimated_reclaimable_bytes": sum(item["estimated_bytes"] for item in resources if item["eligible"]),
         "eligible_count": sum(1 for item in resources if item["eligible"]),
         "resources": resources,
-        "protected_or_unregistered": discover_unregistered(workspace, registered),
+        "protected_or_unregistered": (
+            [] if raw_worktrees else discover_unregistered(workspace, registered)
+        ),
     }
 
 
@@ -969,7 +1005,8 @@ def _remove_worktree(
 def apply_cleanup(args) -> dict:
     workspace = validate_workspace(args.workspace)
     tracker_path = _absolute(args.tracker) if args.tracker else state_file("pr_tracker.json")
-    inventory = build_inventory(workspace, tracker_path)
+    raw_worktrees = getattr(args, "worktrees", None)
+    inventory = build_inventory(workspace, tracker_path, raw_worktrees)
     if not args.apply:
         return inventory
 
@@ -1108,6 +1145,7 @@ def apply_cleanup(args) -> dict:
     return {
         "mode": "apply",
         "workspace": str(workspace),
+        "selected_worktrees": inventory["selected_worktrees"],
         "planned_count": inventory["eligible_count"],
         "removed_count": sum(1 for item in results if item["status"] == "removed"),
         "partial_count": sum(1 for item in results if item["status"] == "partial_branch_retained"),
@@ -1308,6 +1346,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     cleanup = subparsers.add_parser("cleanup", help="plan cleanup; pass --apply to execute")
     cleanup.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    cleanup.add_argument(
+        "--worktree",
+        dest="worktrees",
+        action="append",
+        help="exact active registered worktree to include; repeat to narrow cleanup scope",
+    )
     cleanup.add_argument("--tracker", help="override pr_tracker.json")
     cleanup.add_argument("--apply", action="store_true", help="execute the verified dry-run plan")
     cleanup.add_argument("--json", action="store_true")

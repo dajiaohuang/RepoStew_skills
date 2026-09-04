@@ -185,6 +185,20 @@ python scripts/workspace_cleanup.py cleanup \
   --json
 ```
 
+To limit a run to exact registered worktrees, repeat `--worktree`. This only
+narrows the registered-resource inventory; each selected path is still subject
+to every terminal-PR, boundary, ownership, cleanliness, ignored-data, pushed-tip,
+and branch-ownership check. A selected path with no active ownership record
+fails safely, including a missing path that was never registered:
+
+```bash
+python scripts/workspace_cleanup.py cleanup \
+  --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker-a" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker-b" \
+  --json
+```
+
 The inventory distinguishes registered linked worktrees from protected
 canonical clones and unregistered worktrees. For every registered resource it
 rechecks:
@@ -213,6 +227,7 @@ After reviewing the dry run, repeat the same command with `--apply`:
 ```bash
 python scripts/workspace_cleanup.py cleanup \
   --workspace "$REPOSTEW_REPOS_HOME" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker-a" \
   --apply --json
 ```
 
