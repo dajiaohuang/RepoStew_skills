@@ -321,6 +321,18 @@ def _worker_inclusion_proof(
     if merge_commits:
         raise CleanupError("worker-only history contains merge commits that patch IDs cannot prove")
 
+    # ``git cherry`` omits worker commits whose exact OID is already reachable
+    # from the integration head.  Those commits are still part of the worker
+    # range (and therefore must be included in the immutable provenance), so
+    # account for them separately before checking patch-equivalent output.
+    shared = []
+    for commit in worker_commits:
+        ancestor = _run(
+            ["git", "merge-base", "--is-ancestor", commit, integration_head], cwd=canonical
+        )
+        if ancestor.returncode == 0:
+            shared.append(commit)
+
     output = _git(["cherry", integration_head, worker_head, merge_base], cwd=canonical)
     results = [line.split(maxsplit=1) for line in output.splitlines() if line.strip()]
     missing = [parts[1] for parts in results if len(parts) == 2 and parts[0] == "+"]
@@ -328,9 +340,11 @@ def _worker_inclusion_proof(
         raise CleanupError(
             "worker patches are not fully represented by the tracked PR head: " + ", ".join(missing)
         )
-    represented = [parts[1] for parts in results if len(parts) == 2 and parts[0] == "-"]
-    if len(represented) != len(worker_commits):
+    equivalent = [parts[1] for parts in results if len(parts) == 2 and parts[0] == "-"]
+    expected_equivalent = [commit for commit in worker_commits if commit not in shared]
+    if set(equivalent) != set(expected_equivalent) or len(equivalent) != len(expected_equivalent):
         raise CleanupError("worker patch proof did not account for every worker-range commit")
+    represented = worker_commits
     return {
         "integration_head": integration_head,
         "merge_base": merge_base,

@@ -254,6 +254,69 @@ class WorkspaceCleanupTests(unittest.TestCase):
                 0,
             )
 
+    def test_worker_proof_accounts_for_shared_commit_and_cherry_picks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture = CleanupFixture(root)
+            base = git(fixture.canonical, "rev-parse", "main").stdout.strip()
+
+            (fixture.canonical / "shared.txt").write_text("shared\n", encoding="utf-8")
+            git(fixture.canonical, "add", "shared.txt")
+            git(fixture.canonical, "commit", "-m", "shared worker foundation")
+            shared = git(fixture.canonical, "rev-parse", "HEAD").stdout.strip()
+            git(fixture.canonical, "checkout", "-b", "worker/shared", "HEAD")
+            worker_commits = [shared]
+            for index in range(3):
+                path = fixture.canonical / f"worker-{index}.txt"
+                path.write_text(f"worker {index}\n", encoding="utf-8")
+                git(fixture.canonical, "add", path.name)
+                git(fixture.canonical, "commit", "-m", f"worker patch {index}")
+                worker_commits.append(git(fixture.canonical, "rev-parse", "HEAD").stdout.strip())
+            worker_head = worker_commits[-1]
+
+            git(fixture.canonical, "checkout", "-b", "integration/shared", shared)
+            (fixture.canonical / "integration-only.txt").write_text("integration\n", encoding="utf-8")
+            git(fixture.canonical, "add", "integration-only.txt")
+            git(fixture.canonical, "commit", "-m", "independent integration change")
+            for commit in worker_commits[1:]:
+                git(fixture.canonical, "cherry-pick", commit)
+            integration_head = git(fixture.canonical, "rev-parse", "HEAD").stdout.strip()
+
+            self.assertNotEqual(
+                git(
+                    fixture.canonical,
+                    "merge-base",
+                    "--is-ancestor",
+                    worker_head,
+                    integration_head,
+                    check=False,
+                ).returncode,
+                0,
+            )
+            cherry = git(
+                fixture.canonical, "cherry", integration_head, worker_head, base
+            ).stdout.splitlines()
+            self.assertEqual(len(cherry), 3)
+            self.assertTrue(all(line.startswith("-") for line in cherry))
+            self.assertNotIn(shared, "\n".join(cherry))
+
+            proof = workspace_cleanup._worker_inclusion_proof(
+                fixture.canonical, integration_head, worker_head, base
+            )
+
+            self.assertEqual(proof["proof"], "patch-equivalent")
+            self.assertEqual(proof["represented_worker_commits"], worker_commits)
+
+            git(fixture.canonical, "checkout", "worker/shared")
+            (fixture.canonical / "missing.txt").write_text("not integrated\n", encoding="utf-8")
+            git(fixture.canonical, "add", "missing.txt")
+            git(fixture.canonical, "commit", "-m", "worker patch omitted from integration")
+            missing_head = git(fixture.canonical, "rev-parse", "HEAD").stdout.strip()
+            with self.assertRaisesRegex(workspace_cleanup.CleanupError, "not fully represented"):
+                workspace_cleanup._worker_inclusion_proof(
+                    fixture.canonical, integration_head, missing_head, base
+                )
+
     def test_worker_registration_rejects_open_pr_and_unrepresented_patch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
