@@ -228,6 +228,7 @@ After reviewing the dry run, repeat the same command with `--apply`:
 python scripts/workspace_cleanup.py cleanup \
   --workspace "$REPOSTEW_REPOS_HOME" \
   --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker-a" \
+  --worktree "$REPOSTEW_REPOS_HOME/repo-batch-worker-b" \
   --apply --json
 ```
 
