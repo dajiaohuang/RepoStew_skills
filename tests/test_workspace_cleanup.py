@@ -530,6 +530,104 @@ class WorkspaceCleanupTests(unittest.TestCase):
                 0,
             )
 
+    def test_complete_failed_cleanup_can_recover_after_empty_root_is_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+
+            def remove_everything_then_fail(canonical, path, **_kwargs):
+                shutil.rmtree(path)
+                git(canonical, "worktree", "prune", "--expire", "now")
+                path.mkdir()
+                raise workspace_cleanup.CleanupError("simulated directory lock")
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                with mock.patch.object(
+                    workspace_cleanup, "_remove_worktree", side_effect=remove_everything_then_fail
+                ):
+                    failed = workspace_cleanup.apply_cleanup(
+                        self._args(fixture, tracker, apply=True)
+                    )
+                self.assertEqual(failed["results"][0]["status"], "failed")
+                self.assertEqual(failed["actual_freed_bytes"], failed["results"][0]["actual_freed_bytes"])
+                fixture.worktree.rmdir()
+
+                retry = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
+                applied = workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+
+            self.assertEqual(retry["resources"][0]["kind"], "recovered_partial_worktree")
+            self.assertEqual(retry["eligible_count"], 1)
+            self.assertEqual(applied["removed_count"], 1)
+            self.assertNotEqual(
+                git(fixture.canonical, "show-ref", "--verify", "refs/heads/fix/42", check=False).returncode,
+                0,
+            )
+            self.assertEqual(
+                git(fixture.remote, "show-ref", "--verify", "refs/heads/fix/42").returncode,
+                0,
+            )
+
+    def test_missing_worktree_without_complete_failed_cleanup_evidence_is_blocked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                shutil.rmtree(fixture.worktree)
+                git(fixture.canonical, "worktree", "prune", "--expire", "now")
+                inventory = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
+
+            self.assertEqual(inventory["eligible_count"], 0)
+            self.assertIn(
+                "missing_worktree_has_no_git_metadata", inventory["resources"][0]["blockers"]
+            )
+            self.assertEqual(
+                git(fixture.canonical, "show-ref", "--verify", "refs/heads/fix/42").returncode,
+                0,
+            )
+
+    def test_complete_failed_cleanup_evidence_does_not_override_head_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker())
+
+            def remove_everything_then_fail(canonical, path, **_kwargs):
+                shutil.rmtree(path)
+                git(canonical, "worktree", "prune", "--expire", "now")
+                path.mkdir()
+                raise workspace_cleanup.CleanupError("simulated directory lock")
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                with mock.patch.object(
+                    workspace_cleanup, "_remove_worktree", side_effect=remove_everything_then_fail
+                ):
+                    workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+                fixture.worktree.rmdir()
+                (fixture.canonical / "later.txt").write_text("later\n", encoding="utf-8")
+                git(fixture.canonical, "add", "later.txt")
+                git(fixture.canonical, "commit", "-m", "later")
+                git(fixture.canonical, "branch", "-f", "fix/42", "HEAD")
+                inventory = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
+
+            self.assertEqual(inventory["eligible_count"], 0)
+            self.assertIn("registered_head_changed", inventory["resources"][0]["blockers"])
+            self.assertEqual(
+                git(fixture.canonical, "show-ref", "--verify", "refs/heads/fix/42").returncode,
+                0,
+            )
+
     def test_live_cleanup_uses_git_non_force_guard_against_racing_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

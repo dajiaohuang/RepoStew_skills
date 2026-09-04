@@ -242,6 +242,14 @@ A missing worktree can have its stale Git metadata pruned after the same
 registration, terminal-state, branch, and pushed-provenance checks. The script
 does not push branch deletion.
 
+If a previous applied cleanup failed after it recorded that it freed every
+estimated logical byte for that exact registered path, PR, branch, and head,
+and both the worktree directory and its Git worktree metadata have since gone,
+a retry may recover by pruning the stale state and deleting the verified local
+branch. This is only a retry of an evidenced helper failure: an arbitrary
+missing worktree without Git metadata remains blocked. The terminal PR,
+registered-head, remote-provenance, and branch-owner checks still apply.
+
 The result reports estimated and actual freed logical bytes. Successful and
 failed attempts remain in `workspace_resources.json`, including PR URL, branch,
 commit, timestamps, and byte counts. Keep this history even after the local

@@ -720,7 +720,47 @@ def _branch_oid(canonical: Path, branch: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dict]) -> dict:
+def _has_complete_failed_cleanup_evidence(resource: dict, history_entries: list[dict]) -> bool:
+    """Return whether this exact resource has a fully accounted failed cleanup.
+
+    A missing worktree without Git metadata is ordinarily indistinguishable
+    from an unverified filesystem deletion, so it remains blocked.  This is a
+    deliberately narrow exception for a failed helper invocation which already
+    recorded that it freed every estimated logical byte for the same registered
+    path, PR, branch, and head.  The normal terminal, provenance, head, and
+    branch-owner checks still run in ``evaluate_resource``.
+    """
+
+    expected_path = _path_key(resource.get("worktree", ""))
+    expected_pr = str(resource.get("pr_url") or "").rstrip("/").lower()
+    expected_branch = str(resource.get("branch") or "")
+    expected_head = str(resource.get("registered_head") or "")
+    for event in reversed(history_entries):
+        if not isinstance(event, dict) or event.get("status") != "failed":
+            continue
+        if _path_key(event.get("worktree", "")) != expected_path:
+            continue
+        if str(event.get("pr_url") or "").rstrip("/").lower() != expected_pr:
+            continue
+        if str(event.get("branch") or "") != expected_branch:
+            continue
+        if str(event.get("head") or "") != expected_head:
+            continue
+        estimated = event.get("estimated_bytes")
+        actual = event.get("actual_freed_bytes")
+        if (
+            isinstance(estimated, int)
+            and not isinstance(estimated, bool)
+            and estimated > 0
+            and actual == estimated
+        ):
+            return True
+    return False
+
+
+def evaluate_resource(
+    resource: dict, workspace: Path, tracker_entries: list[dict], history_entries: list[dict] | None = None
+) -> dict:
     path = _absolute(resource.get("worktree", ""))
     canonical = _absolute(resource.get("canonical", ""))
     branch = str(resource.get("branch", ""))
@@ -787,7 +827,10 @@ def evaluate_resource(resource: dict, workspace: Path, tracker_entries: list[dic
             records = parse_worktree_list(canonical)
             matching = [item for item in records if _path_key(item.get("worktree", "")) == _path_key(path)]
             if not matching:
-                blockers.append("missing_worktree_has_no_git_metadata")
+                if _has_complete_failed_cleanup_evidence(resource, history_entries or []):
+                    kind = "recovered_partial_worktree"
+                else:
+                    blockers.append("missing_worktree_has_no_git_metadata")
             elif matching[0].get("branch") != f"refs/heads/{branch}":
                 blockers.append("broken_worktree_branch_changed")
         except CleanupError:
@@ -916,7 +959,7 @@ def build_inventory(
     tracker = _load_tracker(tracker_path)
     state = _state()
     active = _selected_active_resources(workspace, state, raw_worktrees)
-    resources = [evaluate_resource(item, workspace, tracker) for item in active]
+    resources = [evaluate_resource(item, workspace, tracker, state["history"]) for item in active]
     resources.sort(key=lambda item: _path_key(item["worktree"]))
     registered = {_path_key(item["worktree"]) for item in active}
     return {
@@ -1021,7 +1064,7 @@ def apply_cleanup(args) -> dict:
             for item in state["resources"]
             if item.get("status") == "active" and _path_key(item["worktree"]) == _path_key(planned["worktree"])
         )
-        current = evaluate_resource(resource, workspace, tracker)
+        current = evaluate_resource(resource, workspace, tracker, state["history"])
         if not current["eligible"]:
             results.append(
                 {
@@ -1049,7 +1092,7 @@ def apply_cleanup(args) -> dict:
             _remove_worktree(
                 canonical,
                 path,
-                broken=current["kind"] == "broken_worktree",
+                broken=current["kind"] in {"broken_worktree", "recovered_partial_worktree"},
                 disposable_paths=current["ignored_disposable"],
             )
             branch_ref = f"refs/heads/{current['branch']}"
