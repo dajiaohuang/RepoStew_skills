@@ -123,10 +123,11 @@ def _summarize_checks(checks):
     result = {"total": 0, "success": 0, "failure": 0, "skipped": 0, "pending": 0}
     for check in checks or []:
         result["total"] += 1
-        conclusion = (check.get("conclusion") or "").lower()
+        # The rollup contains CheckRun.conclusion and legacy StatusContext.state.
+        conclusion = (check.get("conclusion") or check.get("state") or "").lower()
         if conclusion == "success":
             result["success"] += 1
-        elif conclusion in {"failure", "cancelled", "timed_out", "action_required"}:
+        elif conclusion in {"failure", "error", "cancelled", "timed_out", "action_required"}:
             result["failure"] += 1
         elif conclusion in {"skipped", "neutral"}:
             result["skipped"] += 1

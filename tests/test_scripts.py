@@ -231,6 +231,35 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class TrackerTests(unittest.TestCase):
+    def test_summarize_mixed_check_runs_and_status_contexts(self):
+        checks = [
+            {"__typename": "CheckRun", "conclusion": "SUCCESS"},
+            {"__typename": "CheckRun", "conclusion": "NEUTRAL"},
+            {"__typename": "CheckRun", "conclusion": "", "status": "IN_PROGRESS"},
+            {"__typename": "StatusContext", "state": "SUCCESS"},
+            {"__typename": "StatusContext", "state": "FAILURE"},
+            {"__typename": "StatusContext", "state": "ERROR"},
+            {"__typename": "StatusContext", "state": "PENDING"},
+            {"__typename": "StatusContext", "state": "EXPECTED"},
+            {"__typename": "StatusContext", "state": "UNRECOGNIZED"},
+        ]
+        self.assertEqual(
+            pr_tracker._summarize_checks(checks),
+            {"total": 9, "success": 2, "failure": 2, "skipped": 1, "pending": 4},
+        )
+
+    def test_status_context_failure_requires_attention(self):
+        entry = {
+            "state": "OPEN",
+            "ci_status": pr_tracker._summarize_checks([
+                {"__typename": "StatusContext", "state": "ERROR"},
+            ]),
+            "pending_activity": [],
+        }
+        priority, reasons, _action = pr_tracker.priority_and_action(entry)
+        self.assertEqual(priority, "red")
+        self.assertIn("ci_failure", reasons)
+
     def test_parse_pr_url(self):
         self.assertEqual(
             pr_tracker.parse_pr_url("https://github.com/owner/repo/pull/123/"),
