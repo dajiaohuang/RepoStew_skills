@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Validate and record the three user-selected RepoStew storage roots."""
+"""Validate and record the three user-selected RepoStew storage roots.
+
+paths.json schema_version 2 stores each root as a POSIX path relative to the
+state home ('.' = the state home itself). The record is therefore portable:
+any machine that knows one absolute anchor -- REPOSTEW_HOME -- can resolve the
+other two roots from it, across macOS, Windows, and Linux. The input roots are
+still chosen as absolute paths during cold start.
+"""
 
 from __future__ import annotations
 
@@ -9,12 +16,8 @@ import os
 import tempfile
 from pathlib import Path
 
-
-ENVIRONMENT_KEYS = {
-    "skill_home": "REPOSTEW_SKILL_HOME",
-    "state_home": "REPOSTEW_HOME",
-    "repos_home": "REPOSTEW_REPOS_HOME",
-}
+ROOT_ROLES = ("skill_home", "state_home", "repos_home")
+SCHEMA_VERSION = 2
 
 
 def absolute_path(value: str) -> Path:
@@ -39,6 +42,18 @@ def write_json_atomic(path: Path, payload: dict[str, object]) -> None:
         raise
 
 
+def _relative_to_state(target: Path, state: Path) -> str:
+    """Return target as a '/'-separated path relative to the state home."""
+    try:
+        relative = os.path.relpath(str(target), str(state))
+    except ValueError as error:
+        raise ValueError(
+            f"cannot express {target} relative to the state home {state}; "
+            "skill, state, and managed-repository roots must share a drive"
+        ) from error
+    return relative.replace("\\", "/")
+
+
 def configure(skill_home: Path, state_home: Path, repos_home: Path) -> Path:
     selected = {
         "skill_home": Path(skill_home).expanduser(),
@@ -54,14 +69,16 @@ def configure(skill_home: Path, state_home: Path, repos_home: Path) -> Path:
     for path in selected.values():
         path.mkdir(parents=True, exist_ok=True)
 
+    state = selected["state_home"]
     payload: dict[str, object] = {
-        "schema_version": 1,
-        "paths": {name: str(path) for name, path in selected.items()},
-        "environment": {
-            ENVIRONMENT_KEYS[name]: str(path) for name, path in selected.items()
+        "schema_version": SCHEMA_VERSION,
+        "paths": {
+            "state_home": ".",
+            "skill_home": _relative_to_state(selected["skill_home"], state),
+            "repos_home": _relative_to_state(selected["repos_home"], state),
         },
     }
-    destination = selected["state_home"] / "paths.json"
+    destination = state / "paths.json"
     write_json_atomic(destination, payload)
     return destination
 
