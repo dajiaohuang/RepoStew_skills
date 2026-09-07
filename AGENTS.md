@@ -12,10 +12,16 @@ Chinese-first bilingual documentation site.
 
 ## Skill Structure
 
-- `SKILL.md` - Default RepoStew skill (generic, model-agnostic; full detailed workflow)
-- `repostew_essence/` - Slim profile for GPT-6 Astra / Fable parents (`repostew-essence`),
-  delegating to small models (Luna) as subagents
-- `references/` - Full reference documents for the default workflow
+- `SKILL.md` - Single model-agnostic RepoStew skill with an in-file model fork: a
+  GPT-6 Astra / Fable parent is the orchestrator and delegates bounded work to
+  small models (Luna on OpenAI hosts, Haiku on Anthropic hosts); every other
+  parent follows the full detailed workflow in `references/generic-full-workflow.md`.
+- `references/` - Model-fork and full reference documents
+  - `generic-full-workflow.md` - Full detailed workflow (non-Astra/Fable parents)
+  - `astra-fable.md` - Orchestration profile for GPT-6 Astra / Fable parents
+  - `luna-agents/*.toml` - Codex Luna worker definitions (OpenAI hosts)
+  - `worker-contract.md` - Worker packet spec for spawned subagents
+  - `commands.md` - Command quick reference
   - `workflow.md` - Canonical yes/no tree
   - `state.md` - SQLite state store
   - `cold-start.md` - First-time setup
@@ -23,7 +29,8 @@ Chinese-first bilingual documentation site.
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
   - `batched-iteration.md` - Bounded integration workflow for maintained repositories
   - `taste-and-permissions.md` - Contribution guidelines
-  - `maintenance-workspace-agents.md` - Workspace agent instructions
+  - `maintenance-workspace-agents.md` - Slim workspace `AGENTS.md` template
+  - `maintenance-workspace-claude.md` - Slim wrapper `CLAUDE.md` template (Claude Code)
 - `docs/` - Zero-dependency bilingual GitHub Pages source
 - `scripts/` - Python helper scripts
   - `repostew_state.py` / `state_store.py` - SQLite state home

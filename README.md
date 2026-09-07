@@ -16,7 +16,7 @@ RepoStew 是一个可移植的 [Agent Skill](https://agentskills.io/)，用于�
   └──────────── 持久状态与反馈 ──────┘
 ```
 
-核心规则位于 [`SKILL.md`](SKILL.md)（默认通用版：完整详细流程，模型无关，默认单智能体；仅在边界清晰的只读/并行工作才委派给小模型）。GPT-6 Astra 或 Fable 父代理使用精简版 [`repostew_essence/SKILL.md`](repostew_essence/SKILL.md)（`repostew-essence`，用小模型如 Luna 作 subagent）。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
+核心规则位于 [`SKILL.md`](SKILL.md)（单一、模型无关，内含模型分叉：GPT-6 Astra 或 Fable 父代理作编排者，把边界清晰的只读/并行工作委派给小模型 —— OpenAI 主机上是 Luna、Anthropic 主机上是 Haiku；其他任何父代理则按 [`references/generic-full-workflow.md`](references/generic-full-workflow.md) 走完整详细流程）。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
 
 ## 为什么需要 RepoStew
 
@@ -255,7 +255,7 @@ python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --js
 RepoStew 以 `REPOSTEW_HOME` 为唯一绝对锚点，其余两处根由 `paths.json` 解析（推荐布局：skill 与 state 作为兄弟 checkout）：
 
 ```text
-<skill-home>/          SKILL.md、repostew_essence/、references、scripts、tests
+<skill-home>/          SKILL.md、references、scripts、tests
 <state-home>/          checkpoint、PR tracker、贡献记录、通知 inbox、资源台账（paths.json）
 <repos-home>/          canonical clones 与 linked worktrees
 ```

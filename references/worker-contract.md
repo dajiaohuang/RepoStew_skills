@@ -1,6 +1,6 @@
 # Worker packet
 
-Parent (Astra or Fable) must give every Luna worker a complete packet. Workers revalidate GitHub and must not advance `notification_checkpoints` or `issue_checkpoints`.
+Parent (Astra or Fable) must give every small-model worker — Luna on OpenAI hosts, Haiku on Anthropic hosts — a complete packet. Workers revalidate GitHub and must not advance `notification_checkpoints` or `issue_checkpoints`.
 
 ## Required fields
 

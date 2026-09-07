@@ -6,10 +6,12 @@ contradicts this file. If two documents disagree, this file plus the root
 
 ## 0. Profile
 
-- Default (generic) parent → root `SKILL.md` (the complete detailed workflow).
-- Parent is GPT-6 Astra or Fable → `repostew_essence/SKILL.md`
-  (`repostew-essence`), the slim profile that delegates to small models (Luna).
-  Do not mix the two profiles in one run.
+- Any parent → root `SKILL.md`, which holds the model fork inline: a GPT-6
+  Astra or Fable parent is the orchestrator and follows the "Astra / Fable
+  parent" section plus `astra-fable.md`, delegating bounded work to small models
+  (Luna on OpenAI hosts, Haiku on Anthropic hosts); every other parent follows
+  the full detailed workflow in `generic-full-workflow.md`. One skill, one
+  source of truth — do not mix separate skill copies in one run.
 
 ## 1. Roots and state
 

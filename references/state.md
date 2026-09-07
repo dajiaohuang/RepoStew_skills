@@ -42,3 +42,8 @@ Never infer `REPOSTEW_HOME` from the user profile or current directory.
 Keep one selected state home as the single live state source. It may itself live
 in a git repository that is pushed to a private remote; that remote and any
 checkout of it are recovery storage, never a second live state source.
+Keep the state home slim: SQLite, `paths.json`, canonical collections, and the
+working artifacts of active runs only. Session handover / session-resume notes
+are not state; never commit `HANDOVER*` / `SESSION_HANDOVER*` documents into a
+state repository (root or `.repostew/`). Keep handover context in the active
+conversation or an untracked wrapper file and delete it once obsolete.

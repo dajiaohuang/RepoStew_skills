@@ -16,7 +16,7 @@ discover → verify → patch → validate → submit → maintain
     └────────── durable state + feedback ─────┘
 ```
 
-The governing workflow lives in [`SKILL.md`](SKILL.md), the default generic profile with the full detailed workflow; it is model-agnostic and runs as a single agent by default, delegating only clearly bounded read-heavy/parallel side work to a smaller model. GPT-6 Astra or Fable parents use the slim [`repostew_essence/SKILL.md`](repostew_essence/SKILL.md) profile (`repostew-essence`), which keeps the core gates and delegates to small models (Luna) as subagents. Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md).
+The governing workflow lives in [`SKILL.md`](SKILL.md): one model-agnostic skill with an in-file model fork. A GPT-6 Astra or Fable parent acts as orchestrator and delegates clearly bounded read-only/parallel work to small models — Luna on OpenAI hosts, Haiku on Anthropic hosts; every other parent follows the full detailed workflow in [`references/generic-full-workflow.md`](references/generic-full-workflow.md). Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md).
 
 ## Why RepoStew exists
 
