@@ -124,9 +124,11 @@ File an issue only after:
 2. checking supported versions and the default branch;
 3. searching open and closed issues, discussions, PRs, and commits;
 4. reducing the report to one actionable problem;
-5. following the repository's issue template and contribution policy.
+5. following the repository's issue template, voice, and contribution policy.
 
-Include:
+Write each issue in the repository's own template and voice first; do not layer
+RepoStew structure on top. Where the template leaves the content open, keep the
+body minimal and include only:
 
 - concise problem-focused title;
 - affected version/commit and environment;

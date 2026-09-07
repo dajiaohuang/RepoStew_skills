@@ -132,7 +132,7 @@ gh api --method POST \
   -f body="<concise response>"
 ```
 
-Follow the repository's convention for resolving review threads. Avoid one comment per commit, duplicate acknowledgements, defensive language, and repeated review pings.
+Match the repository's own voice and conventions when replying and when resolving review threads. Where the repository leaves reply style open, keep each reply to one short evidence-backed response — what changed, the commit, and the validation. Avoid one comment per commit, duplicate acknowledgements, defensive language, and repeated review pings.
 
 ## Diagnose CI and conflicts
 

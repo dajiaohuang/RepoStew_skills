@@ -209,7 +209,8 @@ For each qualifying independent defect:
 
 1. Revalidate the latest default branch, supported version, repository policy,
    assignment/ownership, and duplicate search.
-2. File one focused issue using the repository template unless policy requires
+2. File one focused issue in the repository's own template and voice, kept
+   minimal where the template leaves the content open, unless policy requires
    prior discussion or a private security route. Do not mass-file a batch of
    weak or overlapping reports.
 3. Record the issue URL in the contribution tracker.
