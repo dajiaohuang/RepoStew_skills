@@ -10,18 +10,24 @@ description: >-
   PRs, maintain repositories the user owns or administers, respond to reviews,
   follow repositories already contributed to, or clean up after terminal
   contributions. Apply before cloning, editing, commenting, filing issues, or
-  opening PRs. Do not use this skill when the parent model is GPT-6 Astra;
-  that run uses repostew-astra instead.
+  opening PRs. Do not use this skill when the parent model is GPT-6 Astra or
+  Fable; those runs use the slim repostew-essence profile instead.
 ---
 
 # RepoStew
 
-This is the default RepoStew profile (Luna extra-high, one agent, full gates).
-Use it unless the parent model is GPT-6 Astra. Astra parents must switch to
-[astra-luna/SKILL.md](astra-luna/SKILL.md) (`repostew-astra`) and not continue
-from this file.
+This is the default RepoStew skill: a generic, model-agnostic profile with the
+complete detailed workflow. Use it unless the parent model is GPT-6 Astra or
+Fable, in which case switch to the slim
+[repostew_essence/SKILL.md](repostew_essence/SKILL.md) (`repostew-essence`) —
+which keeps the core gates and delegates to small models (Luna) as subagents —
+and do not continue from this file.
 
-Act as a careful repository contributor with engineering taste. Use the host agent's native file, shell, planning, browser, and GitHub tools; do not assume a particular AI product or operating system.
+Run as a single agent by default. Delegate only clearly bounded, read-heavy,
+parallel side work, and prefer a smaller model (Luna-class) for it; never spawn
+a subagent for work you can do inline. Use the host agent's native file, shell,
+planning, browser, and GitHub tools; do not assume a particular AI product or
+operating system.
 
 ## Instruction priority
 
@@ -42,9 +48,10 @@ already-authorized reversible step.
 
 Follow this order. Do not skip a gate because the work looks familiar.
 
-1. **Roots.** Validate `REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`,
-   `REPOSTEW_REPOS_HOME` against `paths.json`. Mutable state is SQLite at
-   `REPOSTEW_HOME/repostew.sqlite` (see [references/state.md](references/state.md)).
+1. **Roots.** Validate the `REPOSTEW_HOME` anchor against `paths.json` and
+   resolve the three roots (`python scripts/repostew_state.py roots`).
+   Mutable state is SQLite at `REPOSTEW_HOME/repostew.sqlite`
+   (see [references/state.md](references/state.md)).
 2. **Mode.** Confirm unless the user asked for autonomous/automatic/continuous
    work.
 3. **Auth.** `gh auth status`, `git --version`, `python --version`.
@@ -112,15 +119,16 @@ Read [references/taste-and-permissions.md](references/taste-and-permissions.md) 
 
 Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected skill, state, and managed-repository roots. Keep one selected state home as the single live state source; it may itself live in a git repository that is pushed to a private remote, whose remote and checkouts are recovery storage, never a second live state source.
 
-Before running any stateful helper, require explicit, validated selections for
-`REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. If a selected
-root conflicts with the recorded `paths.json`, stop normal work and reconcile
-the cold-start path selection. Never infer these roots from the user profile,
-current directory, an example path, or an earlier installation.
+Before running any stateful helper, require an explicit, validated `REPOSTEW_HOME`
+absolute anchor and a readable `paths.json` at its root; `resolved_roots()`
+derives the skill and managed-repository homes from the anchor. If the anchor or
+the recorded roots conflict, stop normal work and reconcile the cold-start path
+selection. Never infer these roots from the user profile, current directory, an
+example path, or an earlier installation.
 
 A local scheduled task may start without inheriting those environment
 variables. Its prompt must contain the absolute path to the already-selected
-`paths.json` and the three absolute roots captured when the task was created.
+`paths.json` and the verified `REPOSTEW_HOME` captured when the task was created.
 After validating that the record, prompt, workspace instructions, and existing
 roots all agree, initialize only missing variables for that task process from
 the verified values. An unreadable record, an unfilled placeholder, a mismatch,
@@ -323,8 +331,7 @@ Mutable state is stored only under the user-selected absolute
 `REPOSTEW_HOME`, in `repostew.sqlite`. RepoStew has no implicit mutable-state
 default. JSON files in that directory are a legacy import/export format;
 runtime scripts read and write the SQLite store. The canonical skill checkout
-and managed repositories likewise use the selected `REPOSTEW_SKILL_HOME` and
-`REPOSTEW_REPOS_HOME` roots.
+and managed repositories resolve from `paths.json` under that one anchor.
 
 ```bash
 python scripts/repostew_state.py status

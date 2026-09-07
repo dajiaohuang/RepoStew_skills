@@ -2,7 +2,11 @@
 
 Runtime mutable state lives in `REPOSTEW_HOME/repostew.sqlite` (SQLite WAL).
 `paths.json` remains a bootstrap file in the same directory and is never stored
-in the database.
+in the database. It records the three storage roots (schema_version 2) as POSIX
+paths **relative to the state home** (`.`, `../skill`, `../..`), so the record is
+portable across macOS, Windows, and Linux. `repostew_state.resolved_roots()`
+resolves them to absolute paths from the one `REPOSTEW_HOME` anchor; print them
+with `python scripts/repostew_state.py roots`.
 
 Canonical collections:
 

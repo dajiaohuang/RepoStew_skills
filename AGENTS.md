@@ -12,9 +12,10 @@ Chinese-first bilingual documentation site.
 
 ## Skill Structure
 
-- `SKILL.md` - Default RepoStew skill (non-Astra, including Luna extra-high)
-- `astra-luna/` - GPT-6 Astra only (`repostew-astra`)
-- `references/` - Full Luna-profile reference documents
+- `SKILL.md` - Default RepoStew skill (generic, model-agnostic; full detailed workflow)
+- `repostew_essence/` - Slim profile for GPT-6 Astra / Fable parents (`repostew-essence`),
+  delegating to small models (Luna) as subagents
+- `references/` - Full reference documents for the default workflow
   - `workflow.md` - Canonical yes/no tree
   - `state.md` - SQLite state store
   - `cold-start.md` - First-time setup

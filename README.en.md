@@ -16,7 +16,7 @@ discover → verify → patch → validate → submit → maintain
     └────────── durable state + feedback ─────┘
 ```
 
-The governing workflow lives in [`SKILL.md`](SKILL.md) for a solo Luna extra-high agent. GPT-6 Astra plus Luna subagents use [`astra-luna/SKILL.md`](astra-luna/SKILL.md). Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md).
+The governing workflow lives in [`SKILL.md`](SKILL.md), the default generic profile with the full detailed workflow; it is model-agnostic and runs as a single agent by default, delegating only clearly bounded read-heavy/parallel side work to a smaller model. GPT-6 Astra or Fable parents use the slim [`repostew_essence/SKILL.md`](repostew_essence/SKILL.md) profile (`repostew-essence`), which keeps the core gates and delegates to small models (Luna) as subagents. Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md).
 
 ## Why RepoStew exists
 
@@ -40,7 +40,7 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 | Default pace | confirm mode: investigate and plan first; approve edits and external submission separately |
 | Optional pace | autonomous mode: continue inside explicitly granted scope |
 | Decisions | `ACCEPT`, `ASK_MAINTAINER`, `SKIP` |
-| State model | three user-selected absolute roots: skill, state, repositories |
+| State model | one absolute `REPOSTEW_HOME` anchor; skill and repositories resolve from `paths.json` |
 | Requirements | Python 3.10+, Git, authenticated GitHub CLI |
 | Script dependencies | Python standard library; no runtime package install |
 | License | MIT |

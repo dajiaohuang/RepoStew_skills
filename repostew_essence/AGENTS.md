@@ -1,7 +1,7 @@
-# RepoStew Astra orchestrator
+# RepoStew Essence orchestrator
 
-Parent model: GPT-6 Astra only. Workers: GPT-6 Luna custom agents in `agents/`.
-Read `SKILL.md` in this directory. Default non-Astra runs use the root `repostew` skill instead; do not load that file on an Astra run.
+Parent model: GPT-6 Astra or Fable. Workers: Luna custom agents in `agents/`.
+Read `SKILL.md` in this directory. Default (generic) runs use the root `repostew` skill instead; do not load this file on a generic run.
 
 ## Instruction priority
 
@@ -23,7 +23,11 @@ Confirm mode still waits before first edit and before opening a PR or posting, e
 
 ## When to spawn Luna
 
-Astra under-delegates. Whenever independent repository, issue, or PR partitions can run in parallel and that saves time, spawn Luna agents instead of serializing the work here.
+Default to this parent; delegate only when it saves time. Spawn a Luna agent for
+clearly bounded, independent, read-heavy or parallel repository, issue, or PR
+partitions (scan, verify, implement, review, audit) instead of serializing them
+here — but never spawn for work you can do inline, and never let a worker write
+shared state.
 
 | Agent | Use |
 | --- | --- |
@@ -34,7 +38,7 @@ Astra under-delegates. Whenever independent repository, issue, or PR partitions 
 
 Give each worker a packet from `references/worker-contract.md`. Messages to workers must be legible. Do not spawn a hidden subagent when the user asked for a user-visible handover.
 
-Keep one already-verified tiny change in this conversation only when spawn overhead would exceed the work. Independent partitions still go to Luna.
+Keep a small, already-verified change in this conversation when spawn overhead would exceed the work.
 
 ## Checkpoint ownership
 

@@ -42,7 +42,7 @@ Follow does not prove permission. Maintained does not add intake by itself. Cont
 
 | Who | May advance `notification_checkpoints` / `issue_checkpoints` |
 | --- | --- |
-| Astra parent | Yes, after every partition is complete or durably retained, using captured batch-start |
+| Astra / Fable parent | Yes, after every partition is complete or durably retained, using captured batch-start |
 | Luna workers | No |
 
 Unread is not a cursor. Truncated or failed partition: do not advance that cursor.

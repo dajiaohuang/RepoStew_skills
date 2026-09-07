@@ -11,11 +11,13 @@ This workspace maintains third-party repositories with RepoStew and may also con
 
 ## Selected storage roots
 
-- `REPOSTEW_SKILL_HOME` is `[selected-absolute-skill-home]`.
-- `REPOSTEW_HOME` is `[selected-absolute-state-home]`.
-- `REPOSTEW_REPOS_HOME` is `[selected-absolute-managed-repository-home]`.
+- `REPOSTEW_HOME` is `[selected-absolute-state-home]` — the one required absolute
+  anchor; skill and managed-repository homes resolve from `paths.json`.
+- Resolve all three roots with `python scripts/repostew_state.py roots`; they
+  must exist and match this workspace layout.
 - These are this machine's single selected RepoStew roots. Do not create a second skill checkout, state home, or managed-repository root elsewhere.
-- Stop stateful work if an environment value is missing or disagrees with `paths.json` in the selected state home.
+- Stop stateful work if `REPOSTEW_HOME` is missing or disagrees with `paths.json`
+  in the selected state home.
 
 ## Workspace layout
 
@@ -36,7 +38,7 @@ This workspace maintains third-party repositories with RepoStew and may also con
 ## Skill activation
 
 - Invoke the `repostew` skill (skill-home `SKILL.md`) for all RepoStew work by default.
-- If the parent model is GPT-6 Astra, invoke `repostew-astra` (`astra-luna/SKILL.md`) instead. Do not keep using the default skill on an Astra run.
+- If the parent model is GPT-6 Astra or Fable, invoke the slim `repostew-essence` (`repostew_essence/SKILL.md`) instead. Do not keep using the default skill on those runs.
 - Apply the matching skill before cloning, editing, commenting, filing issues, or opening PRs.
 
 ## Followed repository registry

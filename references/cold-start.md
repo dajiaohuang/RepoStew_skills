@@ -24,7 +24,10 @@ discovery paths are compatibility constraints and suggestions, not RepoStew
 defaults. The selected roots may share a parent, but none may be the same path.
 
 After confirmation, validate that all paths are absolute and writable. Record
-the selection deterministically:
+the selection deterministically. `configure_paths.py` stores the three roots in
+`paths.json` as POSIX paths **relative to the state home** (`.`, `../skill`,
+`../..`), so the committed record is portable across macOS, Windows, and Linux —
+no machine-absolute `environment` block is written:
 
 ```text
 python <selected-skill-home>/scripts/configure_paths.py \
@@ -33,10 +36,20 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
-Persist the three environment variables using the host's supported settings
-only with the user's approval. Make sure scheduled tasks receive the same
-values. `paths.json` in the selected state home is the audit and restore copy;
-it does not replace environment configuration needed to locate that directory.
+Persist `REPOSTEW_HOME` (the one absolute anchor) using the host's supported
+settings only with the user's approval. Make sure scheduled tasks receive it.
+The skill and managed-repository homes are derived from `paths.json` once that
+anchor is known; set their env vars only if a tool needs them, and keep them
+consistent with the record. `paths.json` in the selected state home is the
+bootstrap record; it does not replace the environment configuration needed to
+locate that directory. The recommended layout keeps skill and state as sibling
+checkouts so their relative paths resolve on any machine:
+
+```text
+<wrapper>/                    managed-repository home (repos)
+<wrapper>/RepoStew_skills     skill home
+<wrapper>/repostew-state/.repostew   state home (paths.json, sqlite)
+```
 
 If the current checkout is not the selected skill home, prepare a verified
 clone or move and update the agent's discovery link. Do not delete the loaded

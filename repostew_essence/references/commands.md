@@ -1,6 +1,6 @@
 # Commands
 
-Cwd: `REPOSTEW_SKILL_HOME`. Require selected `REPOSTEW_HOME` / `REPOSTEW_SKILL_HOME` / `REPOSTEW_REPOS_HOME`. SQLite: `REPOSTEW_HOME/repostew.sqlite`.
+Cwd: `REPOSTEW_SKILL_HOME`. Require an explicit `REPOSTEW_HOME` absolute anchor; resolve all three roots from `paths.json` (`python scripts/repostew_state.py roots`). SQLite: `REPOSTEW_HOME/repostew.sqlite`.
 
 ## Auth / issue verify
 

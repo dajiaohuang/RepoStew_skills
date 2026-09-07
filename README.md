@@ -16,7 +16,7 @@ RepoStew 是一个可移植的 [Agent Skill](https://agentskills.io/)，用于�
   └──────────── 持久状态与反馈 ──────┘
 ```
 
-核心规则位于 [`SKILL.md`](SKILL.md)（Luna extra-high 单智能体）。GPT-6 Astra 父代理加 Luna 子代理使用 [`astra-luna/SKILL.md`](astra-luna/SKILL.md)。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
+核心规则位于 [`SKILL.md`](SKILL.md)（默认通用版：完整详细流程，模型无关，默认单智能体；仅在边界清晰的只读/并行工作才委派给小模型）。GPT-6 Astra 或 Fable 父代理使用精简版 [`repostew_essence/SKILL.md`](repostew_essence/SKILL.md)（`repostew-essence`，用小模型如 Luna 作 subagent）。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
 
 ## 为什么需要 RepoStew
 
@@ -40,7 +40,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 | 默认节奏 | 确认模式：调查与计划先行，编辑和外部提交分别确认 |
 | 可选节奏 | 自主模式：在用户明确授权的范围内连续执行 |
 | 判断结果 | `ACCEPT`、`ASK_MAINTAINER`、`SKIP` |
-| 状态模型 | 三个用户选择的独立绝对根：skill、state、repositories |
+| 状态模型 | 一个绝对 `REPOSTEW_HOME` 锚点；skill 与 repositories 由 `paths.json` 解析 |
 | 运行要求 | Python 3.10+、Git、已认证 GitHub CLI |
 | 脚本依赖 | Python 标准库；不安装运行时包 |
 | 许可证 | MIT |
@@ -142,9 +142,11 @@ $env:REPOSTEW_SKILL_HOME = Read-Host "RepoStew skill 的绝对安装路径"
 git clone https://github.com/dajiaohuang/RepoStew_skills.git $env:REPOSTEW_SKILL_HOME
 ```
 
-### 首次选择三个存储根
+### 首次选择存储根
 
-第一次使用时，再选择独立的状态目录与受管理仓库目录。三个根都必须是明确、互不重叠的绝对路径：
+第一次使用时，再选择独立的状态目录与受管理仓库目录，用 `configure_paths.py`
+记录。入参是明确、互不重叠的绝对路径；`paths.json` 会把它们存成相对 state
+home 的可移植 POSIX 表达，换机后只需重设 `REPOSTEW_HOME` 锚点：
 
 ```text
 python <selected-skill-home>/scripts/configure_paths.py \
@@ -250,11 +252,11 @@ python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --js
 
 ## 状态与目录
 
-RepoStew 只使用冷启动时明确选择的三个根：
+RepoStew 以 `REPOSTEW_HOME` 为唯一绝对锚点，其余两处根由 `paths.json` 解析（推荐布局：skill 与 state 作为兄弟 checkout）：
 
 ```text
-<skill-home>/          SKILL.md、astra-luna/、references、scripts、tests
-<state-home>/          checkpoint、PR tracker、贡献记录、通知 inbox、资源台账
+<skill-home>/          SKILL.md、repostew_essence/、references、scripts、tests
+<state-home>/          checkpoint、PR tracker、贡献记录、通知 inbox、资源台账（paths.json）
 <repos-home>/          canonical clones 与 linked worktrees
 ```
 

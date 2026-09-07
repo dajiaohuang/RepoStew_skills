@@ -1,4 +1,4 @@
-# RepoStew workflow (Luna extra-high)
+# RepoStew workflow
 
 Use this tree in order. A later reference must not invent a second gate that
 contradicts this file. If two documents disagree, this file plus the root
@@ -6,14 +6,19 @@ contradicts this file. If two documents disagree, this file plus the root
 
 ## 0. Profile
 
-- Default (any non-Astra parent, including Luna extra-high) → root `SKILL.md`.
-- Parent is GPT-6 Astra → `astra-luna/SKILL.md` (`repostew-astra`). Do not mix the two in one run.
+- Default (generic) parent → root `SKILL.md` (the complete detailed workflow).
+- Parent is GPT-6 Astra or Fable → `repostew_essence/SKILL.md`
+  (`repostew-essence`), the slim profile that delegates to small models (Luna).
+  Do not mix the two profiles in one run.
 
 ## 1. Roots and state
 
-- Are `REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME` set and
-  identical to `REPOSTEW_HOME/paths.json`? If no: stop and reconcile cold start.
-  Never infer from the profile, cwd, or an example path.
+- Is `REPOSTEW_HOME` set and absolute, and does it match the state root recorded
+  in `REPOSTEW_HOME/paths.json`? `resolved_roots()` derives the skill and
+  managed-repository homes from that one anchor; set `REPOSTEW_SKILL_HOME` /
+  `REPOSTEW_REPOS_HOME` only if a tool needs them, and keep them consistent with
+  the record. If the anchor or the record is missing or disagrees: stop and
+  reconcile cold start. Never infer from the profile, cwd, or an example path.
 - Scheduled task missing only inherited env vars, but prompt + `paths.json` +
   workspace instructions + existing roots agree? Initialize the missing vars
   from that record. Any mismatch remains fail-closed.

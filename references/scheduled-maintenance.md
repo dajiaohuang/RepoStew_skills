@@ -7,15 +7,15 @@ machine and host application running when local files are required, and grant
 only the minimum permissions needed for the requested actions.
 
 Before creating either task, replace every `<selected-...>` placeholder below
-with the absolute roots already stored by RepoStew cold start. Do not leave a
-task dependent only on environment variables inherited from the interactive
-shell: a scheduler process may not inherit them, especially when they were set
-after the host application started. Bind the task to the saved local project at
-`<selected-repos-home>`, make the prompt read
-`<selected-state-home>/paths.json` directly, and verify that required command
-line tools are available to a fresh non-interactive process. Missing inherited
-variables alone are not a cold-start failure after the fixed record and all
-three roots have been revalidated.
+with the already-stored RepoStew state root and the derived roots resolved by
+`python scripts/repostew_state.py roots`. Do not leave a task dependent only on
+environment variables inherited from the interactive shell: a scheduler process
+may not inherit them, especially when they were set after the host application
+started. Bind the task to the saved local project at `<selected-repos-home>`,
+make the prompt read `<selected-state-home>/paths.json` directly, and verify
+that required command line tools are available to a fresh non-interactive
+process. Missing inherited variables alone are not a cold-start failure after
+the fixed record and the resolved roots have been revalidated.
 
 For authority-aware maintenance, apply
 [maintaining-owned-repositories.md](maintaining-owned-repositories.md); the task
@@ -45,12 +45,12 @@ Prompt:
 ```text
 Use $repostew in autonomous mode for one bounded maintenance batch in this
 workspace. Before any stateful work, read
-<selected-state-home>/paths.json directly. Require it to record exactly
-REPOSTEW_SKILL_HOME=<selected-skill-home>,
-REPOSTEW_HOME=<selected-state-home>, and
-REPOSTEW_REPOS_HOME=<selected-repos-home>. Verify that those absolute roots
-exist and that the saved local project's workspace instructions agree. If one
-of the three process environment variables is unset, initialize it for this
+<selected-state-home>/paths.json directly. Require it to be schema_version 2
+and to record REPOSTEW_HOME=<selected-state-home> as the '.' state root, with
+skill and managed-repository homes resolvable from that one anchor. Resolve the
+roots with `python scripts/repostew_state.py roots` and verify the recorded
+roots exist and that the saved local project's workspace instructions agree. If
+the anchor environment variable is unset, initialize it for this
 run from the matching verified value before invoking RepoStew helpers. If the
 record is missing or unreadable, a placeholder remains unfilled, a variable is
 already set to a different value, the workspace disagrees, or a root is
@@ -119,10 +119,10 @@ Prompt:
 ```text
 Use $repostew to run the safe local workspace-cleanup workflow in
 <selected-repos-home>. Before writing, read
-<selected-state-home>/paths.json directly and require it to record exactly
-REPOSTEW_SKILL_HOME=<selected-skill-home>,
-REPOSTEW_HOME=<selected-state-home>, and
-REPOSTEW_REPOS_HOME=<selected-repos-home>. Verify the roots and workspace
+<selected-state-home>/paths.json directly and require it to be schema_version 2
+with REPOSTEW_HOME=<selected-state-home> as the state root; resolve the skill
+and managed-repository homes from that anchor with
+`python scripts/repostew_state.py roots`. Verify the roots and workspace
 instructions. Initialize any unset process variable for this run from the
 matching verified value; stop on an unreadable record, an unfilled placeholder,
 a mismatch, or a missing root, but not merely because the scheduler did not

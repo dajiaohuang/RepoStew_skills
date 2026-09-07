@@ -1,6 +1,6 @@
 # Worker packet
 
-Parent (Astra) must give every Luna worker a complete packet. Workers revalidate GitHub and must not advance `notification_checkpoints` or `issue_checkpoints`.
+Parent (Astra or Fable) must give every Luna worker a complete packet. Workers revalidate GitHub and must not advance `notification_checkpoints` or `issue_checkpoints`.
 
 ## Required fields
 
@@ -17,7 +17,7 @@ Parent (Astra) must give every Luna worker a complete packet. Workers revalidate
 | `allowed_actions` | Explicit list (fetch, classify, edit, test, commit, push, comment, …) |
 | `prohibited_actions` | Must include: advance shared checkpoints; merge; close; delete remotes; expose secrets; fabricated authorship |
 | `validation` | Commands or checks the worker must run, calibrated to risk |
-| `state` | `REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, `REPOSTEW_REPOS_HOME` as already-selected absolutes; SQLite `REPOSTEW_HOME/repostew.sqlite`; never infer roots |
+| `state` | `REPOSTEW_HOME` as the already-selected absolute anchor; skill and managed-repository homes resolved from `paths.json`; SQLite `REPOSTEW_HOME/repostew.sqlite`; never infer roots |
 | `partition` | Org/repo group id; whether this partition may finish independently |
 | `stop` | Packet stop conditions |
 
