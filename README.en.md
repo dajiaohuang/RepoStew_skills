@@ -201,7 +201,7 @@ Explicit words such as `autonomous`, `automatic`, `continuous`, `no confirmation
 
 Complexity controls execution location, not value. Clear localized work stays in the current conversation; cross-subsystem audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task when the host supports one.
 
-In autonomous mode, RepoStew opens a regular PR only when policy allows it, the work remains available, expected behavior is strongly supported, the solution is minimal and compatible, no approval-gated dependency/service/permission/security/public-API/architecture boundary is crossed, validation passes, and assumptions are stated honestly. See [`SKILL.md`](SKILL.md) and [`references/taste-and-permissions.md`](references/taste-and-permissions.md).
+In autonomous mode, RepoStew opens a regular PR only when policy allows it, the work remains available, expected behavior is strongly supported, the solution is minimal and compatible, no approval-gated dependency/service/permission/security/public-API/architecture boundary is crossed, validation passes, and the PR body follows the repository's own conventions (minimal where the repository defines none). See [`SKILL.md`](SKILL.md) and [`references/taste-and-permissions.md`](references/taste-and-permissions.md).
 
 ## Bundled scripts
 

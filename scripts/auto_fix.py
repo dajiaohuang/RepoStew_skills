@@ -37,8 +37,10 @@ Do not stop merely because maintainers have not selected among reasonable soluti
 unsolicited PRs are allowed and the issue is available, expected behavior is strongly supported
 by repository evidence, the smallest complete reversible patch preserves defaults/interfaces,
 crosses no separately gated boundary, and focused validation passes, open a regular upstream PR
-directly. Do not post a redundant question or default to Draft. State material assumptions and
-tradeoffs in the PR body.
+directly. Do not post a redundant question or default to Draft. Write the PR body to match the
+repository's own template and conventions first; if the repository defines no PR shape, keep the
+body minimal — what changed, why, and how it was verified. Mention a material assumption or an
+unrun check only in one short sentence when a reviewer needs it.
 
 If a material implementation uncertainty remains after that direct-PR gate, follow RepoStew's
 draft route. Open an upstream Draft PR only when repository policy allows unsolicited early drafts.

@@ -141,18 +141,32 @@ After a candidate is selected:
 
 ## Commit and open the PR
 
-Follow repository conventions. If none exist, use a concise imperative subject such as `fix: handle empty configuration`.
+Match the target repository first. Write the PR to fit that project's own
+conventions: fill its PR template, follow any description guidance in its
+contribution documents, and mirror a recent merged PR from the project when the
+format is unclear. Do not layer RepoStew structure on top of the repository's own
+format. Use a concise subject in the repository's style; if it has no subject
+convention, use a concise imperative subject such as `fix: handle empty
+configuration`.
 
 Before opening a PR, verify:
 
 - the issue still has no competing fix;
 - required checks pass;
 - the branch contains only intended commits;
-- the PR template is complete;
+- the PR follows the repository's own template and conventions when it has them;
 - claims match actual validation;
 - disclosure and sign-off requirements are satisfied.
 
-Write the PR body around problem, root cause, solution, and verification. Link the issue with the repository's preferred closing syntax only when the change fully resolves it. Do not comment on the issue merely to advertise the PR unless repository practice or the user requires it.
+Only where the repository defines no PR shape — no template, no example PRs, no
+description guidance — keep the body minimal: what changed, why, and how it was
+verified, a sentence or two each, with no extra headings or boilerplate. Mention a
+material assumption or an unrun check in one short sentence only when a reviewer
+genuinely needs it. Never add an assumptions/tradeoffs section, RepoStew
+provenance, or unsolicited generated-by advertising. Link the issue with the
+repository's preferred closing syntax only when the change fully resolves it. Do
+not comment on the issue merely to advertise the PR unless repository practice or
+the user requires it.
 
 After creation, record the real PR URL:
 

@@ -44,7 +44,7 @@ In contributor mode, frame this as a question or tradeoff, not a project decisio
 
 Treat submission permission and technical approval as separate gates. Do not leave an item design-only merely because maintainers have not selected among reasonable implementations. When the direct regular-PR standard above is met, classify it `ACCEPT` and open a regular upstream PR; do not post a redundant question or default to Draft. Recheck previously unanswered questions and upstream Drafts under this standard, and mark an existing Draft ready for review instead of opening a duplicate.
 
-If a material implementation uncertainty remains, choose the smallest reversible option supported by repository evidence, validate it, and make its assumptions and alternatives explicit in the Draft.
+If a material implementation uncertainty remains, choose the smallest reversible option supported by repository evidence, validate it, and state the unresolved choice and the option chosen briefly in the Draft.
 
 | Repository policy | Allowed draft action |
 |---|---|
