@@ -35,3 +35,5 @@ when `repostew.sqlite` is present.
 
 Never hand-edit `workspace_resources` records. Use `workspace_cleanup.py`.
 Never infer `REPOSTEW_HOME` from the user profile or current directory.
+Keep one selected state home. Do not create a second copy or a private GitHub
+state-backup checkout.

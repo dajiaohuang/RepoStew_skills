@@ -18,7 +18,7 @@ record under `REPOSTEW_HOME`. Record at least the batch identifier, repository
 and starting ref, included and excluded work, parent/integration owner, exact
 integration worktree and branch, worker status, validation results, PR URL,
 merge authority, and cleanup result. Persist this record with the normal
-RepoStew state backup; do not put it in a target-repository commit.
+RepoStew SQLite state store; do not put it in a target-repository commit.
 
 The batch is complete only after its integration PR is terminal and cleanup has
 been evaluated. A blocked or unauthorised cleanup does not permit the next
@@ -115,6 +115,5 @@ normal terminal, repository, exact-head, clean-state, ignored-data, non-force
 removal, or no-remote-deletion gates.
 
 Only after the terminal state and cleanup outcome are durably recorded may the
-parent select the next bounded batch. Keep target-repository implementation,
-RepoStew self-maintenance, and private-state backup changes in separate commits
-and PRs throughout the cycle.
+parent select the next bounded batch. Keep target-repository implementation
+and RepoStew self-maintenance in separate commits and PRs throughout the cycle.

@@ -153,7 +153,7 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
-If the selected skill path is outside the agent's discovery locations, create a user-approved link to that checkout instead of a second copy. See [`references/cold-start.md`](references/cold-start.md) for path selection, old-state reconciliation, and private backup.
+If the selected skill path is outside the agent's discovery locations, create a user-approved link to that checkout instead of a second copy. See [`references/cold-start.md`](references/cold-start.md) for path selection and old-state reconciliation into one state home.
 
 Always update the selected checkout:
 
@@ -269,7 +269,7 @@ RepoStew's autonomy always remains inside these rules:
 - Never fabricate attribution or add unsolicited generated-by advertising.
 - Never claim an unrun test passed.
 - Never merge, close, release, change governance, or delete remote resources without explicit authority.
-- Never expose credentials in prompts, logs, commits, issues, pull requests, or backups.
+- Never expose credentials in prompts, logs, commits, issues, or pull requests.
 
 See [`references/taste-and-permissions.md`](references/taste-and-permissions.md) for the contribution and authority model, [`references/pr-maintenance.md`](references/pr-maintenance.md) for PR follow-up, [`references/repository-audit.md`](references/repository-audit.md) for audits, and [`references/workspace-cleanup.md`](references/workspace-cleanup.md) for cleanup.
 

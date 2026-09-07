@@ -64,7 +64,7 @@ Read a specialist reference only when that gate is active:
 | Gate | Reference |
 | --- | --- |
 | Taste, ASK vs ACCEPT, Draft vs upstream | [taste-and-permissions.md](references/taste-and-permissions.md) |
-| First-time roots / backup | [cold-start.md](references/cold-start.md) |
+| First-time roots | [cold-start.md](references/cold-start.md) |
 | Owner/admin/maintain registry | [maintaining-owned-repositories.md](references/maintaining-owned-repositories.md) |
 | PR inbox, comments, CI | [pr-maintenance.md](references/pr-maintenance.md) |
 | Scheduled notification/issue loops | [scheduled-maintenance.md](references/scheduled-maintenance.md) |
@@ -110,7 +110,7 @@ Autonomy does not grant maintainer authority and does not override repository ru
 
 Read [references/taste-and-permissions.md](references/taste-and-permissions.md) when candidate suitability, contributor authority, dependencies, security, or issue filing is in question.
 
-Read [references/cold-start.md](references/cold-start.md) for first-time setup including private state backup repository creation.
+Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected skill, state, and managed-repository roots. Do not create a private GitHub state-backup checkout or a second local state copy.
 
 Before running any stateful helper, require explicit, validated selections for
 `REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. If a selected
@@ -190,8 +190,8 @@ Verified owner/admin/maintain authority does not authorize an automatic merge.
 Merge the batch PR into the current default branch only when the user has
 explicitly authorized that merge and current repository policy, required checks,
 and PR state permit it. Never use this cycle to delete remote branches. Keep
-target-repository changes, RepoStew self-maintenance, and private-state backup
-changes in separate commits and PRs.
+target-repository changes and RepoStew self-maintenance in separate commits and
+PRs.
 
 For a repository-wide audit, multi-repository audit, documentation/site
 consistency review, or audit-to-issue-to-PR campaign, read

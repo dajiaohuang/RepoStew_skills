@@ -153,7 +153,7 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
-如果 skill 位于智能体无法直接发现的位置，经用户同意后创建链接到所选路径；不要为了匹配示例再复制一份 checkout。完整的路径选择、旧状态合并和私有备份流程见 [`references/cold-start.md`](references/cold-start.md)。
+如果 skill 位于智能体无法直接发现的位置，经用户同意后创建链接到所选路径；不要为了匹配示例再复制一份 checkout。完整的路径选择与旧状态合并到单一状态目录的流程见 [`references/cold-start.md`](references/cold-start.md)。
 
 更新始终在已选 skill 路径执行：
 
@@ -271,7 +271,7 @@ RepoStew 的自主性始终受以下规则约束：
 - 不伪造署名，不添加未经要求的 generated-by 宣传；
 - 未运行的测试绝不宣称通过；
 - 未经明确授权，不合并、不关闭、不发布、不修改治理、不删除远端资源；
-- 不在提示、日志、提交、issue、PR 或备份中暴露凭据。
+- 不在提示、日志、提交、issue 或 PR 中暴露凭据。
 
 更完整的贡献质量与权限模型见 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)，PR 跟进见 [`references/pr-maintenance.md`](references/pr-maintenance.md)，仓库审计见 [`references/repository-audit.md`](references/repository-audit.md)，安全清理见 [`references/workspace-cleanup.md`](references/workspace-cleanup.md)。
 

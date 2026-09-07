@@ -74,29 +74,10 @@ If GitHub CLI is unavailable, direct the user to
 <https://github.com/cli/cli/releases> or their package manager, then authenticate
 with `gh auth login`.
 
-## 4. Offer a private state-backup repository
+Do not create a private GitHub state-backup checkout or a second local copy of
+the selected state home.
 
-RepoStew maintains contribution history, PR tracking, notifications, cursors,
-registries, and workspace ownership state. Ask whether the user wants a private
-GitHub repository for durable, cross-device backup. Explain that credentials,
-browser sessions, keys, caches, dependencies, target clones, and temporary
-build output are always excluded.
-
-If the user agrees:
-
-1. Ask for or confirm the private GitHub repository name and the local backup
-   checkout path; neither has a RepoStew default.
-2. Create or validate the repository as private before the first push and
-   periodically afterward.
-3. Keep synchronization one-way from the selected state and workspace into the
-   backup checkout.
-4. Generate a deterministic path/size/SHA-256 manifest, review the staged diff,
-   scan for credentials and private keys, then commit and push.
-
-If the user declines, continue with local state only. Do not treat the backup
-checkout as a followed or managed target repository.
-
-## 5. Set up workspace registries
+## 4. Set up workspace registries
 
 Create `FOLLOWED_REPOSITORIES.md` in the selected managed-repository workspace
 when absent, preserving paused entries as history:
@@ -128,11 +109,3 @@ contributions, organization membership, forks, and local clones do not prove
 authority. Read
 [maintaining-owned-repositories.md](maintaining-owned-repositories.md) before
 relying on the registry.
-
-## 6. Periodic state synchronization
-
-When a private backup is configured, synchronize from the selected paths rather
-than reconstructing paths from the user profile or current directory. Back up
-workspace instructions, registries, all state JSON, maintenance batches,
-plans, and retained investigation/comment records. Verify the manifest and
-visibility before each push, and retain Git history as the recovery log.

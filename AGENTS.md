@@ -8,7 +8,7 @@ Chinese-first bilingual documentation site.
 - Treat unsafe assumptions, stale documentation, portability problems, and script defects found during real use as candidates for focused improvements.
 - Validate documentation and scripts before committing.
 - Keep public documentation platform-neutral and label platform-specific examples.
-- Commit and push changes separately from target-repository and private-state work.
+- Commit and push changes separately from target-repository work.
 
 ## Skill Structure
 
@@ -17,7 +17,7 @@ Chinese-first bilingual documentation site.
 - `references/` - Full Luna-profile reference documents
   - `workflow.md` - Canonical yes/no tree
   - `state.md` - SQLite state store
-  - `cold-start.md` - First-time setup including private state backup
+  - `cold-start.md` - First-time setup
   - `pr-maintenance.md` - PR follow-up workflow
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
   - `batched-iteration.md` - Bounded integration workflow for maintained repositories
@@ -40,14 +40,14 @@ Chinese-first bilingual documentation site.
 On first invocation, agents should:
 1. Ask the user to choose distinct absolute skill, state, and managed-repository roots
 2. Validate and record those roots without applying an implicit default
-3. Reconcile any existing installations or state with a reversible merge
+3. Reconcile any existing installations or state with a reversible merge into one state home
 4. Check gh CLI authentication
-5. Offer to create a private backup repository for persistent state
-6. Set up FOLLOWED_REPOSITORIES.md and MAINTAINED_REPOSITORIES.md if absent
+5. Set up FOLLOWED_REPOSITORIES.md and MAINTAINED_REPOSITORIES.md if absent
 
-See `references/cold-start.md` for details.
+See `references/cold-start.md` for details. Do not create a private GitHub
+state-backup checkout or a second local state copy.
 
 ## Safety
 
-- Never expose credentials or tokens in files, logs, commits, or state backups.
+- Never expose credentials or tokens in files, logs, commits, issues, or pull requests.
 - Do not add dependencies, services, CI actions, permissions, or public APIs without approval.

@@ -91,8 +91,8 @@ Also run the configured low-frequency reconciliation when due so missed
 comments, reviews, and CI are retained, but keep notification-first intake as
 the normal path. Capture and inspect a tail pass after all actions. Advance a
 source checkpoint to the batch-start timestamp only after every partition and
-tail event is handled or durably retained. Persist the batch record and state
-backup according to workspace policy.
+tail event is handled or durably retained. Persist the batch record in the
+selected SQLite state home.
 
 When the host supports subagents or child tasks, independent repository
 partitions may run in parallel. The parent task remains responsible for result
