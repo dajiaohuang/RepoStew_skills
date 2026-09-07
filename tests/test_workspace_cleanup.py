@@ -17,6 +17,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import workspace_cleanup  # noqa: E402
 import pr_tracker  # noqa: E402
+import repostew_state  # noqa: E402
 
 
 def git(cwd: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
@@ -146,7 +147,10 @@ class WorkspaceCleanupTests(unittest.TestCase):
                 git(fixture.remote, "show-ref", "--verify", "refs/heads/fix/42").returncode,
                 0,
             )
-            history = json.loads((state_home / "workspace_resources.json").read_text(encoding="utf-8"))
+            history = repostew_state.load_json(
+                state_home / "workspace_resources.json",
+                {"version": 2, "resources": [], "history": []},
+            )
             self.assertEqual(history["resources"][0]["status"], "removed")
             self.assertEqual(history["history"][0]["status"], "removed")
             self.assertFalse(applied["results"][0]["remote_branches_modified"])
@@ -396,10 +400,12 @@ class WorkspaceCleanupTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
                 workspace_cleanup.register_resource(self._args(fixture, tracker))
                 state_path = state_home / "workspace_resources.json"
-                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state = repostew_state.load_json(
+                    state_path, {"version": 2, "resources": [], "history": []}
+                )
                 state["version"] = 1
                 state["resources"][0].pop("resource_type")
-                state_path.write_text(json.dumps(state), encoding="utf-8")
+                repostew_state.save_json(state_path, state)
                 same = workspace_cleanup.register_resource(self._args(fixture, tracker))
                 rebound = workspace_cleanup.rebind_resource(self._args(fixture, tracker))
 
@@ -529,8 +535,9 @@ class WorkspaceCleanupTests(unittest.TestCase):
             self.assertTrue(rebound["rebound"])
             self.assertEqual(rebound["previous_registered_head"], fixture.head)
             self.assertEqual(rebound["registered_head"], updated_head)
-            state = json.loads(
-                (state_home / "workspace_resources.json").read_text(encoding="utf-8")
+            state = repostew_state.load_json(
+                state_home / "workspace_resources.json",
+                {"version": 2, "resources": [], "history": []},
             )
             self.assertEqual(state["resources"][0]["registered_head"], updated_head)
             self.assertEqual(state["history"][0]["status"], "rebound")
@@ -753,7 +760,10 @@ class WorkspaceCleanupTests(unittest.TestCase):
             self.assertEqual(applied["results"][0]["status"], "partial_branch_retained")
             self.assertFalse(fixture.worktree.exists())
             self.assertEqual(follow_up["eligible_count"], 0)
-            state = json.loads((state_home / "workspace_resources.json").read_text(encoding="utf-8"))
+            state = repostew_state.load_json(
+                state_home / "workspace_resources.json",
+                {"version": 2, "resources": [], "history": []},
+            )
             self.assertEqual(state["resources"][0]["status"], "partial_branch_retained")
             self.assertEqual(state["history"][0]["status"], "partial_branch_retained")
             self.assertEqual(

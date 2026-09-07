@@ -12,8 +12,11 @@ Chinese-first bilingual documentation site.
 
 ## Skill Structure
 
-- `SKILL.md` - Main skill file loaded by the agent
-- `references/` - Additional reference documents
+- `SKILL.md` - Default RepoStew skill (non-Astra, including Luna extra-high)
+- `astra-luna/` - GPT-6 Astra only (`repostew-astra`)
+- `references/` - Full Luna-profile reference documents
+  - `workflow.md` - Canonical yes/no tree
+  - `state.md` - SQLite state store
   - `cold-start.md` - First-time setup including private state backup
   - `pr-maintenance.md` - PR follow-up workflow
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
@@ -22,6 +25,7 @@ Chinese-first bilingual documentation site.
   - `maintenance-workspace-agents.md` - Workspace agent instructions
 - `docs/` - Zero-dependency bilingual GitHub Pages source
 - `scripts/` - Python helper scripts
+  - `repostew_state.py` / `state_store.py` - SQLite state home
   - `contribution_tracker.py` - Track contributed repositories and issues
   - `pr_tracker.py` - Track submitted pull requests
   - `maintained_repositories.py` - Validate maintained-repository authority

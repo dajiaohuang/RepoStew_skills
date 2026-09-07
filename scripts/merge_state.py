@@ -15,7 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from repostew_state import save_json
+from repostew_state import load_json, save_json
+from state_store import DATABASE_NAME, export_documents, uses_database
 
 
 class MergeError(RuntimeError):
@@ -213,8 +214,21 @@ MERGERS: dict[str, Callable[[Any, Any], Any]] = {
 
 
 def load(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    return load_json(path, None)
+
+
+def payloads_in(root: Path) -> dict[str, Any]:
+    payloads: dict[str, Any] = {}
+    if uses_database(root):
+        payloads.update(export_documents(root))
+    for source_file in sorted(root.glob("*.json")):
+        if source_file.name in payloads:
+            continue
+        try:
+            payloads[source_file.name] = json.loads(source_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return payloads
 
 
 def paths_overlap(left: Path, right: Path) -> bool:
@@ -231,19 +245,22 @@ def paths_overlap(left: Path, right: Path) -> bool:
 
 
 def prepare(source: Path, destination: Path) -> dict[str, Any]:
+    left_docs = payloads_in(source)
+    right_docs = payloads_in(destination)
     changes: dict[str, Any] = {}
-    for source_file in sorted(source.glob("*.json")):
-        destination_file = destination / source_file.name
-        if not destination_file.exists():
-            changes[source_file.name] = load(source_file)
+    for name in sorted(set(left_docs) | set(right_docs)):
+        if name not in left_docs:
             continue
-        left, right = load(source_file), load(destination_file)
-        if source_file.name in MERGERS:
-            changes[source_file.name] = MERGERS[source_file.name](left, right)
+        if name not in right_docs:
+            changes[name] = left_docs[name]
+            continue
+        left, right = left_docs[name], right_docs[name]
+        if name in MERGERS:
+            changes[name] = MERGERS[name](left, right)
         elif canonical(left) == canonical(right):
-            changes[source_file.name] = right
+            changes[name] = right
         else:
-            raise MergeError(f"no safe merge rule for conflicting {source_file.name}")
+            raise MergeError(f"no safe merge rule for conflicting {name}")
     return changes
 
 
@@ -262,6 +279,18 @@ def back_up(source: Path, destination: Path, backup: Path, names: set[str]) -> P
     for label, root in (("source", source), ("destination", destination)):
         output = backup / label
         output.mkdir(parents=True, exist_ok=True)
+        sqlite = root / DATABASE_NAME
+        if sqlite.exists():
+            copied = output / DATABASE_NAME
+            shutil.copy2(sqlite, copied)
+            manifest.append(
+                {
+                    "origin": str(sqlite),
+                    "backup": str(copied.relative_to(backup)),
+                    "bytes": copied.stat().st_size,
+                    "sha256": sha256(copied),
+                }
+            )
         for name in sorted(names):
             original = root / name
             if not original.exists():
@@ -319,7 +348,7 @@ def main() -> int:
         save_json(destination / name, value)
     # Verify every written file can be parsed and matches the prepared result.
     for name, value in changes.items():
-        if canonical(load(destination / name)) != canonical(value):
+        if canonical(load_json(destination / name, None)) != canonical(value):
             raise MergeError(f"post-write verification failed for {name}")
     print(json.dumps({"mode": "applied", "manifest": str(manifest), "result_counts": report}, indent=2))
     return 0

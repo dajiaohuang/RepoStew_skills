@@ -16,7 +16,7 @@ RepoStew 是一个可移植的 [Agent Skill](https://agentskills.io/)，用于�
   └──────────── 持久状态与反馈 ──────┘
 ```
 
-核心规则位于 [`SKILL.md`](SKILL.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
+核心规则位于 [`SKILL.md`](SKILL.md)（Luna extra-high 单智能体）。GPT-6 Astra 父代理加 Luna 子代理使用 [`astra-luna/SKILL.md`](astra-luna/SKILL.md)。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
 
 ## 为什么需要 RepoStew
 
@@ -253,7 +253,7 @@ python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --js
 RepoStew 只使用冷启动时明确选择的三个根：
 
 ```text
-<skill-home>/          SKILL.md、references、scripts、tests
+<skill-home>/          SKILL.md、astra-luna/、references、scripts、tests
 <state-home>/          checkpoint、PR tracker、贡献记录、通知 inbox、资源台账
 <repos-home>/          canonical clones 与 linked worktrees
 ```

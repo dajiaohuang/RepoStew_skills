@@ -16,7 +16,7 @@ discover → verify → patch → validate → submit → maintain
     └────────── durable state + feedback ─────┘
 ```
 
-The governing workflow lives in [`SKILL.md`](SKILL.md). Optional Python scripts use only the standard library plus external `git` / `gh` commands for deterministic discovery, durable state, notification intake, and guarded cleanup. RepoStew is independent of model vendor, GitHub identity, workspace path, operating system, and shell.
+The governing workflow lives in [`SKILL.md`](SKILL.md) for a solo Luna extra-high agent. GPT-6 Astra plus Luna subagents use [`astra-luna/SKILL.md`](astra-luna/SKILL.md). Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md).
 
 ## Why RepoStew exists
 

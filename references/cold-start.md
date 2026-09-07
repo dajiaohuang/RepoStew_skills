@@ -11,8 +11,9 @@ Ask the user to choose three distinct absolute paths:
 1. **Skill home** (`REPOSTEW_SKILL_HOME`): the canonical RepoStew skill
    checkout. It must be directly discoverable by the selected agent, or have a
    user-approved platform discovery link that points to it.
-2. **State home** (`REPOSTEW_HOME`): all mutable trackers, notification
-   checkpoints, registries, batch records, plans, and resource ledgers.
+2. **State home** (`REPOSTEW_HOME`): SQLite `repostew.sqlite` for trackers,
+   notification checkpoints, registries, batch records, and resource ledgers,
+   plus `paths.json` as the bootstrap record. See `references/state.md`.
 3. **Managed-repository home** (`REPOSTEW_REPOS_HOME`): canonical target clones,
    linked worktrees, and other persistent repository workspaces managed by
    RepoStew.

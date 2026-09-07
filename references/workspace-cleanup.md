@@ -1,13 +1,36 @@
 # Safe local workspace cleanup
 
 Use this workflow when local contribution branches, linked worktrees, dependency
-trees, and build output have accumulated. Cleanup is a terminal-PR maintenance
-step, not a general disk cleaner.
+trees, and build output have accumulated. The registered-resource cleanup below
+is the default. A separate monthly sweep is available only after the user
+explicitly authorizes cleanup of the selected managed-repository root.
 
 ## Safety boundary
 
-RepoStew cleans only explicitly registered linked worktrees whose tracked pull
-request is currently `MERGED` or `CLOSED`. Ordinary PR worktrees must match the
+### User-authorized monthly sweep
+
+For an explicit request to clean the selected `REPOSTEW_REPOS_HOME`, freeze the
+cutoff at the first day of the current month in local time. Inspect direct
+children of that root and use each child's `LastWriteTime` as the activity
+signal. A recursive content-date scan is optional, not required.
+
+Preserve the state home, canonical skill checkout, discovery junction,
+workspace instructions, active/canonical paths recorded in
+`workspace_resources.json`, and Git directories whose status is dirty or
+unreadable. Delete other direct children older than the cutoff, including clean
+Git clones, unregistered worktrees, stale audits, temporary directories,
+archives, and generated files. Prefer the Recycle Bin when practical; direct
+deletion is allowed after explicit user authorization and a final exact-set
+recheck. Re-scan afterward and report removed, preserved, skipped, failed, and
+missing active-record counts. Do not rewrite registries merely because a
+recorded path is missing.
+
+The sweep must still stay inside the selected root and must never delete the
+root itself, a remote branch, credentials, or the canonical/state roots.
+
+For the registered-resource workflow, RepoStew cleans only explicitly
+registered linked worktrees whose tracked pull request is currently `MERGED` or
+`CLOSED`. Ordinary PR worktrees must match the
 tracked PR branch and pushed tip. Batch workers require the separate terminal
 proof described below. It never deletes:
 
