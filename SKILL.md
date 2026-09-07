@@ -140,21 +140,19 @@ Read [references/taste-and-permissions.md](references/taste-and-permissions.md) 
 
 Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected skill, state, and managed-repository roots. Keep one selected state home as the single live state source; it may itself live in a git repository that is pushed to a private remote, whose remote and checkouts are recovery storage, never a second live state source.
 
-Before running any stateful helper, require an explicit, validated `REPOSTEW_HOME`
-absolute anchor and a readable `paths.json` at its root; `resolved_roots()`
-derives the skill and managed-repository homes from the anchor. If the anchor or
-the recorded roots conflict, stop normal work and reconcile the cold-start path
-selection. Never infer these roots from the user profile, current directory, an
-example path, or an earlier installation.
+Before any stateful helper, require an explicit validated `REPOSTEW_HOME` anchor
+and a readable `paths.json` at its root; `resolved_roots()` derives the skill and
+managed-repository homes from the anchor. On a conflict, stop and reconcile the
+cold-start selection; never infer these roots from the user profile, current
+directory, an example path, or an earlier installation.
 
-A local scheduled task may start without inheriting those environment
-variables. Its prompt must contain the absolute path to the already-selected
-`paths.json` and the verified `REPOSTEW_HOME` captured when the task was created.
-After validating that the record, prompt, workspace instructions, and existing
-roots all agree, initialize only missing variables for that task process from
-the verified values. An unreadable record, an unfilled placeholder, a mismatch,
-or a missing root remains a fail-closed error; missing inherited variables alone
-do not restart cold-start selection.
+A local scheduled task may start without inheriting those environment variables.
+Its prompt must contain the absolute path to the already-selected `paths.json`
+and the verified `REPOSTEW_HOME` captured when the task was created; once the
+record, prompt, workspace instructions, and existing roots agree, initialize only
+missing variables for that task process from the verified values. An unreadable
+record, an unfilled placeholder, a mismatch, or a missing root is a fail-closed
+error; missing inherited variables alone do not restart cold-start selection.
 
 ## Intake the request
 
@@ -180,24 +178,18 @@ If `gh` is unavailable, use an available GitHub connector or API. Do not silentl
 
 ## Use verified owner or maintainer authority
 
-Keep maintenance intake and authority separate. An active/self row in
-`FOLLOWED_REPOSITORIES.md` selects routine events; it does not prove permission.
-An enabled, recently verified row in `MAINTAINED_REPOSITORIES.md` proves
-owner/admin/maintain capability; it does not automatically add the repository
-to intake.
+An active/self row in `FOLLOWED_REPOSITORIES.md` selects routine intake; it does
+not prove permission. An enabled, recently verified row in
+`MAINTAINED_REPOSITORIES.md` proves owner/admin/maintain capability. Reuse that
+verified authority through the focused quick path instead of repeating
+contributor eligibility, CLA, PR-acceptance, or push-permission questions every
+cycle, and never infer it from a contribution, follow row, affiliation, fork, or
+clone.
 
-For the intersection—or an explicitly named maintained repository—reuse the
-verified authority instead of repeating external-contributor eligibility, CLA,
-PR-acceptance, or push-permission questions for every cycle. Still act only on
-a notification or state change, an explicit request, or due low-frequency
-reconciliation. On a hit, read one complete current issue/PR snapshot including
-comments, reviews, inline threads, commits, checks, mergeability, and head state
-before acting. Repository instructions, focused validation, scope, checkpoint,
-and secret-safety checks remain required.
-
-Never infer authority from a contribution, follow row, organization affiliation,
-fork, or local clone. Pause and retain a registry row when permission disappears
-or cannot be reverified, then fall back to external-contributor rules. Read
+Act only on a notification or state change, an explicit request, or due
+reconciliation, reading one complete current issue/PR snapshot before acting.
+When permission disappears or cannot be reverified, pause the row and fall back
+to external-contributor rules. Read
 [references/maintaining-owned-repositories.md](references/maintaining-owned-repositories.md)
 before creating, verifying, changing, or relying on the authority registry.
 
@@ -206,26 +198,15 @@ before creating, verifying, changing, or relying on the authority registry.
 For a user-owned or verified maintained repository, use a bounded iteration
 cycle only when the user explicitly asks for continuous or batched maintenance.
 Read [references/batched-iteration.md](references/batched-iteration.md) before
-starting the first batch. It requires one durable scope record, isolated worker
-worktrees when parallel work is useful, and one parent-owned integration
-worktree, branch, and reviewable PR per batch. Do not start another batch until
+starting the first batch. Each batch converges into one parent-owned integration
+worktree, branch, and reviewable PR per batch; do not begin another batch until
 the current PR is terminal and its registered integration worktree plus any
-explicitly proven batch-worker worktrees have passed a reviewed dry-run cleanup;
-when cleanup is authorized and applied, retain the reported actual reclaimed
-bytes. Never register a worker through the ordinary PR-worktree path; use the
-terminal `register-worker` proof in the reference workflow.
-
-Verified owner/admin/maintain authority does not authorize an automatic merge.
-Merge the batch PR into the current default branch only when the user has
-explicitly authorized that merge and current repository policy, required checks,
-and PR state permit it. Never use this cycle to delete remote branches. Keep
-target-repository changes and RepoStew self-maintenance in separate commits and
-PRs.
-
-For a repository-wide audit, multi-repository audit, documentation/site
-consistency review, or audit-to-issue-to-PR campaign, read
-[references/repository-audit.md](references/repository-audit.md) before building
-the audit inventory or handing work to another task.
+explicitly proven batch-worker worktrees have passed a reviewed dry-run cleanup.
+Verified authority does not authorize an automatic merge: merge into the current
+default branch only when the user explicitly authorizes it and repository
+policy, required checks, and PR state permit it. Never use this cycle to delete
+remote branches. Keep target-repository changes and RepoStew self-maintenance in
+separate commits and PRs.
 
 ## Route by complexity
 
@@ -306,12 +287,6 @@ classify, talk to the user, integrate results, and own the shared checkpoints.
 
 ## Full detailed procedure (generic parent)
 
-The remaining procedural sections of this skill have moved to
-[references/generic-full-workflow.md](references/generic-full-workflow.md). On a
-run whose parent is not GPT-6 Astra or Fable, open that file and follow it as
-the complete detailed procedure. It covers: verifying a specific issue; scanning
-one repository; discovering candidates across GitHub; auditing repositories and
-contributing findings; forking, cloning, and branching; implementing and
-validating; committing and opening the PR; maintaining pull requests; sustaining
-contributed repositories; retiring terminal local resources safely; the optional
-autonomous dispatcher; and maintaining RepoStew itself.
+A parent that is not GPT-6 Astra or Fable is the single working agent: after
+this file, open [references/generic-full-workflow.md](references/generic-full-workflow.md)
+and follow it as the complete step-by-step procedure for every remaining gate.

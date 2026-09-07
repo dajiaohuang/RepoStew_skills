@@ -45,19 +45,12 @@ Chinese-first bilingual documentation site.
 
 ## Cold Start
 
-On first invocation, agents should:
-1. Ask the user to choose distinct absolute skill, state, and managed-repository roots
-2. Validate and record those roots without applying an implicit default
-3. Reconcile any existing installations or state with a reversible merge into one state home
-4. Check gh CLI authentication
-5. Set up FOLLOWED_REPOSITORIES.md and MAINTAINED_REPOSITORIES.md if absent
-
-See `references/cold-start.md` for details. Keep one selected state home as the
-single live state source; it may itself live in a git repository that is pushed
-to a private remote, whose remote and checkouts are recovery storage, never a
-second live state source.
+First invocation follows `references/cold-start.md`: choose and validate distinct
+absolute skill, state, and managed-repository roots, reconcile any existing state
+into one state home, and verify `gh` authentication.
 
 ## Safety
 
-- Never expose credentials or tokens in files, logs, commits, issues, or pull requests.
-- Do not add dependencies, services, CI actions, permissions, or public APIs without approval.
+Apply the non-negotiable rules in `SKILL.md`: never expose credentials or tokens,
+and add no dependency, service, CI action, permission, or public API without
+approval.
