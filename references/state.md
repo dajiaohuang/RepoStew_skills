@@ -35,5 +35,6 @@ when `repostew.sqlite` is present.
 
 Never hand-edit `workspace_resources` records. Use `workspace_cleanup.py`.
 Never infer `REPOSTEW_HOME` from the user profile or current directory.
-Keep one selected state home. Do not create a second copy or a private GitHub
-state-backup checkout.
+Keep one selected state home as the single live state source. It may itself live
+in a git repository that is pushed to a private remote; that remote and any
+checkout of it are recovery storage, never a second live state source.

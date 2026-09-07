@@ -18,8 +18,10 @@ contradicts this file. If two documents disagree, this file plus the root
   workspace instructions + existing roots agree? Initialize the missing vars
   from that record. Any mismatch remains fail-closed.
 - Runtime state is `REPOSTEW_HOME/repostew.sqlite`. Do not hand-edit tracker
-  JSON; use the scripts. `paths.json` stays a file. Keep one state home; do not
-  create a second copy or a private GitHub state-backup checkout.
+  JSON; use the scripts. `paths.json` stays a file. Keep one selected state home
+  as the single live state source; it may itself live in a git repository pushed
+  to a private remote, whose remote and checkouts are recovery, not a second
+  live state source.
 
 ## 2. Mode
 

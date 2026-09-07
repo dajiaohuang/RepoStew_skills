@@ -14,7 +14,7 @@
 
 ## Configure a persistent maintenance workspace
 
-When RepoStew is used for recurring work across several repositories, read [maintenance-workspace-agents.md](maintenance-workspace-agents.md) and adapt its root `AGENTS.md` template. It separates the active-follow registry from historical contribution data, preserves notification checkpoint correctness across partitioned batches, and requires one selected state home with no second copy.
+When RepoStew is used for recurring work across several repositories, read [maintenance-workspace-agents.md](maintenance-workspace-agents.md) and adapt its root `AGENTS.md` template. It separates the active-follow registry from historical contribution data, preserves notification checkpoint correctness across partitioned batches, and requires one selected state home as the single live state source (a private git remote is recovery, not a second copy).
 
 When the workspace also records repositories the user owns or administers,
 read [maintaining-owned-repositories.md](maintaining-owned-repositories.md).

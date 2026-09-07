@@ -74,8 +74,10 @@ If GitHub CLI is unavailable, direct the user to
 <https://github.com/cli/cli/releases> or their package manager, then authenticate
 with `gh auth login`.
 
-Do not create a private GitHub state-backup checkout or a second local copy of
-the selected state home.
+Keep one selected state home as the single live state source. It may itself live
+in a git repository that is pushed to a private remote; that remote and any
+checkout of it are recovery storage, never a second live state source. Do not
+keep a second local copy of the selected state home as an editable source.
 
 ## 4. Set up workspace registries
 

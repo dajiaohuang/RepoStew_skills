@@ -110,7 +110,7 @@ Autonomy does not grant maintainer authority and does not override repository ru
 
 Read [references/taste-and-permissions.md](references/taste-and-permissions.md) when candidate suitability, contributor authority, dependencies, security, or issue filing is in question.
 
-Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected skill, state, and managed-repository roots. Do not create a private GitHub state-backup checkout or a second local state copy.
+Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected skill, state, and managed-repository roots. Keep one selected state home as the single live state source; it may itself live in a git repository that is pushed to a private remote, whose remote and checkouts are recovery storage, never a second live state source.
 
 Before running any stateful helper, require explicit, validated selections for
 `REPOSTEW_SKILL_HOME`, `REPOSTEW_HOME`, and `REPOSTEW_REPOS_HOME`. If a selected

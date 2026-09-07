@@ -44,8 +44,10 @@ On first invocation, agents should:
 4. Check gh CLI authentication
 5. Set up FOLLOWED_REPOSITORIES.md and MAINTAINED_REPOSITORIES.md if absent
 
-See `references/cold-start.md` for details. Do not create a private GitHub
-state-backup checkout or a second local state copy.
+See `references/cold-start.md` for details. Keep one selected state home as the
+single live state source; it may itself live in a git repository that is pushed
+to a private remote, whose remote and checkouts are recovery storage, never a
+second live state source.
 
 ## Safety
 

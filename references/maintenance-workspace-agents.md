@@ -2,7 +2,7 @@
 
 Use this as a starting point for a workspace that maintains several third-party repositories with RepoStew. Copy the template into the workspace root as `AGENTS.md`, then replace the bracketed values. Keep personal repository lists, account names, and machine-specific paths out of the public skill repository.
 
-There is one selected state home. Do not create a second skill checkout, state home, or managed-repository root, and do not run a private GitHub state-backup checkout.
+There is one selected state home as the single live state source. It may itself live in a git repository that is pushed to a private remote; that remote and any checkout of it are recovery storage, never a second live state source. Do not create a second skill checkout, state home, or managed-repository root.
 
 ```markdown
 # RepoStew Maintenance Workspace
