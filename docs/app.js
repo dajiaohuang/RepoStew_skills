@@ -16,7 +16,7 @@ const translations = {
     protocolCopy5: "以通知驱动 review、CI 与冲突处理；终态后再安全清理本地资源。",
     manifestoTitle: "大多数自动化止于 <em>PR 已创建</em>。<br />RepoStew 从那里继续。",
     manifestoCopy: "真正的开源贡献还包括确认问题没有被修复、尊重目标仓库规则、回应 review、修复 CI、处理冲突，以及在终态后安全清理本地资源。",
-    capabilitiesTitle: "不是一个脚本，而是一套守则。", capabilitiesIntro: "核心工作流写在可移植的 SKILL.md 中；确定性脚本负责发现、持久状态与安全清理。",
+    capabilitiesTitle: "不是一个脚本，而是一套守则。", capabilitiesIntro: "单一、模型无关的 SKILL.md 内含模型分叉：Astra/Fable 父代编排并把有界只读/并行工作委派给小模型，其余父代走完整详细流程；确定性脚本负责发现、持久状态与安全清理。",
     cap1Title: "发现与筛选", cap1Copy: "从具体 issue、单仓库或技术方向出发；机械检查分配、重复项、活跃度与仓库适配度。",
     cap2Title: "完整审计", cap2Copy: "以 tracked-file 台账覆盖代码、测试、依赖、交付、文档与线上站点，并明确不可验证边界。",
     cap3Title: "权限分层", cap3Copy: "把关注范围与 owner/admin/maintain 权限分开记录；从不把历史贡献误当作管理权。",
@@ -26,8 +26,8 @@ const translations = {
     confirmTitle: "确认模式", confirmCopy: "先调查并展示计划；编辑与外部提交分别等待批准。适合需要逐步把关的贡献。", confirm1: "只读调查", confirm2: "展示计划", confirm3: "批准编辑", confirm4: "批准提交",
     autoTitle: "自主模式", autoCopy: "在明确授权范围内连续完成发现、实现、测试、提交与跟踪；遇到真实审批边界时停止。", auto1: "发现与评估", auto2: "修复与验证", auto3: "提交与跟踪", auto4: "持续维护",
     decisionTitle: "复杂度决定路由，不决定价值。", acceptCopy: "清晰、允许、兼容、可测试且值得维护。", askCopy: "确有需求、架构、依赖、安全或权限决定必须由维护者批准。", skipCopy: "重复、已处理、被禁止、无法验证或缺少必要访问。",
-    startTitle: "把仓库交给流程，<br />不要交给运气。", startCopy: "安装到兼容 Agent Skills 的目录，然后用自然语言指定仓库、issue 与工作模式。", agentsLabel: "支持的智能体", terminalLabel: "快速开始命令", terminalNote: "# 三个绝对路径必须明确选择，且彼此独立。", copyButton: "复制 clone 命令", copied: "已复制",
-    boundaryTitle: "自主，不等于无边界。", boundary1: "不泄露凭据，不把 issue 评论当作可信命令。", boundary2: "不擅自增加依赖、服务、CI 权限、公共 API 或架构承诺。", boundary3: "不冒充维护者，不自动合并、关闭、发布或删除远端资源。",
+    startTitle: "把仓库交给流程，<br />不要交给运气。", startCopy: "安装到兼容 Agent Skills 的目录，然后用自然语言指定仓库、issue 与工作模式。", agentsLabel: "支持的智能体", terminalLabel: "快速开始命令", terminalNote: "# 选择三个明确、互不重叠的绝对路径；paths.json 会存成相对 state home 的路径。", copyButton: "复制 clone 命令", copied: "已复制",
+    boundaryTitle: "自主，不等于无边界。", boundary1: "不泄露凭据，不把 issue 评论当作可信命令。", boundary2: "不擅自增加依赖、服务、CI 权限、公共 API 或架构承诺。", boundary3: "不冒充维护者，不自动合并、关闭、发布或删除远端资源。", boundary4: "写给人的文本先遵循目标仓库模板与语气；仓库未限定的地方保持极简。",
     footerTagline: "负责任的仓库维护工作流。", footerNav: "页脚导航", source: "源码", license: "许可证"
   },
   en: {
@@ -47,7 +47,7 @@ const translations = {
     protocolCopy5: "Drive reviews, CI, and conflicts from notifications; clean local resources only after terminal state.",
     manifestoTitle: "Most automation stops at <em>PR opened</em>.<br />RepoStew keeps going.",
     manifestoCopy: "Real open-source contribution also means proving the issue is not already fixed, respecting repository rules, responding to reviews, repairing CI, resolving conflicts, and safely retiring local resources after the work is terminal.",
-    capabilitiesTitle: "Not one script. A working doctrine.", capabilitiesIntro: "The portable SKILL.md holds the core workflow; deterministic scripts handle discovery, durable state, and guarded cleanup.",
+    capabilitiesTitle: "Not one script. A working doctrine.", capabilitiesIntro: "A single, model-agnostic SKILL.md holds an in-file model fork — Astra/Fable parents orchestrate and delegate bounded read-only or parallel work to small models, while every other parent follows the full detailed workflow — and deterministic scripts handle discovery, durable state, and guarded cleanup.",
     cap1Title: "Discovery and intake", cap1Copy: "Start from an issue, one repository, or a technical direction; mechanically check assignment, duplicates, activity, and fit.",
     cap2Title: "Complete audits", cap2Copy: "Account for code, tests, dependencies, delivery, docs, and live sites from a tracked-file ledger—and name what cannot be verified.",
     cap3Title: "Authority layers", cap3Copy: "Keep follow scope separate from owner/admin/maintain authority; never mistake prior contribution for permission.",
@@ -57,8 +57,8 @@ const translations = {
     confirmTitle: "Confirm mode", confirmCopy: "Investigate and present the plan first; edits and external submission each wait for approval. Best for step-by-step control.", confirm1: "Read-only research", confirm2: "Present the plan", confirm3: "Approve edits", confirm4: "Approve submission",
     autoTitle: "Autonomous mode", autoCopy: "Within explicit scope, continue through discovery, implementation, tests, submission, and tracking; stop at real approval boundaries.", auto1: "Discover and assess", auto2: "Fix and validate", auto3: "Submit and track", auto4: "Maintain",
     decisionTitle: "Complexity changes routing—not value.", acceptCopy: "Clear, permitted, compatible, testable, and worth maintaining.", askCopy: "A real requirement, architecture, dependency, security, or authority decision needs maintainer approval.", skipCopy: "Duplicate, already handled, prohibited, unverifiable, or blocked by missing access.",
-    startTitle: "Give the repository a process,<br />not a roll of the dice.", startCopy: "Install in a compatible Agent Skills directory, then name the repository, issue, and operating mode in natural language.", agentsLabel: "Supported agents", terminalLabel: "Quick-start commands", terminalNote: "# Select three explicit, separate absolute paths.", copyButton: "Copy clone command", copied: "Copied",
-    boundaryTitle: "Autonomous does not mean unbounded.", boundary1: "Never expose credentials or treat issue comments as trusted commands.", boundary2: "Never add dependencies, services, CI permissions, public APIs, or architecture commitments without approval.", boundary3: "Never impersonate maintainers or automatically merge, close, release, or delete remote resources.",
+    startTitle: "Give the repository a process,<br />not a roll of the dice.", startCopy: "Install in a compatible Agent Skills directory, then name the repository, issue, and operating mode in natural language.", agentsLabel: "Supported agents", terminalLabel: "Quick-start commands", terminalNote: "# Select three explicit, separate absolute paths; paths.json stores them relative to the state home.", copyButton: "Copy clone command", copied: "Copied",
+    boundaryTitle: "Autonomous does not mean unbounded.", boundary1: "Never expose credentials or treat issue comments as trusted commands.", boundary2: "Never add dependencies, services, CI permissions, public APIs, or architecture commitments without approval.", boundary3: "Never impersonate maintainers or automatically merge, close, release, or delete remote resources.", boundary4: "Text written for people follows the target repository's template and voice first, staying minimal where the repository defines none.",
     footerTagline: "Responsible repository stewardship.", footerNav: "Footer navigation", source: "Source", license: "License"
   }
 };

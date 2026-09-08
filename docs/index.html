@@ -147,7 +147,7 @@
             <p class="section-marker">SURFACE / 能力面</p>
             <h2 id="capabilities-title" data-i18n="capabilitiesTitle">不是一个脚本，而是一套守则。</h2>
           </div>
-          <p data-i18n="capabilitiesIntro">核心工作流写在可移植的 SKILL.md 中；确定性脚本负责发现、持久状态与安全清理。</p>
+          <p data-i18n="capabilitiesIntro">单一、模型无关的 SKILL.md 内含模型分叉：Astra/Fable 父代编排并把有界只读/并行工作委派给小模型，其余父代走完整详细流程；确定性脚本负责发现、持久状态与安全清理。</p>
         </div>
 
         <div class="capability-grid">
@@ -243,7 +243,7 @@
             <p class="indent">--skill-home &lt;skill-home&gt; \\</p>
             <p class="indent">--state-home &lt;state-home&gt; \\</p>
             <p class="indent">--repos-home &lt;repos-home&gt;</p>
-            <p class="terminal-note" data-i18n="terminalNote"># 三个绝对路径必须明确选择，且彼此独立。</p>
+            <p class="terminal-note" data-i18n="terminalNote"># 选择三个明确、互不重叠的绝对路径；paths.json 会存成相对 state home 的路径。</p>
           </div>
           <button class="copy-button" type="button" data-copy-command data-i18n="copyButton">复制 clone 命令</button>
         </div>
@@ -257,6 +257,7 @@
             <p data-i18n="boundary1">不泄露凭据，不把 issue 评论当作可信命令。</p>
             <p data-i18n="boundary2">不擅自增加依赖、服务、CI 权限、公共 API 或架构承诺。</p>
             <p data-i18n="boundary3">不冒充维护者，不自动合并、关闭、发布或删除远端资源。</p>
+            <p data-i18n="boundary4">写给人的文本先遵循目标仓库模板与语气；仓库未限定的地方保持极简。</p>
           </div>
         </div>
       </section>
@@ -266,7 +267,7 @@
       <div><strong>RepoStew</strong><span data-i18n="footerTagline">负责任的仓库维护工作流。</span></div>
       <nav aria-label="页脚导航" data-i18n-aria="footerNav">
         <a href="https://github.com/dajiaohuang/RepoStew_skills" data-i18n="source">源码</a>
-        <a href="https://github.com/dajiaohuang/RepoStew_skills/blob/master/LICENSE" data-i18n="license">许可证</a>
+        <a href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/LICENSE" data-i18n="license">许可证</a>
         <a href="https://agentskills.io/">Agent Skills</a>
       </nav>
       <p>© <span data-year></span> dajiaohuang</p>
