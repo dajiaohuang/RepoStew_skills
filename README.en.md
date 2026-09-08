@@ -16,7 +16,7 @@ discover → verify → patch → validate → submit → maintain
     └────────── durable state + feedback ─────┘
 ```
 
-The governing workflow lives in [`SKILL.md`](SKILL.md): one model-agnostic skill with an in-file model fork. A GPT-6 Astra or Fable parent acts as orchestrator and delegates clearly bounded read-only/parallel work to small models — Luna on OpenAI hosts, Haiku on Anthropic hosts; every other parent follows the full detailed workflow in [`references/generic-full-workflow.md`](references/generic-full-workflow.md). Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md).
+The governing workflow lives in [`SKILL.md`](SKILL.md): one model-agnostic skill with an in-file model fork. A GPT-6 Astra or Fable parent acts as orchestrator and delegates clearly bounded read-only/parallel work to small models — Luna on OpenAI hosts, Haiku on Anthropic hosts; every other parent follows the full detailed workflow in [`references/generic-full-workflow.md`](references/generic-full-workflow.md). Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md). The optional Python scripts in [`scripts/`](scripts/) use only the standard library plus the external `git` / `gh` CLIs, and RepoStew is not bound to a model vendor, GitHub username, workspace path, operating system, or shell.
 
 ## Why RepoStew exists
 
@@ -40,6 +40,7 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 | Default pace | confirm mode: investigate and plan first; approve edits and external submission separately |
 | Optional pace | autonomous mode: continue inside explicitly granted scope |
 | Decisions | `ACCEPT`, `ASK_MAINTAINER`, `SKIP` |
+| Text written for people | target repository template and voice first; minimal where it leaves content open |
 | State model | one absolute `REPOSTEW_HOME` anchor; skill and repositories resolve from `paths.json` |
 | Requirements | Python 3.10+, Git, authenticated GitHub CLI |
 | Script dependencies | Python standard library; no runtime package install |
@@ -69,7 +70,7 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 - Follow the target repository's architecture and toolchain.
 - Run focused checks first, then the repository-required suite.
 - Review the diff, untracked files, commit scope, and credential exposure.
-- Choose a regular PR, Draft, fork-only draft, or local design according to repository policy.
+- Route submission through the direct regular-PR gate: open a regular PR when policy permits, use a Draft only while a material but non-prohibited implementation uncertainty remains, and keep invitation-only repositories to a fork-only Draft. See "Decisions and routing".
 
 ### 4. Continuous PR maintenance
 
@@ -153,6 +154,11 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
+The record lands in `<state-home>/paths.json` (schema v2): the skill and
+repository roots are stored as POSIX paths relative to the state home, so the
+file stays portable across machines. Only `REPOSTEW_HOME`, the one absolute
+anchor, changes per machine.
+
 If the selected skill path is outside the agent's discovery locations, create a user-approved link to that checkout instead of a second copy. See [`references/cold-start.md`](references/cold-start.md) for path selection and old-state reconciliation into one state home.
 
 Always update the selected checkout:
@@ -201,7 +207,18 @@ Explicit words such as `autonomous`, `automatic`, `continuous`, `no confirmation
 
 Complexity controls execution location, not value. Clear localized work stays in the current conversation; cross-subsystem audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task when the host supports one.
 
-In autonomous mode, RepoStew opens a regular PR only when policy allows it, the work remains available, expected behavior is strongly supported, the solution is minimal and compatible, no approval-gated dependency/service/permission/security/public-API/architecture boundary is crossed, validation passes, and anything RepoStew writes for people — a PR body, a filed issue, a reply, a comment — follows the repository's own conventions first, staying minimal where the repository defines none. See [`SKILL.md`](SKILL.md) and [`references/taste-and-permissions.md`](references/taste-and-permissions.md).
+In autonomous mode, RepoStew opens a regular PR only when policy allows it, the work remains available, expected behavior is strongly supported, the solution is minimal and compatible, no approval-gated dependency/service/permission/security/public-API/architecture boundary is crossed, validation passes, and any text it writes for people follows the repo-first rule below. See [`SKILL.md`](SKILL.md) and [`references/taste-and-permissions.md`](references/taste-and-permissions.md).
+
+### Write for the target repository
+
+Every message RepoStew writes that a person reads — a PR body, a filed issue, a
+reply, a review-thread response, a clarifying question, or an invitation note —
+follows the target repository first: fill its template, follow its contribution
+and communication guidance, and mirror how that project actually writes.
+RepoStew's own style applies only where the repository leaves the content open,
+and it stays minimal: state the point in one or two short sentences, without
+boilerplate, provenance, or filler. Brevity never trims an honest material
+caveat a reviewer or maintainer needs.
 
 ## Bundled scripts
 

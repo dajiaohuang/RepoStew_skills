@@ -40,6 +40,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 | 默认节奏 | 确认模式：调查与计划先行，编辑和外部提交分别确认 |
 | 可选节奏 | 自主模式：在用户明确授权的范围内连续执行 |
 | 判断结果 | `ACCEPT`、`ASK_MAINTAINER`、`SKIP` |
+| 写给人的文本 | 先遵循目标仓库模板与语气；仓库未限定的地方保持极简 |
 | 状态模型 | 一个绝对 `REPOSTEW_HOME` 锚点；skill 与 repositories 由 `paths.json` 解析 |
 | 运行要求 | Python 3.10+、Git、已认证 GitHub CLI |
 | 脚本依赖 | Python 标准库；不安装运行时包 |
@@ -69,7 +70,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 - 遵循目标仓库既有架构与工具链；
 - 运行聚焦检查，再运行仓库要求的完整验证；
 - 复核 diff、未跟踪文件、提交范围与凭据风险；
-- 根据仓库政策选择普通 PR、Draft 或仅保留本地草稿。
+- 用“直接建普通 PR”门槛路由提交：政策允许就开普通 PR，仅在仍有实质实施不确定且仓库接受早期 Draft 时用 Draft，邀请制仓库则改为 fork 内 Draft；详见“判断与路由”。
 
 ### 4. PR 持续维护
 
@@ -203,9 +204,17 @@ git -C <selected-skill-home> pull --ff-only
 
 复杂度只决定执行位置：清晰且局部的工作留在当前对话；跨子系统审计、多 issue 活动或长期维护在宿主支持时交接到单独的用户可见任务。复杂本身不是拒绝理由。
 
-自主模式下，只有在仓库允许、问题仍可处理、预期行为证据充分、方案最小且兼容、不跨越依赖/服务/权限/安全/公共 API/架构审批边界、验证通过，且 RepoStew 写给人的文本（PR 正文、所提 issue、回复、评论）优先遵循目标仓库自身惯例、无既定格式时保持极简时，RepoStew 才直接创建普通 PR。详情见 [`SKILL.md`](SKILL.md) 与 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)。
+自主模式下，只有在仓库允许、问题仍可处理、预期行为证据充分、方案最小且兼容、不跨越依赖/服务/权限/安全/公共 API/架构审批边界、验证通过、且所有写给人的文本符合下文的 repo-first 规则时，RepoStew 才直接创建普通 PR。详情见 [`SKILL.md`](SKILL.md) 与 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)。
 
 明确要求持续维护时，请遵循 [`references/batched-iteration.md`](references/batched-iteration.md)：它定义了从隔离 worker 汇入 integration PR、再经终态清理门控进入下一批的流程。
+
+### 写给目标仓库的文本
+
+RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue、回复、评论、
+澄清提问或邀请说明——都先遵循目标仓库：套用其模板、遵守其贡献与沟通指引、
+模仿项目真实的行文。仓库未限定内容的地方才使用 RepoStew 自身风格，并保持
+极简：一两句话讲清要点，不写套话、来历或填充；极简从不以牺牲评审者或维护者
+需要的、诚实而实质的保留说明为代价。
 
 ## 内置脚本
 
