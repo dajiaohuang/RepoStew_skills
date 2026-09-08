@@ -46,6 +46,16 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 | Script dependencies | Python standard library; no runtime package install |
 | License | MIT |
 
+For broad activity-report discovery, RepoStew recommends a ranked campaign:
+capture daily/weekly/monthly report provenance and a batch-start timestamp,
+deduplicate against durable RepoStew records and active tasks, select at most
+10 repositories, and create one independent user-visible task per repository.
+Each task runs the recent issue/PR gates and full audit before qualifying issue
+or PR work. On OpenAI hosts, Luna is the default campaign model; Spark requires
+an explicit user request. Launch-only requests persist the task map and stop
+without polling the created tasks. See
+[`references/ranked-repository-campaign.md`](references/ranked-repository-campaign.md).
+
 ## Capability map
 
 ### 1. Discovery and verification
@@ -53,6 +63,8 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 - Fix a user-specified GitHub issue.
 - Scan one repository for worthwhile contribution candidates.
 - Find recently active repositories and issues in a technical direction.
+- Rank a bounded batch from daily, weekly, or monthly activity reports, with
+  one independent visible task per selected repository.
 - Search linked PRs, competing PRs in all states, commits, and recent history.
 - Treat labels as discovery signals, never as permission.
 

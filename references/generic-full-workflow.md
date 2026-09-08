@@ -71,6 +71,18 @@ python scripts/loop.py --dry-rounds 3 --max-candidates 5
 python scripts/loop.py --focus agent --focus harness --dry-rounds 3
 ```
 
+When the user asks for a batch ranked from daily, weekly, or monthly activity
+reports, follow [ranked-repository-campaign.md](ranked-repository-campaign.md)
+before cloning. It adds the campaign-specific controls that a single direction
+search does not provide: report provenance and a batch-start timestamp,
+deduplication against every durable RepoStew record and active task, a maximum
+of 10 selected repositories, and one independent user-visible task per
+repository. Each task still follows the complete audit and issue/PR gates in
+this workflow. On OpenAI hosts, use Luna by default for those tasks and do not
+choose Spark unless the user explicitly requests it. If the user asks only to
+launch the batch, persist the manifest and task mapping and do not poll the
+new tasks.
+
 Mutable state is stored only under the user-selected absolute
 `REPOSTEW_HOME`, in `repostew.sqlite`. RepoStew has no implicit mutable-state
 default. JSON files in that directory are a legacy import/export format;

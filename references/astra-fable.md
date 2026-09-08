@@ -19,6 +19,14 @@ split repays. You plan, classify, talk to the user, integrate results, and own
 the shared checkpoints. Never spawn a subagent for work you can do inline, and
 never let a worker write shared state.
 
+For a ranked campaign sourced from daily, weekly, or monthly activity reports,
+read [ranked-repository-campaign.md](ranked-repository-campaign.md). Select at
+most 10 repositories per batch and create one user-visible task per repository
+when the host supports it. On OpenAI hosts these tasks use Luna by default;
+Spark is not a default and requires an explicit user request. A launch-only
+request ends after the task map and durable artifacts are recorded; do not poll
+or monitor the new tasks.
+
 ## Install the workers
 
 The Codex subagent definitions live at `references/luna-agents/*.toml`

@@ -46,6 +46,8 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 | 脚本依赖 | Python 标准库；不安装运行时包 |
 | 许可证 | MIT |
 
+对于按日、周、月活跃报告进行广泛发现，RepoStew 推荐使用排名批次：保留报告来源与批次开始时间，与持久状态和活跃任务去重，每批最多选 10 个仓库，并为每个仓库创建一个独立、用户可见的任务。每个任务都要完成最近 issue/PR 门槛与完整审计，然后才能提交符合条件的 issue 或 PR。OpenAI 主机默认使用 Luna，Spark 只在用户明确要求时使用。只要求启动时，写入任务映射与持久文件后就停止，不轮询新建任务。详见 [`references/ranked-repository-campaign.md`](references/ranked-repository-campaign.md)。
+
 ## 能力地图
 
 ### 1. 发现与核验

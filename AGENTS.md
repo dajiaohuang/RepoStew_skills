@@ -28,6 +28,7 @@ Chinese-first bilingual documentation site.
   - `pr-maintenance.md` - PR follow-up workflow
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
   - `batched-iteration.md` - Bounded integration workflow for maintained repositories
+  - `ranked-repository-campaign.md` - Ranked day/week/month report campaigns with visible per-repository tasks
   - `taste-and-permissions.md` - Contribution guidelines
   - `maintenance-workspace-agents.md` - Slim workspace `AGENTS.md` template
   - `maintenance-workspace-claude.md` - Slim wrapper `CLAUDE.md` template (Claude Code)

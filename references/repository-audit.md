@@ -3,6 +3,11 @@
 Read this reference for a repository-wide audit, a multi-repository audit, or
 an audit that may continue into filed issues and pull requests.
 
+For a batch selected from daily, weekly, or monthly activity reports, also read
+[ranked-repository-campaign.md](ranked-repository-campaign.md). That reference
+defines the report provenance, deduplication, 10-repository batch cap, Luna
+default, launch-only behavior, and per-repository task manifest.
+
 ## Contents
 
 - Authority and campaign scope
@@ -262,6 +267,13 @@ shared patch stream. When the host supports user-visible tasks:
   applicable authority, known evidence, coverage requirements, validation
   expectations, and prohibited actions; and
 - tell every task to revalidate time-sensitive GitHub and deployment state.
+
+For a ranked report campaign, capture the report URLs and batch-start timestamp,
+deduplicate against audit/tracker/follow/task records, and select no more than
+10 repositories. Create one independent visible task for each selected
+repository. On OpenAI hosts, choose Luna by default; Spark requires an explicit
+user request. If the user requests launch-only execution, persist the task map
+and artifacts and do not poll the created tasks.
 
 Do not use hidden delegation when the user asks for visible handover. Respect
 host concurrency and resource limits, but do not silently reduce repository or

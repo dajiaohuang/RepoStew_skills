@@ -13,6 +13,11 @@ contradicts this file. If two documents disagree, this file plus the root
   the full detailed workflow in `generic-full-workflow.md`. One skill, one
   source of truth — do not mix separate skill copies in one run.
 
+Ranked day/week/month report campaigns additionally read
+`ranked-repository-campaign.md`: cap each batch at 10 repositories, create one
+independent visible task per repository, and use Luna by default on OpenAI
+hosts. Launch-only requests create and persist the mapping without polling.
+
 ## 1. Roots and state
 
 - Is `REPOSTEW_HOME` set and absolute, and does it match the state root recorded
@@ -53,6 +58,7 @@ Pick exactly one:
 | Issue URL or `owner/repo#N` | Verify that issue |
 | `owner/repo` without a number | Scan that repository |
 | A technical direction | Discover across GitHub |
+| Daily/weekly/monthly activity reports or a ranked popular-repository batch | Ranked repository campaign |
 | Inspect / propose / file issues | Audit |
 | Check or respond to PRs | PR maintenance |
 | Maintain repos they own or administer | Maintained-repo path |

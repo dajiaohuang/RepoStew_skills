@@ -53,6 +53,7 @@ const translations = {
     cap3Title: "Authority layers", cap3Copy: "Keep follow scope separate from owner/admin/maintain authority; never mistake prior contribution for permission.",
     cap4Title: "PR maintenance", cap4Copy: "Use GitHub Notifications as the primary trigger and retain reviews, comments, CI, and conflict state until explicitly handled.",
     cap5Title: "Recoverable state and cleanup", cap5Copy: "Three selected roots isolate skill, state, and repositories; terminal-PR worktrees are removed only after full dry-run-first validation.",
+    cap6Title: "Ranked campaigns", cap6Copy: "Deduplicate and rank daily, weekly, or monthly activity reports, cap each batch at 10 repositories, and give every repository an independent visible task and full audit.",
     modesTitle: "You choose the pace. Boundaries stay on.", modesIntro: "Autonomous mode removes intermediate confirmation inside granted scope. It adds no authority and never overrides repository policy.",
     confirmTitle: "Confirm mode", confirmCopy: "Investigate and present the plan first; edits and external submission each wait for approval. Best for step-by-step control.", confirm1: "Read-only research", confirm2: "Present the plan", confirm3: "Approve edits", confirm4: "Approve submission",
     autoTitle: "Autonomous mode", autoCopy: "Within explicit scope, continue through discovery, implementation, tests, submission, and tracking; stop at real approval boundaries.", auto1: "Discover and assess", auto2: "Fix and validate", auto3: "Submit and track", auto4: "Maintain",
@@ -62,6 +63,9 @@ const translations = {
     footerTagline: "Responsible repository stewardship.", footerNav: "Footer navigation", source: "Source", license: "License"
   }
 };
+
+translations.zh.cap6Title = "报告排名批次";
+translations.zh.cap6Copy = "从日、周、月活跃报告中去重并排名，每批最多 10 个仓库；每个仓库使用独立的用户可见任务与完整审计。";
 
 const root = document.documentElement;
 const metaDescription = document.querySelector('meta[name="description"]');

@@ -2,6 +2,12 @@
 
 Parent (Astra or Fable) must give every small-model worker — Luna on OpenAI hosts, Haiku on Anthropic hosts — a complete packet. Workers revalidate GitHub and must not advance `notification_checkpoints` or `issue_checkpoints`.
 
+For a ranked day/week/month report campaign, the parent creates one visible
+task per repository (maximum 10 per batch) and uses Luna on OpenAI hosts by
+default. The packet must carry the report source, ranking evidence, and batch
+identifier. Spark is not selected unless the user explicitly requests it. A
+launch-only campaign does not require the parent to poll the created tasks.
+
 ## Required fields
 
 | Field | Content |

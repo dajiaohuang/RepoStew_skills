@@ -85,6 +85,7 @@ Read a specialist reference only when that gate is active:
 | PR inbox, comments, CI | [pr-maintenance.md](references/pr-maintenance.md) |
 | Scheduled notification/issue loops | [scheduled-maintenance.md](references/scheduled-maintenance.md) |
 | Bounded maintained-repo batches | [batched-iteration.md](references/batched-iteration.md) |
+| Ranked repository campaign from day/week/month reports | [ranked-repository-campaign.md](references/ranked-repository-campaign.md) |
 | Audit coverage | [repository-audit.md](references/repository-audit.md) |
 | Worktree cleanup / monthly sweep | [workspace-cleanup.md](references/workspace-cleanup.md) |
 
@@ -161,6 +162,9 @@ Choose one workflow:
 - **Specific issue:** the user gives an issue URL or `owner/repo#N`.
 - **Repository scan:** the user gives `owner/repo` without an issue number.
 - **GitHub discovery:** the user asks for suitable issues across repositories.
+- **Ranked repository campaign:** the user asks for a recent/popular repository
+  batch sourced from daily, weekly, or monthly reports. Read
+  [ranked-repository-campaign.md](references/ranked-repository-campaign.md).
 - **Repository audit:** the user asks to inspect a repository and propose or file issues.
 - **PR maintenance:** the user asks to check or respond to existing pull requests.
 - **Owned/maintained repository maintenance:** the user asks to maintain repositories they own or administer.
@@ -175,6 +179,23 @@ python --version
 ```
 
 If `gh` is unavailable, use an available GitHub connector or API. Do not silently downgrade mechanical verification.
+
+## Recommended ranked repository campaign
+
+For broad discovery from activity reports, use the ranked campaign reference as
+the default best-practice route. Capture the report evidence and batch-start
+timestamp, deduplicate against durable RepoStew records and active tasks, and
+select at most 10 repositories per batch. Create one independent, user-visible
+task per selected repository when the host supports it; each task must perform
+the recent issue/PR gates and the full repository audit before any qualifying
+issue or PR work. The controller owns the manifest, shared checkpoints, and
+final aggregation.
+
+On OpenAI hosts, use Luna for these repository tasks by default. Do not select
+Spark or another model unless the user explicitly requests it. If the user asks
+for launch-only execution, create the tasks and persist their mapping and
+artifacts without polling or monitoring them; ongoing maintenance remains a
+separate explicitly requested workflow.
 
 ## Use verified owner or maintainer authority
 
