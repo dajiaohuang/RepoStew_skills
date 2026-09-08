@@ -19,19 +19,13 @@ split repays. You plan, classify, talk to the user, integrate results, and own
 the shared checkpoints. Never spawn a subagent for work you can do inline, and
 never let a worker write shared state.
 
-For a ranked campaign sourced from daily, weekly, or monthly activity reports,
-read [ranked-repository-campaign.md](ranked-repository-campaign.md). Select at
-most 10 repositories per batch and create one user-visible task per repository
-when the host supports it. On OpenAI hosts these tasks use Luna by default;
-Spark is not a default and requires an explicit user request. A launch-only
-request ends after the task map and durable artifacts are recorded; do not poll
-or monitor the new tasks.
+For ranked campaigns, read [ranked-repository-campaign.md](ranked-repository-campaign.md). Select at most 10 repositories per batch. Use [worker-scheduling.md](worker-scheduling.md): one current root, a durable queue, and at most three direct Luna workers subject to host capacity. Workers must not delegate. Create visible tasks only on explicit user request; launch-only execution records launched versus queued work without promising unattended queue draining.
 
 ## Install the workers
 
 The Codex subagent definitions live at `references/luna-agents/*.toml`
 (`repostew-explore`, `repostew-implement`, `repostew-review`, `repostew-audit`,
-model `gpt-6-luna`). Copy them into the Codex project's agent directory (for
+model `gpt-5.6-luna`; verify availability on the current host). Copy them into the Codex project's agent directory (for
 example `.codex/agents/`) so the host can spawn them, then address them by name.
 On an Anthropic host, use the platform's small model (Haiku) for the same four
 bounded worker roles instead of copying the Luna definitions; the packet
@@ -79,7 +73,7 @@ because nobody confirmed the solution: apply the direct-PR gate first.
 
 ## Spawn
 
-Spawn independent partitions in parallel. The parent classifies, opens or
+Admit independent partitions under [worker-scheduling.md](worker-scheduling.md). The parent classifies, opens or
 converts PRs when authorized, talks to the user, and writes shared state. Packet
 every worker. Workers revalidate live GitHub state; they do not advance shared
 checkpoints.

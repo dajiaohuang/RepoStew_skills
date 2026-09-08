@@ -1,12 +1,6 @@
 # Worker packet
 
-Parent (Astra or Fable) must give every small-model worker — Luna on OpenAI hosts, Haiku on Anthropic hosts — a complete packet. Workers revalidate GitHub and must not advance `notification_checkpoints` or `issue_checkpoints`.
-
-For a ranked day/week/month report campaign, the parent creates one visible
-task per repository (maximum 10 per batch) and uses Luna on OpenAI hosts by
-default. The packet must carry the report source, ranking evidence, and batch
-identifier. Spark is not selected unless the user explicitly requests it. A
-launch-only campaign does not require the parent to poll the created tasks.
+Every root, including Luna, gives each worker a complete packet. Follow [worker-scheduling.md](worker-scheduling.md). Workers revalidate GitHub and never advance shared checkpoints. Ranked packets carry report source, ranking evidence, and batch identifier; a repository work item does not require a new conversation.
 
 ## Required fields
 
@@ -21,7 +15,9 @@ launch-only campaign does not require the parent to poll the created tasks.
 | `pr_urls` | PR URLs in scope, or empty |
 | `goal` | One paragraph of authorized outcome |
 | `allowed_actions` | Explicit list (fetch, classify, edit, test, commit, push, comment, …) |
-| `prohibited_actions` | Must include: advance shared checkpoints; merge; close; delete remotes; expose secrets; fabricated authorship |
+| `prohibited_actions` | Must include: spawn agents; create/fork conversations; delegate further; advance shared checkpoints; merge; close; delete remotes; expose secrets; fabricated authorship |
+| `dependencies` | Required validated results, or none; root admits ready packets only |
+| `completion` | One bounded output and its acceptance condition |
 | `validation` | Commands or checks the worker must run, calibrated to risk |
 | `state` | `REPOSTEW_HOME` as the already-selected absolute anchor; skill and managed-repository homes resolved from `paths.json`; SQLite `REPOSTEW_HOME/repostew.sqlite`; never infer roots |
 | `partition` | Org/repo group id; whether this partition may finish independently |

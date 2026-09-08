@@ -3,7 +3,7 @@
 Use this reference when the user asks RepoStew to continuously discover or
 process popular, recently active repositories from daily, weekly, or monthly
 reports. It is the recommended campaign shape for broad GitHub discovery: a
-ranked intake followed by one independent, user-visible task per repository.
+ranked intake followed by queued repository work under one bounded scheduler.
 
 ## Selection and ranking
 
@@ -28,28 +28,17 @@ ranked intake followed by one independent, user-visible task per repository.
    deferred to the next batch. A later batch needs a fresh timestamp and fresh
    live-state verification.
 
-## One repository, one visible task
+## One repository, one queued work item
 
-For every selected repository, create a separate user-visible task when the
-host supports it. The controller owns the batch manifest, task-to-repository
-map, shared checkpoints, deduplication, and final aggregation; each repository
-task owns only its local clone/worktree and its returned evidence. Do not use a
-hidden worker where the user asked for visible handoff.
+Use [worker-scheduling.md](worker-scheduling.md): one current root, a durable queue, and at most three direct Luna workers subject to host capacity. Workers must not delegate. Create visible tasks only on explicit user request; launch-only execution records launched versus queued work without promising unattended queue draining.
 
-The task packet must include the canonical repository URL, selection evidence,
-current default branch, mode, authority, state roots, workspace path, allowed
-actions, prohibited actions, validation expectations, and stop conditions. The
-task must revalidate live GitHub state and repository instructions instead of
-trusting the ranking snapshot.
+The controller owns the batch manifest, repository-to-worker mapping, deduplication, shared checkpoints, and integration. Every repository retains separate workspace and evidence. Split large audits into bounded packets while preserving the complete coverage ledger; a packet finishing is not proof that the repository audit is complete.
 
-On OpenAI hosts, use Luna for this campaign by default. Do not substitute
-Spark or another small model unless the user explicitly requests that model.
-Model choice does not change the gates, evidence standard, or required return
-contract.
+Packets include repository URL, report source and ranking, batch identifier, current default branch, mode, authority, verified state roots, allowed and prohibited actions, validation, and stop conditions. Workers revalidate GitHub and repository instructions. Use the available Luna model for workers when permitted by the host; do not silently substitute another model.
 
 ## Independent repository lifecycle
 
-Each task runs the complete lifecycle independently:
+The root completes this lifecycle for each repository through bounded leaf packets:
 
 - verify repository metadata, instructions, authority, and the recent issue/PR
   window before cloning or editing;
@@ -76,9 +65,4 @@ and PR/issue URLs, validation results, limitations, and terminal outcome. The
 controller writes shared trackers and checkpoints only after each repository
 partition is complete or durably retained.
 
-Do not poll or monitor newly created tasks when the user asks for launch-only
-execution. Report the created task IDs and durable artifact locations, then
-stop. Ongoing PR or notification maintenance is a separate explicitly
-requested workflow; if monitoring is requested, use the notification and
-checkpoint rules in the main skill.
-
+For launch-only requests, follow [worker-scheduling.md](worker-scheduling.md): persist the full queue, report admitted work separately from pending work, and respect host dispatch acknowledgement requirements. Ongoing maintenance requires explicit authorization.

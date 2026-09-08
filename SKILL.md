@@ -38,6 +38,8 @@ procedure lives depends on the parent:
 Use the host agent's native file, shell, planning, browser, and GitHub tools; do
 not assume a particular AI product or operating system.
 
+Read [references/worker-scheduling.md](references/worker-scheduling.md) before any delegation, on either operating path. A Luna root may schedule bounded Luna workers under this same policy.
+
 ## Instruction priority
 
 1. The user's current authorized request.
@@ -182,20 +184,9 @@ If `gh` is unavailable, use an available GitHub connector or API. Do not silentl
 
 ## Recommended ranked repository campaign
 
-For broad discovery from activity reports, use the ranked campaign reference as
-the default best-practice route. Capture the report evidence and batch-start
-timestamp, deduplicate against durable RepoStew records and active tasks, and
-select at most 10 repositories per batch. Create one independent, user-visible
-task per selected repository when the host supports it; each task must perform
-the recent issue/PR gates and the full repository audit before any qualifying
-issue or PR work. The controller owns the manifest, shared checkpoints, and
-final aggregation.
+For broad discovery from activity reports, use the ranked campaign reference. Capture report evidence and batch-start time, deduplicate durable records, and select at most 10 repositories per batch. Keep a separate repository work item and complete audit coverage for each.
 
-On OpenAI hosts, use Luna for these repository tasks by default. Do not select
-Spark or another model unless the user explicitly requests it. If the user asks
-for launch-only execution, create the tasks and persist their mapping and
-artifacts without polling or monitoring them; ongoing maintenance remains a
-separate explicitly requested workflow.
+Follow [references/worker-scheduling.md](references/worker-scheduling.md) for every parent model, including Luna: the current root owns a durable queue and at most three direct workers, bounded by host capacity. Workers never spawn workers or conversations. Use Luna workers on OpenAI hosts when available; obey host model-selection rules. Create user-visible tasks only when explicitly requested. Launch-only requests report launched and queued work separately; pending work is not automatically scheduled.
 
 ## Use verified owner or maintainer authority
 
@@ -234,9 +225,9 @@ separate commits and PRs.
 Classify the work after read-only verification and before cloning or editing.
 
 - **Simple issue:** requirements and acceptance criteria are clear; the change is localized to one subsystem; existing patterns and tests cover the behavior; no architecture, dependency, service, permission, security-policy, or public-API decision is needed. Keep it in the current conversation and complete the normal confirm/autonomous workflow directly.
-- **Complex issue:** the work spans subsystems or repositories, requires substantial design discovery, has ambiguous requirements, changes architecture or public behavior, needs a long repository-wide audit, involves many issues, or is intended for persistent monitoring and maintenance. Use the host platform's user-visible new-task or handover capability when available. Do not substitute a hidden subagent for a requested handover.
+- **Complex issue:** the work spans subsystems or repositories, requires substantial design discovery, has ambiguous requirements, changes architecture or public behavior, needs a long repository-wide audit, involves many issues, or is intended for persistent monitoring and maintenance. Use bounded partitions in the current root; use a user-visible new task or handover only when the user explicitly requests it. Do not substitute a hidden subagent for a requested handover.
 
-Complexity is never, by itself, a reason to reject, skip, or stop work. Separate the contribution decision from the execution route: clear, permitted, valuable, testable work is `ACCEPT` regardless of size, then simple work stays here and complex work is handed over. Use `ASK_MAINTAINER` only for a real unresolved product, architecture, dependency, compatibility, security, or authority decision; after approval, continue through the appropriate route. Use `SKIP` only for substantive blockers such as duplication, existing ownership or fixes, repository prohibition, lack of evidence, or unavailable required access.
+Complexity is never, by itself, a reason to reject, skip, or stop work. Separate the contribution decision from the execution route: clear, permitted, valuable, testable work is `ACCEPT` regardless of size, then simple work stays here and complex work uses bounded partitions or an explicitly requested handover. Use `ASK_MAINTAINER` only for a real unresolved product, architecture, dependency, compatibility, security, or authority decision; after approval, continue through the appropriate route. Use `SKIP` only for substantive blockers such as duplication, existing ownership or fixes, repository prohibition, lack of evidence, or unavailable required access.
 
 Do not classify work `ASK_MAINTAINER` merely because nobody has confirmed the proposed solution. First apply the direct-PR judgment gate below. Use `ASK_MAINTAINER` only when a hard approval boundary remains or the expected behavior cannot be inferred safely enough to produce a reviewable patch.
 

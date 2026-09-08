@@ -256,24 +256,7 @@ direction.
 
 ## Multi-repository routing
 
-Treat a multi-repository campaign as a portfolio of independent audits, not one
-shared patch stream. When the host supports user-visible tasks:
-
-- use one task per repository so code, policy, tests, credentials, and Git state
-  do not leak across repositories;
-- keep a controller task for inventory, task mapping, progress, cross-repository
-  deduplication, priority, and final aggregation;
-- hand over the fixed commit, local directory, repository and website URLs,
-  applicable authority, known evidence, coverage requirements, validation
-  expectations, and prohibited actions; and
-- tell every task to revalidate time-sensitive GitHub and deployment state.
-
-For a ranked report campaign, capture the report URLs and batch-start timestamp,
-deduplicate against audit/tracker/follow/task records, and select no more than
-10 repositories. Create one independent visible task for each selected
-repository. On OpenAI hosts, choose Luna by default; Spark requires an explicit
-user request. If the user requests launch-only execution, persist the task map
-and artifacts and do not poll the created tasks.
+Keep separate repository workspaces and coverage ledgers. Follow [worker-scheduling.md](worker-scheduling.md) for bounded leaf packets and [ranked-repository-campaign.md](ranked-repository-campaign.md) for report provenance, deduplication, the ten-repository intake cap, and launch-only queue accounting. The current root owns mapping, progress, integration, and shared checkpoints. Every worker revalidates time-sensitive state. Create visible tasks only when explicitly requested.
 
 Do not use hidden delegation when the user asks for visible handover. Respect
 host concurrency and resource limits, but do not silently reduce repository or

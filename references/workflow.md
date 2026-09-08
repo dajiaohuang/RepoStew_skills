@@ -13,10 +13,7 @@ contradicts this file. If two documents disagree, this file plus the root
   the full detailed workflow in `generic-full-workflow.md`. One skill, one
   source of truth — do not mix separate skill copies in one run.
 
-Ranked day/week/month report campaigns additionally read
-`ranked-repository-campaign.md`: cap each batch at 10 repositories, create one
-independent visible task per repository, and use Luna by default on OpenAI
-hosts. Launch-only requests create and persist the mapping without polling.
+Ranked campaigns follow `ranked-repository-campaign.md`: ten repositories is an intake cap. All delegation follows `worker-scheduling.md`: one root, bounded leaf workers, durable overflow, and explicit user requests for visible tasks.
 
 ## 1. Roots and state
 
