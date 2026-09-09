@@ -111,7 +111,7 @@ request and are outside every scheduled maintenance run.
 - **RRULE:** `RRULE:FREQ=WEEKLY;BYDAY=SU;BYHOUR=3;BYMINUTE=0`
 - **Project mode:** local project in the persistent maintenance workspace
 - **Permissions:** local Git/workspace access only by default; GitHub read
-  access may refresh terminal tracker state, but no remote mutation permission
+  access is required for live PR/ref recovery verification; no remote mutation permission
 - **Run style:** standalone dry-run-first cleanup
 
 Prompt:
@@ -129,15 +129,18 @@ a mismatch, or a missing root, but not merely because the scheduler did not
 inherit a verified variable.
 Start with the deterministic inventory/dry run and review every reported safety check. Apply
 cleanup only to explicitly registered RepoStew-owned linked worktrees whose PR
-tracker state is MERGED or CLOSED and whose exact absolute path, canonical-clone
+tracker state is OPEN, MERGED or CLOSED and whose exact absolute path, canonical-clone
 boundary, clean tracked/untracked state, pushed tip, remote provenance, branch
-ownership, and ignored-output safety checks all pass. Re-evaluate each item
-immediately before applying. Report estimated and actual freed bytes and retain
-the cleanup history.
+ownership, lock/in-use, and ignored-output safety checks all pass. Verify the
+live PR head and fetchable recovery ref; persist recovery before deletion.
+Re-evaluate each item immediately before applying. This scheduled run is a
+safety net: normal submission/follow-up already releases local resources.
+Report logical sizes separately from filesystem free-space changes and retain
+the recovery and cleanup history.
 
 If any fact is missing, stale, ambiguous, or blocked, report the item and leave
 it untouched. Never delete a canonical clone, workspace root, remote branch,
-fork, active-PR resource, uncommitted or unpushed work, credential, key,
+fork, locked/in-use resource, uncommitted or unpushed work, credential, key,
 RepoStew state, or unknown ignored data. Do not perform a comprehensive
 repository audit or proactively create issues; those require an explicit human
 request outside scheduled tasks.

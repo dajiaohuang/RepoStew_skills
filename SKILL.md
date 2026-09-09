@@ -205,6 +205,26 @@ to external-contributor rules. Read
 [references/maintaining-owned-repositories.md](references/maintaining-owned-repositories.md)
 before creating, verifying, changing, or relying on the authority registry.
 
+## Release task storage after every submitted PR
+
+After pushing, tracking the PR, and completing the current action/validation,
+register the exact contribution worktree, review its dry run, and apply guarded
+cleanup immediately, including while the PR is `OPEN`. Do not keep dependency
+trees and build outputs locally merely to await review or CI. Stop task-owned
+processes first; retain locked/in-use, dirty, unpushed, excluded, or otherwise
+unrecoverable resources with an explicit reason. Live PR/ref verification and
+a durable recovery record must precede deletion. Preserve the remote branch,
+shared canonical clone, tracker and recovery history.
+
+Inspect follow-up notifications remotely. For an actionable small edit, use the
+existing remote PR branch when policy and CI validation allow it; restore the
+registered worktree only for work requiring local editing/testing. After a
+follow-up push, refresh/rebind and release again. Read
+[references/workspace-cleanup.md](references/workspace-cleanup.md) for the
+commands, integration-worker proof, recovery procedure and cache boundaries.
+This is part of the standing contribution lifecycle, not a separate approval
+request. Broad drive/cache sweeps still need their own user-authorized scope.
+
 ## Run a batched continuous iteration cycle
 
 For a user-owned or verified maintained repository, use a bounded iteration
@@ -212,8 +232,10 @@ cycle only when the user explicitly asks for continuous or batched maintenance.
 Read [references/batched-iteration.md](references/batched-iteration.md) before
 starting the first batch. Each batch converges into one parent-owned integration
 worktree, branch, and reviewable PR per batch; do not begin another batch until
-the current PR is terminal and its registered integration worktree plus any
-explicitly proven batch-worker worktrees have passed a reviewed dry-run cleanup.
+the current PR is terminal and cleanup outcomes are recorded. Release the
+registered integration worktree and explicitly proven completed workers as
+soon as the integration PR is submitted; waiting for terminal state does not
+require keeping the local files.
 Verified authority does not authorize an automatic merge: merge into the current
 default branch only when the user explicitly authorizes it and repository
 policy, required checks, and PR state permit it. Never use this cycle to delete

@@ -141,6 +141,11 @@ acting.
 
 ## 11. Cleanup
 
-Default: `workspace_cleanup.py` on registered terminal PR worktrees.
+Default: immediately after each PR submission/follow-up push, review and apply
+`workspace_cleanup.py` on the registered worktree, including `OPEN` PRs. Require
+live remote recovery proof and save the recovery record before deletion. Keep
+the remote branch and shared canonical clone. Read notifications remotely;
+restore only when an actionable fix requires local editing/testing. Retain
+locked/in-use, dirty, unpushed, excluded or unrecoverable resources with reasons.
 Monthly sweep of `REPOSTEW_REPOS_HOME` only when the user explicitly asks to
 clean that root. Never hand-edit `workspace_resources.json`.

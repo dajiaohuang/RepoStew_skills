@@ -136,6 +136,16 @@ Match the repository's own voice and conventions when replying and when resolvin
 
 ## Diagnose CI and conflicts
 
+Read CI/review state remotely first. Submitted worktrees should already be
+released under [workspace-cleanup.md](workspace-cleanup.md). For a small
+text/config edit, use the existing remote PR branch with a current-SHA guard
+when repository policy and required CI permit it. When local reproduction,
+editing, conflict resolution or testing is needed, refresh the tracker and use
+`workspace_cleanup.py restore` for the recorded path. Install only the required
+dependencies. After the follow-up push, refresh/rebind ownership, review the
+exact-path dry run, and release again. An open PR does not require a permanent
+checkout; unresolved safety blockers do require an explicit retention record.
+
 For CI:
 
 1. Open the exact failing job and step with `gh pr checks` and run details.
@@ -214,5 +224,6 @@ Do not manufacture issues to remain visible, mass-file speculative findings, or 
 
 - For merged PRs, note useful maintainer feedback and keep tracker history.
 - For closed PRs, read the reason and preserve reusable evidence before cleanup.
-- Remove a verified local clone or worktree only when it was created for that contribution and contains no unpushed work.
+- Reconcile any retained resource blockers with the guarded cleanup workflow;
+  local worktrees normally were released after submission, before this outcome.
 - Do not reopen, resubmit, or argue unless maintainers invite a revision.

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Inventory and safely retire RepoStew-owned Git worktrees.
 
-The command is deliberately dry-run first. Cleanup candidates must have an
-explicit ownership record, a terminal PR tracker entry, a clean linked
-worktree, and proof that the local tip was pushed. Canonical clones and remote
-branches are never deleted.
+The command is deliberately dry-run first. Submitted PR worktrees can be
+released while the PR is open, after live remote recovery verification and a
+durable recovery record. Ownership, clean state, and ignored-data guards still
+apply. Canonical clones and remote branches are never deleted.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from repostew_state import load_json, save_json, state_file
 
 RESOURCE_STATE = "workspace_resources.json"
 TERMINAL_STATES = {"MERGED", "CLOSED"}
+SUBMITTED_STATES = {"OPEN", *TERMINAL_STATES}
 DISPOSABLE_PARTS = {
     ".astro",
     ".cache",
@@ -124,6 +125,10 @@ def validate_workspace(workspace: str | Path) -> Path:
 
 
 def validate_target(path: str | Path, workspace: Path, *, require_exists: bool) -> Path:
+    raw = Path(os.path.abspath(os.path.expanduser(str(path))))
+    for ancestor in (raw, *raw.parents):
+        if _root_is_reparse_point(ancestor):
+            raise CleanupError(f"target or ancestor is a symlink/reparse point: {ancestor}")
     target = _absolute(path)
     if target == workspace or not _inside_workspace(target, workspace):
         raise CleanupError(f"target must be a child of the workspace: {target}")
@@ -276,6 +281,56 @@ def _has_pushed_provenance(entry: dict, canonical: Path, branch: str, head: str)
     return (bool(tracked_head) and tracked_head == head) or _remote_tip_matches(canonical, branch, head)
 
 
+def _read_live_pr(canonical: Path, pr_url: str) -> dict:
+    result = _run(
+        ["gh", "pr", "view", pr_url, "--json", "url,state,headRefName,headRefOid"],
+        cwd=canonical,
+        timeout=60,
+    )
+    if result.returncode != 0:
+        raise CleanupError("live PR lookup failed; retain the local resource")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise CleanupError("live PR lookup returned invalid JSON") from error
+    if not isinstance(payload, dict):
+        raise CleanupError("live PR lookup returned an invalid record")
+    return payload
+
+
+def _live_recovery_proof(canonical: Path, entry: dict, head: str, branch: str) -> dict:
+    """Verify the PR and its fetchable ref, without trusting cached tracking refs."""
+    pr_url = str(entry.get("pr_url") or "").rstrip("/")
+    match = re.fullmatch(r"https://github\.com/([\w.-]+/[\w.-]+)/pull/([1-9][0-9]*)", pr_url)
+    if not match or match[1].lower() != str(entry.get("repo") or "").lower():
+        raise CleanupError("PR URL does not match the registered GitHub repository")
+    live = _read_live_pr(canonical, pr_url)
+    if str(live.get("url") or "").rstrip("/").lower() != pr_url.lower():
+        raise CleanupError("live PR identity changed")
+    if live.get("state") not in SUBMITTED_STATES:
+        raise CleanupError("live PR is not in a submitted state")
+    if live.get("headRefOid") != head or live.get("headRefName") != branch:
+        raise CleanupError("live PR head or branch changed; refresh and rebind before release")
+    if not re.fullmatch(r"[0-9a-f]{40}", head):
+        raise CleanupError("PR head is not a full commit ID")
+    remote = f"https://github.com/{match[1]}.git"
+    ref = f"refs/pull/{match[2]}/head"
+    advertised = _git(["ls-remote", "--exit-code", remote, ref], cwd=canonical, timeout=60)
+    if advertised.split() != [head, ref]:
+        raise CleanupError("remote PR recovery ref is unavailable or changed")
+    return {
+        "version": 1,
+        "pr_url": pr_url,
+        "repo": match[1],
+        "remote": remote,
+        "ref": ref,
+        "head": head,
+        "branch": branch,
+        "pr_state": live["state"],
+        "verified_at": now_iso(),
+    }
+
+
 def _worker_inclusion_proof(
     canonical: Path, integration_head: str, worker_head: str, base_oid: str | None = None
 ) -> dict:
@@ -407,8 +462,8 @@ def _validated_worker_resource(args) -> dict:
         raise CleanupError("PR is not present in the RepoStew tracker")
     if not tracker.get("head_ref") or not tracker.get("head_oid"):
         raise CleanupError("tracker is missing head provenance; refresh the PR before registration")
-    if str(tracker.get("state") or "").upper() not in TERMINAL_STATES:
-        raise CleanupError("worker registration requires a terminal integration PR")
+    if str(tracker.get("state") or "").upper() not in SUBMITTED_STATES:
+        raise CleanupError("worker registration requires a submitted integration PR")
     if tracker["head_ref"] == info["branch"]:
         raise CleanupError("worker registration requires a branch distinct from the integration PR head")
 
@@ -787,7 +842,7 @@ def evaluate_resource(
     if resource.get("status") != "active":
         blockers.append("resource_not_active")
     try:
-        validate_target(path, workspace, require_exists=False)
+        validate_target(resource.get("worktree", ""), workspace, require_exists=False)
     except CleanupError:
         blockers.append("target_outside_workspace")
     if not canonical.is_dir() or not (canonical / ".git").is_dir():
@@ -796,8 +851,8 @@ def evaluate_resource(
         blockers.append("canonical_clone_protected")
     if not tracker:
         blockers.append("tracker_entry_missing")
-    elif str(tracker.get("state", "")).upper() not in TERMINAL_STATES:
-        blockers.append("pr_not_terminal")
+    elif str(tracker.get("state", "")).upper() not in SUBMITTED_STATES:
+        blockers.append("pr_not_submitted")
     if tracker and resource_type == "pr_worktree" and tracker.get("head_ref") != branch:
         blockers.append("branch_no_longer_matches_tracker")
 
@@ -883,6 +938,11 @@ def evaluate_resource(
 
     try:
         records = parse_worktree_list(canonical) if canonical.is_dir() else []
+        if any(
+            item.get("locked") and _path_key(item.get("worktree", "")) == _path_key(path)
+            for item in records
+        ):
+            blockers.append("worktree_locked")
         owners = [
             item.get("worktree")
             for item in records
@@ -895,7 +955,49 @@ def evaluate_resource(
         if "worktree_list_unavailable" not in blockers:
             blockers.append("worktree_list_unavailable")
 
+    recovery = None
+    if not blockers:
+        try:
+            if resource_type == "pr_worktree":
+                recovery = _live_recovery_proof(canonical, tracker, str(head), branch)
+            else:
+                recovery = _live_recovery_proof(
+                    canonical, tracker, str(resource["integration_head_oid"]), str(tracker["head_ref"])
+                )
+                recovery.update(
+                    {"worker_head": head, "worker_branch": branch,
+                     "inclusion_method": resource.get("inclusion_method")}
+                )
+                if resource.get("inclusion_method") == "patch-equivalent":
+                    # Equivalent patches do not preserve the original worker
+                    # commits. Require an independently fetchable worker tip.
+                    ref = f"refs/heads/{branch}"
+                    for repo in sorted(remote_repositories(canonical)):
+                        if repo not in {
+                            str(tracker.get("repo") or "").lower(),
+                            str(tracker.get("head_repo") or "").lower(),
+                        }:
+                            continue
+                        remote = f"https://github.com/{repo}.git"
+                        try:
+                            advertised = _git(
+                                ["ls-remote", "--exit-code", remote, ref], cwd=canonical, timeout=60
+                            )
+                        except CleanupError:
+                            continue
+                        if advertised.split() == [head, ref]:
+                            recovery.update({"worker_remote": remote, "worker_ref": ref})
+                            break
+                    else:
+                        raise CleanupError("original worker tip has no live remote recovery ref")
+        except CleanupError as error:
+            blockers.append("live_recovery_unverified")
+            recovery = {"error": str(error)}
+
     size = tree_size(path) if exists else 0
+    pr_state = str(tracker.get("state", "")).upper() if tracker else None
+    if recovery and "pr_state" in recovery:
+        pr_state = recovery["pr_state"]
     return {
         "worktree": str(path),
         "canonical": str(canonical),
@@ -903,8 +1005,9 @@ def evaluate_resource(
         "branch": branch,
         "resource_type": resource_type,
         "pr_url": resource.get("pr_url"),
-        "pr_state": str(tracker.get("state", "")).upper() if tracker else None,
+        "pr_state": pr_state,
         "head": head,
+        "recovery": recovery,
         "estimated_bytes": size,
         "ignored_sensitive": sensitive[:20],
         "ignored_nonbuild": unknown[:20],
@@ -1024,6 +1127,11 @@ def _remove_disposable_paths(root: Path, relative_paths: list[str]) -> None:
         normalized.append((target, Path(*relative.parts)))
 
     for target, _ in sorted(normalized, key=lambda item: len(item[1].parts), reverse=True):
+        for ancestor in target.parents:
+            if ancestor == root:
+                break
+            if _root_is_reparse_point(ancestor):
+                raise CleanupError(f"ignored output has a linked ancestor: {ancestor}")
         if not target.exists() and not target.is_symlink():
             continue
         if target.is_symlink():
@@ -1101,7 +1209,14 @@ def apply_cleanup(args) -> dict:
             "pr_state": current["pr_state"],
             "head": current["head"],
             "estimated_bytes": before,
+            "recovery": current.get("recovery"),
         }
+        # Persist recoverability before the first deletion, including interrupted
+        # attempts that never reach the final history update.
+        resource.update(
+            {"release_started_at": history["timestamp"], "recovery": current.get("recovery")}
+        )
+        _save_state(state)
         try:
             _remove_worktree(
                 canonical,
@@ -1209,6 +1324,67 @@ def apply_cleanup(args) -> dict:
         "actual_freed_bytes": sum(item.get("actual_freed_bytes", 0) for item in results),
         "results": results,
         "blocked": [item for item in inventory["resources"] if not item["eligible"]],
+    }
+
+
+def restore_resource(args) -> dict:
+    """Recreate a released PR worktree only when local follow-up is needed."""
+    workspace = validate_workspace(args.workspace)
+    target = validate_target(args.worktree, workspace, require_exists=False)
+    if os.path.lexists(target):
+        raise CleanupError("restore target already exists; inspect it instead of overwriting")
+    state = _state()
+    prior = next(
+        (
+            item
+            for item in reversed(state["resources"])
+            if _path_key(item.get("worktree", "")) == _path_key(target)
+            and str(item.get("pr_url") or "").rstrip("/").lower() == args.pr_url.rstrip("/").lower()
+            and item.get("status") == "removed"
+            and item.get("resource_type", "pr_worktree") == "pr_worktree"
+        ),
+        None,
+    )
+    if prior is None or not prior.get("recovery"):
+        raise CleanupError("no released PR resource with a recovery record at this path")
+    canonical = _absolute(prior["canonical"])
+    if not canonical.is_dir() or not (canonical / ".git").is_dir():
+        raise CleanupError("canonical clone is unavailable; restore its verified repository first")
+    info = inspect_worktree(canonical)
+    if _path_key(info["common_git_dir"]) != _path_key(prior["common_git_dir"]):
+        raise CleanupError("canonical Git directory changed since release")
+    tracker_path = _absolute(args.tracker) if args.tracker else state_file("pr_tracker.json")
+    entry = _tracker_entry(_load_tracker(tracker_path), args.pr_url)
+    if not entry or entry.get("repo") != prior.get("repo") or entry.get("head_ref") != prior["branch"]:
+        raise CleanupError("refresh the same tracked PR before restoring")
+    branch = prior["branch"]
+    head = str(entry.get("head_oid") or "")
+    if _branch_oid(canonical, branch):
+        raise CleanupError("local branch already exists; inspect its ownership before restoring")
+    _git(["check-ref-format", f"refs/heads/{branch}"], cwd=canonical)
+    recovery = _live_recovery_proof(canonical, entry, head, branch)
+    if recovery["pr_state"] != "OPEN":
+        raise CleanupError("local follow-up restore requires an open PR")
+    if not _repo_identity_ok(entry, remote_repositories(canonical)):
+        raise CleanupError("canonical repository remotes no longer match the PR")
+    _git(
+        ["fetch", "--no-tags", "--no-write-fetch-head", recovery["remote"], recovery["ref"]],
+        cwd=canonical,
+        timeout=300,
+    )
+    _git(["cat-file", "-e", f"{head}^{{commit}}"], cwd=canonical)
+    # A force-push during fetch must not silently restore an obsolete checkout.
+    recovery = _live_recovery_proof(canonical, entry, head, branch)
+    _git(["worktree", "add", "-b", branch, str(target), head], cwd=canonical, timeout=300)
+    resource = _validated_resource(args)
+    resource.update(
+        {"restored_at": now_iso(), "restored_from_head": prior.get("removed_head"),
+         "recovery": recovery}
+    )
+    _register_validated(resource)
+    return {
+        "status": "restored", "worktree": str(target), "head": head,
+        "pr_url": args.pr_url, "recovery": recovery, "dependencies_installed": False,
     }
 
 
@@ -1401,6 +1577,13 @@ def build_parser() -> argparse.ArgumentParser:
     rebind.add_argument("--tracker", help="override pr_tracker.json")
     rebind.add_argument("--json", action="store_true")
 
+    restore = subparsers.add_parser("restore", help="restore a released open PR for local follow-up")
+    restore.add_argument("--workspace", required=True, help="exact maintenance workspace root")
+    restore.add_argument("--worktree", required=True, help="exact previously released worktree path")
+    restore.add_argument("--pr-url", required=True, help="same tracked pull-request URL")
+    restore.add_argument("--tracker", help="override pr_tracker.json")
+    restore.add_argument("--json", action="store_true")
+
     cleanup = subparsers.add_parser("cleanup", help="plan cleanup; pass --apply to execute")
     cleanup.add_argument("--workspace", required=True, help="exact maintenance workspace root")
     cleanup.add_argument(
@@ -1443,6 +1626,12 @@ def main() -> int:
                 print(json.dumps(payload, indent=2, ensure_ascii=False))
             else:
                 print(f"Registered {payload['worktree']} for {payload['pr_url']}")
+        elif args.command == "restore":
+            payload = restore_resource(args)
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(f"Restored {payload['worktree']} at {payload['head']}; install only needed dependencies")
         elif args.command == "register-worker":
             payload = register_worker_resource(args)
             if args.json:

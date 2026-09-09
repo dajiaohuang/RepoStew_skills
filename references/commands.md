@@ -56,6 +56,7 @@ Do not advance a failed or truncated scan cursor.
 ```bash
 python scripts/workspace_cleanup.py register --workspace /absolute/workspace --worktree /absolute/worktree --pr-url URL
 python scripts/workspace_cleanup.py rebind --workspace /absolute/workspace --worktree /absolute/worktree --pr-url URL
+python scripts/workspace_cleanup.py restore --workspace /absolute/workspace --worktree /absolute/worktree --pr-url URL
 python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace
 python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace --apply --json
 ```

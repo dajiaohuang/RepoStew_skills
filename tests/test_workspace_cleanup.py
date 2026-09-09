@@ -59,6 +59,7 @@ class CleanupFixture:
         git(self.canonical, "commit", "-m", "fix")
         self.head = git(self.canonical, "rev-parse", "HEAD").stdout.strip()
         git(self.canonical, "push", "-u", "origin", "fix/42")
+        git(self.remote, "update-ref", "refs/pull/42/head", self.head)
         git(self.canonical, "checkout", "main")
         self.worktree = self.workspace / "project-42"
         git(self.canonical, "worktree", "add", str(self.worktree), "fix/42")
@@ -91,6 +92,28 @@ class CleanupFixture:
 
 
 class WorkspaceCleanupTests(unittest.TestCase):
+    def setUp(self):
+        # Keep live PR metadata deterministic, but exercise ls-remote against
+        # the fixture's real bare repository (not cached tracking refs).
+        original_run = workspace_cleanup._run
+
+        def local_transport(cmd, *, cwd=None, timeout=30):
+            if cmd[:2] == ["git", "ls-remote"] and "https://github.com/owner/repo.git" in cmd:
+                cmd = [git(cwd, "remote", "get-url", "origin").stdout.strip()
+                       if part == "https://github.com/owner/repo.git" else part for part in cmd]
+            if cmd[:2] == ["git", "fetch"] and "https://github.com/owner/repo.git" in cmd:
+                cmd = [git(cwd, "remote", "get-url", "origin").stdout.strip()
+                       if part == "https://github.com/owner/repo.git" else part for part in cmd]
+            return original_run(cmd, cwd=cwd, timeout=timeout)
+
+        def live_pr(canonical, pr_url):
+            return {"url": pr_url, "state": "OPEN", "headRefName": "fix/42",
+                    "headRefOid": git(canonical, "rev-parse", "refs/remotes/origin/fix/42").stdout.strip()}
+
+        self.addCleanup(mock.patch.stopall)
+        mock.patch.object(workspace_cleanup, "_run", side_effect=local_transport).start()
+        mock.patch.object(workspace_cleanup, "_read_live_pr", side_effect=live_pr).start()
+
     def test_astro_build_state_is_disposable_but_unknown_data_is_not(self):
         self.assertTrue(workspace_cleanup._disposable_ignored(".astro/"))
         self.assertTrue(workspace_cleanup._disposable_ignored(".astro/content.db"))
@@ -155,7 +178,7 @@ class WorkspaceCleanupTests(unittest.TestCase):
             self.assertEqual(history["history"][0]["status"], "removed")
             self.assertFalse(applied["results"][0]["remote_branches_modified"])
 
-    def test_open_pr_and_uncommitted_work_are_blocked(self):
+    def test_open_pr_with_uncommitted_work_is_blocked(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             state_home = root / "state"
@@ -169,11 +192,120 @@ class WorkspaceCleanupTests(unittest.TestCase):
                 inventory = workspace_cleanup.apply_cleanup(self._args(fixture, tracker))
 
             self.assertEqual(inventory["eligible_count"], 0)
-            self.assertIn("pr_not_terminal", inventory["resources"][0]["blockers"])
+            self.assertNotIn("pr_not_terminal", inventory["resources"][0]["blockers"])
             self.assertIn(
                 "tracked_or_untracked_changes_present", inventory["resources"][0]["blockers"]
             )
             self.assertTrue(fixture.worktree.exists())
+
+    def test_open_pr_release_persists_recovery_before_deletion_and_restores_on_demand(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            original_remove = workspace_cleanup._remove_worktree
+
+            def check_recovery_then_remove(*args, **kwargs):
+                saved = workspace_cleanup._state()["resources"][0]
+                self.assertEqual(saved["recovery"]["head"], fixture.head)
+                self.assertEqual(saved["recovery"]["ref"], "refs/pull/42/head")
+                self.assertTrue(saved["release_started_at"])
+                return original_remove(*args, **kwargs)
+
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                with mock.patch.object(workspace_cleanup, "_remove_worktree", side_effect=check_recovery_then_remove):
+                    result = workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+                self.assertEqual(result["removed_count"], 1)
+                self.assertFalse(fixture.worktree.exists())
+                restored = workspace_cleanup.restore_resource(self._args(fixture, tracker))
+                self.assertEqual(restored["head"], fixture.head)
+                self.assertEqual(git(fixture.worktree, "rev-parse", "HEAD").stdout.strip(), fixture.head)
+                self.assertEqual((fixture.worktree / "fix.txt").read_text(), "fixed\n")
+                self.assertEqual(workspace_cleanup.apply_cleanup(self._args(fixture, tracker))["eligible_count"], 1)
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "already exists"):
+                    workspace_cleanup.restore_resource(self._args(fixture, tracker))
+
+    def test_cached_pushed_head_cannot_replace_live_recovery_ref(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                git(fixture.remote, "update-ref", "-d", "refs/pull/42/head")
+                result = workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+                self.assertEqual(result["removed_count"], 0)
+                self.assertIn("live_recovery_unverified", result["blocked"][0]["blockers"])
+                self.assertTrue(fixture.worktree.exists())
+
+    def test_restore_follows_new_remote_commit_instead_of_released_head(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+                editor = root / "remote-editor"
+                git(root, "clone", "--branch", "fix/42", str(fixture.remote), str(editor))
+                git(editor, "config", "user.name", "Remote Editor")
+                git(editor, "config", "user.email", "test@example.com")
+                (editor / "fix.txt").write_text("remote follow-up\n", encoding="utf-8")
+                git(editor, "commit", "-am", "remote edit")
+                current = git(editor, "rev-parse", "HEAD").stdout.strip()
+                git(editor, "push", "origin", "HEAD:refs/heads/fix/42")
+                git(fixture.remote, "update-ref", "refs/pull/42/head", current)
+                self.assertNotEqual(
+                    git(fixture.canonical, "cat-file", "-e", current, check=False).returncode, 0
+                )
+                tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN", head=current))
+                live = {"url": fixture.tracker()[0]["pr_url"], "state": "OPEN",
+                        "headRefName": "fix/42", "headRefOid": current}
+                with mock.patch.object(workspace_cleanup, "_read_live_pr", return_value=live):
+                    result = workspace_cleanup.restore_resource(self._args(fixture, tracker))
+                self.assertEqual(result["head"], current)
+                self.assertNotEqual(result["head"], fixture.head)
+                self.assertEqual((fixture.worktree / "fix.txt").read_text(), "remote follow-up\n")
+
+    def test_linked_ancestor_cannot_redirect_ignored_output_deletion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            link = root / "linked"
+            output = link / "node_modules"
+            output.mkdir(parents=True)
+            marker = output / "keep.txt"
+            marker.write_text("keep", encoding="utf-8")
+            with mock.patch.object(workspace_cleanup, "_root_is_reparse_point", side_effect=lambda p: p == link):
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "linked ancestor"):
+                    workspace_cleanup._remove_disposable_paths(root, ["linked/node_modules/"])
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "symlink/reparse"):
+                    workspace_cleanup.validate_target(output, root, require_exists=True)
+            self.assertTrue(marker.exists())
+
+    def test_pr_head_change_between_plan_and_apply_preserves_local_worktree(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            live = {"url": fixture.tracker()[0]["pr_url"], "state": "OPEN",
+                    "headRefName": "fix/42", "headRefOid": fixture.head}
+            changed = {**live, "headRefOid": "a" * 40}
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                with mock.patch.object(workspace_cleanup, "_read_live_pr", side_effect=[live, changed]):
+                    result = workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+                self.assertEqual(result["removed_count"], 0)
+                self.assertEqual(result["results"][0]["status"], "skipped_after_recheck")
+                self.assertTrue(fixture.worktree.exists())
 
     def test_cleanup_worktree_selector_narrows_inventory_and_apply_scope(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -321,18 +453,18 @@ class WorkspaceCleanupTests(unittest.TestCase):
                     fixture.canonical, integration_head, missing_head, base
                 )
 
-    def test_worker_registration_rejects_open_pr_and_unrepresented_patch(self):
+    def test_worker_registration_rejects_unknown_pr_state_and_unrepresented_patch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             state_home = root / "state"
             state_home.mkdir()
             fixture = CleanupFixture(root)
             worker, _, base = fixture.add_patch_equivalent_worker()
-            open_tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            open_tracker = self._write_tracker(state_home, fixture.tracker(state="UNKNOWN"))
             args = self._args(fixture, open_tracker, worktree=str(worker), base_oid=base)
 
             with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
-                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "terminal"):
+                with self.assertRaisesRegex(workspace_cleanup.CleanupError, "submitted"):
                     workspace_cleanup.register_worker_resource(args)
 
                 closed_tracker = self._write_tracker(state_home, fixture.tracker())
@@ -342,6 +474,47 @@ class WorkspaceCleanupTests(unittest.TestCase):
                 args = self._args(fixture, closed_tracker, worktree=str(worker), base_oid=base)
                 with self.assertRaisesRegex(workspace_cleanup.CleanupError, "not fully represented"):
                     workspace_cleanup.register_worker_resource(args)
+
+    def test_open_integration_worker_requires_live_original_commit_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            worker, worker_head, base = fixture.add_patch_equivalent_worker()
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            args = self._args(fixture, tracker, worktree=str(worker), base_oid=base)
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_worker_resource(args)
+                ready = workspace_cleanup.apply_cleanup(args)
+                self.assertEqual(ready["eligible_count"], 1)
+                self.assertEqual(ready["resources"][0]["recovery"]["worker_head"], worker_head)
+                git(fixture.remote, "update-ref", "-d", "refs/heads/worker/42")
+                blocked = workspace_cleanup.apply_cleanup(args)
+                self.assertEqual(blocked["eligible_count"], 0)
+                self.assertIn("live_recovery_unverified", blocked["resources"][0]["blockers"])
+                self.assertTrue(worker.exists())
+
+    def test_locked_worktree_is_retained_before_deleting_ignored_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_home = root / "state"
+            state_home.mkdir()
+            fixture = CleanupFixture(root)
+            tracker = self._write_tracker(state_home, fixture.tracker(state="OPEN"))
+            output = fixture.worktree / "node_modules" / "cache.bin"
+            output.parent.mkdir()
+            output.write_bytes(b"keep while in use")
+            with mock.patch.dict(os.environ, {"REPOSTEW_HOME": str(state_home)}):
+                workspace_cleanup.register_resource(self._args(fixture, tracker))
+                git(fixture.canonical, "worktree", "lock", "--reason", "test process in use", str(fixture.worktree))
+                try:
+                    result = workspace_cleanup.apply_cleanup(self._args(fixture, tracker, apply=True))
+                    self.assertEqual(result["removed_count"], 0)
+                    self.assertIn("worktree_locked", result["blocked"][0]["blockers"])
+                    self.assertTrue(output.exists())
+                finally:
+                    git(fixture.canonical, "worktree", "unlock", str(fixture.worktree))
 
     def test_worker_can_atomically_approve_exact_generated_output_during_registration(self):
         with tempfile.TemporaryDirectory() as directory:

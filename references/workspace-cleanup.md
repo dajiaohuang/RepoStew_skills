@@ -1,9 +1,26 @@
-# Safe local workspace cleanup
+# Release local PR resources after submission
 
-Use this workflow when local contribution branches, linked worktrees, dependency
-trees, and build output have accumulated. The registered-resource cleanup below
-is the default. A separate monthly sweep is available only after the user
-explicitly authorizes cleanup of the selected managed-repository root.
+Local contribution worktrees are temporary. After pushing, opening/tracking the
+PR, and completing the current validation/action, release the task's registered
+worktree, local branch, dependencies, and build output. Do this while the PR is
+`OPEN`; do not retain gigabytes merely to wait for CI, review, merge, or a future
+notification. Repeat this release step after each follow-up push. The agent
+reviews the exact dry run and applies it under the standing maintenance scope;
+no extra user confirmation is needed for this default lifecycle.
+
+Prefer a linked worktree for every contribution so task files can be removed
+without deleting the shared canonical clone. Keep at most the selected shared
+clone and durable state between turns, and install dependencies in the task
+worktree. A canonical clone or an unregistered standalone clone is not made
+disposable by its name; migrate future work to registered worktrees, and assess
+existing clones under the separately authorized workspace sweep.
+
+Stop task-owned test servers/watchers first. If another task or process still
+needs the worktree, lock it with `git worktree lock --reason <reason> <path>` and
+retain its owner/reason. Never unlock another task's resource just to clean it.
+Dirty/unpushed work, unknown ignored files, user exclusions, live-head changes,
+and unavailable remote recovery are concrete retention reasons. Record each
+blocker and retry when resolved; PR openness alone is not a blocker.
 
 ## Safety boundary
 
@@ -29,13 +46,13 @@ The sweep must still stay inside the selected root and must never delete the
 root itself, a remote branch, credentials, or the canonical/state roots.
 
 For the registered-resource workflow, RepoStew cleans only explicitly
-registered linked worktrees whose tracked pull request is currently `MERGED` or
-`CLOSED`. Ordinary PR worktrees must match the
-tracked PR branch and pushed tip. Batch workers require the separate terminal
+registered linked worktrees whose tracked pull request is `OPEN`, `MERGED`, or
+`CLOSED`. Ordinary PR worktrees must match the live
+PR branch and fetchable tip. Batch workers require the separate integration
 proof described below. It never deletes:
 
 - a canonical clone, workspace root, fork, or remote branch;
-- an active PR's worktree or branch;
+- a locked or still-in-use worktree;
 - a detached, moved, unregistered, or repository-mismatched worktree;
 - tracked changes, untracked files, unpushed commits, credentials, keys, or
   ignored data that is not recognizable disposable build/dependency output;
@@ -83,7 +100,6 @@ python scripts/workspace_cleanup.py purge-terminal \
 
 ## Sustain contributed repositories
 
-```
 On Windows PowerShell, pass normal absolute paths:
 
 ```powershell
@@ -100,15 +116,16 @@ Registration rejects canonical clones and requires all of the following:
 - a configured GitHub remote matches the PR base or head repository; and
 - its tip matches the tracked PR head or an exact remote-tracking ref.
 
-Refresh the PR first if an imported terminal entry predates the tracker fields:
+Refresh the PR first if its entry predates the current head/provenance fields:
 
 ```bash
 python scripts/pr_tracker.py check --include-terminal --repo owner/repo
 ```
 
-Registration creates `workspace_resources.json` in `REPOSTEW_HOME`. Back up
-that file with the other RepoStew state files; it is the durable ownership and
-cleanup history ledger.
+The helper writes the `workspace_resources` ledger through the selected
+RepoStew state store. Preserve its ownership, recovery, and cleanup history with
+the normal state backup. Do not maintain a second mutable JSON copy or edit the
+ledger directly.
 
 ### Refresh ownership after a branch rewrite
 
@@ -133,7 +150,7 @@ An unpushed rewrite is rejected.
 ### Register a completed batch worker
 
 Do not register a worker with the ordinary `register` command. After the
-integration PR is terminal and refreshed, use the exact worker path and the
+integration PR is submitted and refreshed, use the exact worker path and the
 full batch-start commit recorded when the batch began:
 
 ```bash
@@ -144,12 +161,16 @@ python scripts/workspace_cleanup.py register-worker \
   --base-oid 0123456789abcdef0123456789abcdef01234567
 ```
 
-The command requires a linked, clean worker in the same repository, a terminal
+The command requires a linked, clean worker in the same repository, a submitted
 tracked integration PR, an exact 40-character base that is an ancestor of both
 heads, and at least one worker commit. It accepts either direct ancestry into
 the integration head or a merge-free range whose every patch has an equivalent
 in that head. Patch-equivalent worker tips must also match an exact
-remote-tracking ref so the original commits are not discarded while unpushed.
+remote-tracking ref at registration. Cleanup additionally verifies a live
+remote branch containing that exact worker tip, so equivalent patches do not
+discard otherwise unrecoverable original commits. Direct-ancestor workers are
+recoverable from the integration PR ref itself. Both paths verify the live
+integration PR head and its advertised `refs/pull/N/head` before deletion.
 The recorded worker head, base, integration head, inclusion method, and verified
 commits are immutable cleanup provenance. There is no worker rebind: any later
 head or integration-head change blocks cleanup and requires a new explicit
@@ -210,7 +231,7 @@ python scripts/workspace_cleanup.py cleanup \
 
 To limit a run to exact registered worktrees, repeat `--worktree`. This only
 narrows the registered-resource inventory; each selected path is still subject
-to every terminal-PR, boundary, ownership, cleanliness, ignored-data, pushed-tip,
+to every submitted-PR, boundary, ownership, cleanliness, ignored-data, pushed-tip,
 and branch-ownership check. A selected path with no active ownership record
 fails safely, including a missing path that was never registered:
 
@@ -228,7 +249,7 @@ rechecks:
 
 1. the exact resolved path remains below the workspace and differs from the
    canonical clone;
-2. the tracker entry is terminal and still names the same branch for an ordinary
+2. the tracker entry is submitted and still names the same branch for an ordinary
    PR worktree, or still has the exact recorded integration head for a batch
    worker;
 3. the worktree belongs to the recorded common Git directory;
@@ -237,7 +258,10 @@ rechecks:
    credential-like paths and unknown ignored data blocking cleanup;
 6. the local tip exactly matches its registered head and has the required pushed
    PR provenance or revalidated worker-inclusion proof; and
-7. no other worktree owns the local branch.
+7. no other worktree owns the local branch and the worktree is not locked;
+8. live GitHub PR identity, state, branch and head agree, and a fresh `git
+   ls-remote` advertises the exact recoverable commit. A tracker snapshot or
+   cached `refs/remotes/*` alone cannot pass this gate.
 
 Logical file sizes include ignored dependency and build output. Symlinks are
 not followed. Windows extended-length paths and read-only generated files are
@@ -255,14 +279,17 @@ python scripts/workspace_cleanup.py cleanup \
   --apply --json
 ```
 
-Each candidate is re-evaluated immediately before mutation. For an eligible
+Each candidate is re-evaluated immediately before mutation. The helper saves a
+recovery record and release-start timestamp **before the first deletion**. The
+record contains the PR URL, repository URL, fetch ref, exact head, branch, and
+verification time; batch workers also retain their original-commit proof. For an eligible
 live worktree, the helper removes only the Git-enumerated ignored paths already
 classified as disposable build/dependency output, then asks Git to remove the
 worktree **without** force. Git therefore performs another independent check
 and refuses a tracked or untracked change that races with evaluation. The exact
 local branch ref is deleted only if it still has the verified expected commit.
 A missing worktree can have its stale Git metadata pruned after the same
-registration, terminal-state, branch, and pushed-provenance checks. The script
+registration, submitted-state, branch, and live recovery checks. The script
 does not push branch deletion.
 
 If a previous applied cleanup failed after it recorded that it freed every
@@ -270,7 +297,7 @@ estimated logical byte for that exact registered path, PR, branch, and head,
 and both the worktree directory and its Git worktree metadata have since gone,
 a retry may recover by pruning the stale state and deleting the verified local
 branch. This is only a retry of an evidenced helper failure: an arbitrary
-missing worktree without Git metadata remains blocked. The terminal PR,
+missing worktree without Git metadata remains blocked. The submitted PR,
 registered-head, remote-provenance, and branch-owner checks still apply.
 
 The result reports estimated and actual freed logical bytes. Successful and
@@ -281,3 +308,60 @@ code has been retired.
 If any item is blocked or uncertain, report it and leave it untouched. Do not
 use `git clean -X`, recursive filesystem deletion, or broad branch deletion as
 a substitute for the guarded workflow.
+
+## Restore only for actionable follow-up
+
+A notification is a trigger to read the full current PR, reviews, comments,
+commits, and checks remotely. Do not recreate a checkout simply to inspect or
+poll a PR. Once an actionable change is established:
+
+- For a small text/configuration edit whose required validation can run in CI,
+  edit the existing PR branch remotely using the current file/head SHA as the
+  concurrency guard. Respect repository policy, inspect the resulting diff,
+  and verify the resulting commit and required CI. Never bypass a required
+  local test by choosing remote editing.
+- For code changes, conflict resolution, reproduction, or required local tests,
+  refresh the tracker, then restore the previously released worktree:
+
+  ```bash
+  python scripts/workspace_cleanup.py restore \
+    --workspace "$REPOSTEW_REPOS_HOME" \
+    --worktree "$REPOSTEW_REPOS_HOME/repo-issue" \
+    --pr-url https://github.com/owner/repo/pull/123 --json
+  ```
+
+`restore` fetches the live PR ref, checks the exact head again after fetch,
+creates the branch/worktree, and registers ownership. It refuses an existing
+path or branch, a changed repository/PR identity, unavailable canonical clone,
+stale tracker, or non-open PR. It installs no dependencies. If the canonical
+clone has been retired separately, recover that verified repository at its
+selected path first. Keep the recorded old head as history; follow-up uses the
+current PR head, including changes made remotely since release.
+
+Install only needed dependencies from lockfiles. After the tested follow-up is
+pushed, refresh the tracker, run `rebind`, and repeat the exact-path dry run and
+`cleanup --apply`. Keep the remote PR branch and durable tracker throughout.
+
+## Disk cleanup lessons and cache policy
+
+Full-drive scanning and cache purges require their own user-authorized scope;
+they are not an automatic side effect of every PR. Honor explicit exclusions
+before selecting any path. For an authorized scan:
+
+- Inventory actual contents. Temp directories can contain real repositories,
+  databases, downloads, and unique scientific data. Never empty Temp, a data
+  directory, or an unfamiliar old state root based only on its name or age.
+- Prefer package-manager cache commands and inspect their installed behavior.
+  Keep toolchains and active package environments. Prune unreferenced shared
+  stores after removing task dependencies; do not blindly erase a linked store.
+- Unknown ignored files remain protected. When releasing a valuable worktree,
+  preserve genuinely unique local files outside it with a per-file manifest,
+  SHA-256 and archive verification, then re-evaluate. Never label an unknown
+  file disposable to bypass the guard; do not put credentials in public artifacts.
+- Windows deletion needs exact resolved boundaries, no linked roots/ancestors,
+  and extended-length paths for long names and reserved names such as `con`.
+  Never traverse a junction into another package/source store. Recheck Git
+  status after removing generated outputs from a retained repository.
+- Report filesystem free bytes before/after separately from logical file
+  sizes: hard links and simultaneous tasks make the numbers differ. Preserve
+  scan errors, per-path outcomes, and missing pre-existing registry paths.

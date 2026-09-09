@@ -38,7 +38,7 @@ Chinese-first bilingual documentation site.
   - `contribution_tracker.py` - Track contributed repositories and issues
   - `pr_tracker.py` - Track submitted pull requests
   - `maintained_repositories.py` - Validate maintained-repository authority
-  - `workspace_cleanup.py` - Safely retire verified terminal-PR worktrees
+  - `workspace_cleanup.py` - Release submitted PR worktrees with live recovery proof; restore for follow-up
   - `scan_known_repos.py` - Scan tracked repositories for new issues
   - `discover.py` - Discover relevant repositories
   - `loop.py` - Broadened discovery loop

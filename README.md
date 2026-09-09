@@ -232,7 +232,7 @@ RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue�
 | `pr_tracker.py` | 保存 PR、通知、review、评论、CI 与未处理活动 |
 | `maintained_repositories.py` | 校验独立的 owner/admin/maintain 权限登记表 |
 | `merge_state.py` | 可恢复地合并持久状态 |
-| `workspace_cleanup.py` | dry-run 优先地回收已验证终态 PR 的本地资源 |
+| `workspace_cleanup.py` | PR 提交后即验证远端并释放本地资源，需要跟进时按需恢复 |
 | `auto_fix.py` | 可选的供应商无关非交互调度器 |
 | `auto_fix.sh` | `auto_fix.py` 的 POSIX 包装脚本 |
 
@@ -257,6 +257,7 @@ python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
 # 本地资源清理：先预览，再应用
 python scripts/workspace_cleanup.py cleanup --workspace <workspace>
 python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --json
+python scripts/workspace_cleanup.py restore --workspace <workspace> --worktree <released-worktree> --pr-url <pr-url> --json
 ```
 
 发现脚本只产生机械候选；每项工作仍必须经过政策、重复项、认领、关联 PR、相关性、证据与范围核验。

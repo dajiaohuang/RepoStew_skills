@@ -179,8 +179,10 @@ python scripts/pr_tracker.py add \
 ```
 
 When RepoStew created a linked worktree for the contribution, record its exact
-ownership after tracking the PR. This enables later cleanup without inferring
-ownership from a directory name. Read
+ownership after tracking the PR, then review and apply exact-path cleanup after
+the current validation/action, even while the PR is open. Save recovery proof;
+keep the remote branch and tracker. This avoids inferring ownership from a
+directory name or retaining build/dependency trees throughout review. Read
 [workspace-cleanup.md](workspace-cleanup.md) before
 registration or cleanup.
 
@@ -262,11 +264,16 @@ default full contribution registry.
 
 The output always includes per-repository counts for candidates, filtered issues, previously seen issues, detail-fetch failures, and whether the result window was truncated. Use `--include-decisions` when an all-issues audit needs one record per listed issue, including the mechanical filter reason. A detail-fetch failure or truncated result prevents checkpoint advancement so omitted work remains retryable; rerun a truncated repository with a larger `--issue-limit`. Treat candidates as leads, not claims. Reapply repository policy, duplicate, assignment, linked-PR, taste, and scope checks. Prior participation grants context but no maintainer authority. Audit a contributed repository and file a new issue only when evidence is reproducible, non-duplicate, useful, and allowed by the active operating mode; record the resulting issue URL.
 
-## Retire terminal local resources safely
+## Release submitted local resources and restore on demand
 
 The guarded `workspace_cleanup.py` workflow remains the default for ordinary
-RepoStew maintenance, especially when cleaning a registered PR worktree or
-branch. When the user explicitly authorizes a monthly cleanup of the selected
+RepoStew maintenance. Release registered PR worktrees and local branches after
+submission and each follow-up push, using live remote verification and a saved
+recovery record. Inspect notifications remotely; edit the existing PR branch
+remotely when the change and required CI allow, or use `workspace_cleanup.py
+restore` for local reproduction/testing. Do not reinstall dependencies just to
+read PR state. Retain concrete safety blockers, not open PRs by default.
+When the user explicitly authorizes a monthly cleanup of the selected
 `REPOSTEW_REPOS_HOME`, the user-authorized workspace sweep is also permitted:
 
 1. Freeze the cutoff at the first day of the current month in local time.
