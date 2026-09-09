@@ -231,6 +231,44 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class TrackerTests(unittest.TestCase):
+    def test_add_refresh_preserves_handled_feedback_and_issue_link(self):
+        url = "https://github.com/Owner/Repo/pull/7"
+        old_issue = "https://github.com/Owner/Repo/issues/3"
+        old_pending = {"key": "review_comment:2", "author": "maintainer"}
+        entry = {
+            "repo": "owner/repo", "pr_number": 7, "pr_url": url,
+            "issue_url": old_issue, "handled_activity_ids": ["review:1"],
+            "pending_activity": [old_pending], "fetch_error": True,
+        }
+        detail = {"state": "MERGED", "headRefOid": "new-head",
+                  "author": {"login": "contributor"}}
+        activities = [{"key": "review:1", "author": "maintainer"},
+                      {"key": "pr_comment:3", "author": "maintainer"}]
+        with tempfile.TemporaryDirectory() as directory:
+            with (
+                mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
+                mock.patch.object(pr_tracker, "fetch_pr", return_value=detail),
+                mock.patch.object(pr_tracker, "fetch_activities", return_value=activities),
+                mock.patch.object(pr_tracker, "run", return_value="contributor"),
+                mock.patch.object(pr_tracker, "record_contribution"),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                pr_tracker.save([entry])
+                for issue in (None, "https://github.com/Owner/Repo/issues/4"):
+                    with self.subTest(issue=issue):
+                        self.assertEqual(pr_tracker.cmd_add(argparse.Namespace(
+                            pr_url=url, issue_url=issue)), 0)
+                        entries = pr_tracker.load()
+                        self.assertEqual(len(entries), 1)
+                        refreshed = entries[0]
+                        self.assertEqual(refreshed["issue_url"], issue or old_issue)
+                        self.assertEqual(refreshed["handled_activity_ids"], ["review:1"])
+                        self.assertEqual({a["key"] for a in refreshed["pending_activity"]},
+                                         {"review_comment:2", "pr_comment:3"})
+                        self.assertEqual(refreshed["head_oid"], "new-head")
+                        self.assertEqual(refreshed["state"], "MERGED")
+                        self.assertNotIn("fetch_error", refreshed)
+
     def test_summarize_mixed_check_runs_and_status_contexts(self):
         checks = [
             {"__typename": "CheckRun", "conclusion": "SUCCESS"},

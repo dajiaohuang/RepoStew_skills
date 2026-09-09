@@ -610,20 +610,24 @@ def cmd_add(args) -> int:
         return 1
     author = pr.get("author") or {}
     viewer = run(["gh", "api", "user", "--jq", ".login"], timeout=10) or author.get("login")
-    entry = {
+    data = load()
+    entry = next((item for item in data
+                  if item.get("repo", "").lower() == repo.lower()
+                  and item.get("pr_number") == number), {})
+    entry.update({
         "repo": repo,
         "pr_number": number,
         "pr_url": url,
-        "issue_url": issue_url,
         "author_login": author.get("login"),
         "created_at": pr.get("createdAt"),
-        "handled_activity_ids": [],
-        "pending_activity": [],
-    }
+    })
+    if issue_url is not None or "issue_url" not in entry:
+        entry["issue_url"] = issue_url
+    entry.pop("fetch_error", None)
     apply_pr_state(entry, pr, fetch_activities(repo, number), viewer)
 
     data = [
-        item for item in load()
+        item for item in data
         if not (item.get("repo", "").lower() == repo.lower() and item.get("pr_number") == number)
     ]
     data.append(entry)
