@@ -196,7 +196,7 @@ If `gh` is unavailable, use an available GitHub connector or API. Do not silentl
 
 For broad discovery from activity reports, use the ranked campaign reference. Capture report evidence and batch-start time, deduplicate durable records, and select at most 10 repositories per batch. Keep a separate repository work item and complete audit coverage for each.
 
-Follow [references/worker-scheduling.md](references/worker-scheduling.md) for every parent model, including Luna: the current root owns a durable queue and at most three direct workers, bounded by host capacity. Workers never spawn workers or conversations. Use Luna workers on OpenAI hosts when available; obey host model-selection rules. Create user-visible tasks only when explicitly requested. Launch-only requests report launched and queued work separately; pending work is not automatically scheduled.
+Follow [references/worker-scheduling.md](references/worker-scheduling.md) for every parent model, including Luna: the current root owns a durable queue. The default is at most three direct workers, while an explicit user request to use available local resources or heterogeneous Luna + Claude CLI execution enables dynamic admission with a root reserve, shared accounting, re-measurement, and durable backend mapping. Workers never spawn workers or conversations. Use Luna workers on OpenAI hosts and Claude CLI leaf processes when authorized and available; obey each backend's model, account, and rate limits. Create user-visible tasks only when explicitly requested. Launch-only requests report launched and queued work separately; pending work is not automatically scheduled.
 
 ## Use verified owner or maintainer authority
 

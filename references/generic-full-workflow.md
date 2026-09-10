@@ -71,7 +71,7 @@ python scripts/loop.py --dry-rounds 3 --max-candidates 5
 python scripts/loop.py --focus agent --focus harness --dry-rounds 3
 ```
 
-When the user asks for ranked activity-report batches, follow [ranked-repository-campaign.md](ranked-repository-campaign.md): preserve provenance, deduplicate, and queue at most 10 repositories per batch. Complete all audit and issue/PR gates. Use [worker-scheduling.md](worker-scheduling.md): one current root, a durable queue, and at most three direct Luna workers subject to host capacity. Workers must not delegate. Create visible tasks only on explicit user request; launch-only execution records launched versus queued work without promising unattended queue draining.
+When the user asks for ranked activity-report batches, follow [ranked-repository-campaign.md](ranked-repository-campaign.md): preserve provenance, deduplicate, and queue at most 10 repositories per batch. Complete all audit and issue/PR gates. Use [worker-scheduling.md](worker-scheduling.md): one current root and a durable queue; the default is at most three direct workers, with dynamic heterogeneous Luna + Claude CLI mode available when the user explicitly requests local-resource parallelism. Workers must not delegate. Create visible tasks only on explicit user request; launch-only execution records launched versus queued work without promising unattended queue draining.
 
 Mutable state is stored only under the user-selected absolute
 `REPOSTEW_HOME`, in `repostew.sqlite`. RepoStew has no implicit mutable-state

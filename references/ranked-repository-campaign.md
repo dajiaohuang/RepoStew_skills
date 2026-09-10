@@ -28,13 +28,42 @@ ranked intake followed by queued repository work under one bounded scheduler.
    deferred to the next batch. A later batch needs a fresh timestamp and fresh
    live-state verification.
 
+## GitHub Trending coverage and historical backfill
+
+When the user requests GitHub Trending, process the current **today**,
+**this-week**, and **this-month** pages before historical backfill. Capture the
+rendered page from top to bottom and collect every repository entry available
+in that page. If the UI exposes a Load more control or downward pagination,
+continue scrolling/clicking until it produces no new entries, and record the
+last successful page position. If the raw page ends with no pagination or
+load-more endpoint, record that limitation and treat the complete fetched page
+as the available result; never claim hidden entries were fetched.
+
+Deduplicate the three current windows into one union, compare it with prior
+campaign records, and finish the current-window queue before backfill. Then
+capture prior Trending dates **one day at a time**, with a fresh timestamp and
+raw artifact for each date. Do not advance to the next date until the current
+date's entries, metadata checks, deduplication, and durable queue outcome have
+been recorded. Keep the date-by-date limitation explicit when the source does
+not expose older pages directly.
+
 ## One repository, one queued work item
 
-Use [worker-scheduling.md](worker-scheduling.md): one current root, a durable queue, and at most three direct Luna workers subject to host capacity. Workers must not delegate. Create visible tasks only on explicit user request; launch-only execution records launched versus queued work without promising unattended queue draining.
+Use [worker-scheduling.md](worker-scheduling.md): one current root and a
+durable queue; the default is at most three direct workers, with dynamic
+heterogeneous Luna + Claude CLI mode available when the user explicitly
+requests local-resource parallelism. Workers must not delegate. Create visible
+tasks only on explicit user request; launch-only execution records launched
+versus queued work without promising unattended queue draining.
 
 The controller owns the batch manifest, repository-to-worker mapping, deduplication, shared checkpoints, and integration. Every repository retains separate workspace and evidence. Split large audits into bounded packets while preserving the complete coverage ledger; a packet finishing is not proof that the repository audit is complete.
 
-Packets include repository URL, report source and ranking, batch identifier, current default branch, mode, authority, verified state roots, allowed and prohibited actions, validation, and stop conditions. Workers revalidate GitHub and repository instructions. Use the available Luna model for workers when permitted by the host; do not silently substitute another model.
+Packets include repository URL, report source and ranking, batch identifier,
+current default branch, mode, authority, verified state roots, allowed and
+prohibited actions, validation, and stop conditions. Workers revalidate GitHub
+and repository instructions. Record whether each packet is assigned to a Luna
+subagent or Claude CLI leaf process; do not silently substitute a model or
+backend.
 
 ## Independent repository lifecycle
 

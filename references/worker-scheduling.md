@@ -1,22 +1,33 @@
 # Bounded worker scheduling
 
 This policy applies to every parent model, including a Luna root. Keep the
-current root as the sole scheduler; Luna can orchestrate Luna workers without
-creating another scheduler conversation. Workers are leaves: they must not
-spawn agents, create tasks, fork conversations, or delegate again. A worker
-that discovers more work returns it to the root's queue.
+current root as the sole scheduler; Luna and Claude CLI workers may run in one
+heterogeneous pool without creating another scheduler conversation. Workers are
+leaves: they must not spawn agents, create tasks, fork conversations, or
+delegate again. A worker that discovers more work returns it to the root's
+queue.
 
 ## Admission and queue
 
 - Default to one root and at most three direct workers. This is a conservative
-  RepoStew policy, not a claim about an account or model hard limit.
-- Before each dispatch, cap admission by the host's reported remaining capacity
-  and the root's outstanding workers. Count starting, running, waiting, and
-  unreleased idle agents; reserve capacity for the root where the host counts it.
-  Four total slots therefore permit at most three workers under one root.
+  RepoStew default, not a claim about an account or model hard limit. If the
+  user explicitly asks to use available local resources or to run Luna and
+  Claude CLI workers in parallel, switch to **dynamic heterogeneous mode** for
+  that campaign; do not silently apply the three-worker default as a hard cap.
+- In dynamic heterogeneous mode, measure and record logical processors,
+  total/free memory, current worker and system load, host/account/thread limits,
+  and a root-reserved margin before each admission or expansion. Count Luna
+  subagents and Claude CLI processes in one shared admission ledger, with the
+  backend, worker ID, PID/session, workspace, and packet recorded separately.
+  Choose a bounded target from measured capacity, admit only independent
+  packets, and re-measure before adding workers. Large parallelism is allowed
+  only within those live limits; it never authorizes extra roots, secret use,
+  unsafe repository mutation, or bypassing provider/rate limits.
 - Keep overflow in a durable campaign manifest, with repository, packet,
-  dependencies, status, worker ID, evidence, and retry reason. The ten-repository
-  batch size is intake size, never a concurrency setting.
+  backend, dependencies, status, worker ID, evidence, admission measurement,
+  and retry reason. The ten-repository batch size is intake size, never a
+  concurrency setting. If reliable capacity telemetry or a shared limit is
+  unavailable, use the lower safe target and record why.
 - Dispatch only ready, independent packets whose dependencies have validated
   results. Keep writes isolated by repository/worktree and explicit file scope.
   The root alone integrates results and writes shared trackers/checkpoints.

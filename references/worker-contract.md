@@ -7,6 +7,7 @@ Every root, including Luna, gives each worker a complete packet. Follow [worker-
 | Field | Content |
 | --- | --- |
 | `agent` | `repostew-explore` / `repostew-implement` / `repostew-review` / `repostew-audit` |
+| `backend` | `luna-subagent` or `claude-cli`; the parent must not silently substitute a backend |
 | `mode` | `confirm` or `autonomous` |
 | `authority` | `external` or enabled verified maintained row + proof source |
 | `owner_repo` | `owner/repo` |
@@ -32,6 +33,7 @@ Every root, including Luna, gives each worker a complete packet. Follow [worker-
 | `submission` | `regular-pr` / `upstream-draft` / `fork-only-draft` / `parent-submits` / `none` |
 | `existing_thread` | URL for the standing one-comment `ASK_MAINTAINER` path |
 | `batch_start` | ISO-8601 captured by parent; informational only for children |
+| `admission` | Dynamic-mode measurement, target, root reserve, and the worker's admission sequence/PID or session ID |
 
 ## Worker return (required)
 
