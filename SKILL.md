@@ -70,11 +70,21 @@ Follow this order. Do not skip a gate because the work looks familiar.
 5. **Verify live GitHub state** before clone or edit.
 6. **Classify.** `ACCEPT` / `ASK_MAINTAINER` / `SKIP`, then simple vs complex.
    Complexity is never, by itself, a reason to reject, skip, or stop work.
-7. **Authority.** Follow registry ≠ maintained registry. Quick path only with
+7. **Reconcile PR volume.** When a repository has several authored or related
+   PRs, audit the full open, merged, and closed cluster before opening another
+   PR. Compare linked issues, changed files, branch bases, review history, and
+   closure timelines. If open work materially overlaps and can share one
+   reviewable tested change, prefer consolidating future work into one existing
+   PR; do not create a replacement solely because the repository has many
+   submissions. A closed PR is a consolidation candidate only when its timeline
+   shows duplication or submission-volume cleanup and the surviving direction
+   remains valid. Preserve closed history and never infer a volume closure from
+   the state alone.
+8. **Authority.** Follow registry ≠ maintained registry. Quick path only with
    an enabled verified maintained row.
-8. **Direct regular-PR judgment gate** before asking or opening Draft.
-9. **Implement and validate** in proportion to risk.
-10. **Submit and track**, then maintain from notifications.
+9. **Direct regular-PR judgment gate** before asking or opening Draft.
+10. **Implement and validate** in proportion to risk.
+11. **Submit and track**, then maintain from notifications.
 
 Read [references/workflow.md](references/workflow.md) for the yes/no tree.
 Read a specialist reference only when that gate is active:
@@ -262,6 +272,32 @@ For a genuine `ASK_MAINTAINER`, use the standing comment authority immediately w
 5. Do not repeat or bump the question. Resume after a substantive response, revalidate current state, and route the approved work by complexity.
 
 ### Route permission-gated pull requests
+
+### Reconcile high-volume pull-request clusters
+
+PR count is a routing signal, not a reason to close work. Before submitting or
+updating a PR in a repository with multiple related submissions, enumerate the
+authored and materially related open, merged, and closed PRs. Read each
+candidate's current diff, linked issue, base/head relationship, reviews,
+comments, checks, and closure timeline. Group only changes with compatible
+scope and acceptance criteria; keep unrelated fixes separate even when they are
+in the same repository.
+
+When two or more open branches overlap, choose the existing PR with the clearest
+issue scope and review state as the consolidation target, then apply a guarded
+current-head check, port only the smallest complete changes, rerun focused
+validation, and record the source PRs and resulting diff. Do not create a new
+PR just to combine work, and do not silently rewrite another contributor's
+branch. A closed PR can feed the target only when its timeline explicitly shows
+duplication or a repository cleanup of excess submissions; a normal merge,
+stale branch, policy closure, maintainer rejection, or superseded direction is
+not evidence for reopening or cherry-picking it.
+
+Consolidation never grants merge or close authority. Keep the original PRs and
+their evidence until a maintainer or repository owner performs any required
+close/merge action. If the repository policy, permissions, or current review
+state prevents consolidation, retain the branches and report a concrete
+keep-separate or maintainer-reconciliation recommendation.
 
 Separate **submission permission** from **technical approval**. Do not make a clarification comment or Draft PR the default staging step.
 

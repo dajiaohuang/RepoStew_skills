@@ -104,6 +104,30 @@ Classify each item:
 
 Treat bot feedback as input rather than authority. Do not ignore it solely because it is automated.
 
+## Reconcile repositories with many pull requests
+
+When a repository accumulates several authored or related PRs, perform a
+repository-level reconciliation before opening another one. Enumerate the
+current open, merged, and closed cluster, then compare linked issues, changed
+files, base and head branches, comments, reviews, checks, and closure timelines.
+Treat the count as a signal to inspect overlap, not as proof that a PR is
+unwanted.
+
+If open changes materially overlap and have compatible acceptance criteria,
+select the existing PR with the clearest scope and review state as the
+consolidation target. Guard its current head, port only the smallest complete
+change, rerun focused validation, and record which source PRs were considered.
+Do not create a replacement PR solely to combine work or rewrite another
+contributor's branch. Keep independent fixes separate.
+
+Use a closed PR as input only when its timeline explicitly identifies duplicate
+or excess-submission cleanup and the surviving direction is still valid. A
+normal merge, stale branch, policy closure, maintainer rejection, or superseded
+direction does not justify reopening or cherry-picking. Preserve the original
+closed history, and do not close or merge any PR without the authority required
+by the repository and the user's request. If consolidation is blocked, report
+whether the correct outcome is keep-separate or maintainer reconciliation.
+
 ## Respond with code and communication
 
 For feedback requiring a change:
