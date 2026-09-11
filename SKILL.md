@@ -38,7 +38,7 @@ procedure lives depends on the parent:
 Use the host agent's native file, shell, planning, browser, and GitHub tools; do
 not assume a particular AI product or operating system.
 
-Read [references/worker-scheduling.md](references/worker-scheduling.md) before any delegation, on either operating path. A Luna root may schedule bounded Luna workers under this same policy.
+Read [references/worker-scheduling.md](references/worker-scheduling.md) before any delegation, on either operating path. Every dispatched worker must also read [references/worker-context.md](references/worker-context.md) before any repository action. A Luna root may schedule bounded Luna workers under this same policy.
 
 ## Instruction priority
 

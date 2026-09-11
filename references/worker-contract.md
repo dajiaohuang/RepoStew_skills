@@ -2,6 +2,11 @@
 
 Every root, including Luna, gives each worker a complete packet. Follow [worker-scheduling.md](worker-scheduling.md). Workers revalidate GitHub and never advance shared checkpoints. Ranked packets carry report source, ranking evidence, and batch identifier; a repository work item does not require a new conversation.
 
+Every worker must read [worker-context.md](worker-context.md) before any
+repository action. The parent must include the absolute resolved path to that
+file in the packet and dispatch prompt; a worker that cannot read it stops
+before editing or submitting.
+
 ## Required fields
 
 | Field | Content |
@@ -16,13 +21,14 @@ Every root, including Luna, gives each worker a complete packet. Follow [worker-
 | `pr_urls` | PR URLs in scope, or empty |
 | `goal` | One paragraph of authorized outcome |
 | `allowed_actions` | Explicit list (fetch, classify, edit, test, commit, push, comment, …) |
-| `prohibited_actions` | Must include: spawn agents; create/fork conversations; delegate further; advance shared checkpoints; merge; close; delete remotes; expose secrets; fabricated authorship |
+| `prohibited_actions` | Must include: spawn agents; create/fork conversations; delegate further; advance shared checkpoints; merge; close; delete remotes; expose secrets; fabricated authorship; `Co-authored-by` trailers or agent/bot emails in commits |
 | `dependencies` | Required validated results, or none; root admits ready packets only |
 | `completion` | One bounded output and its acceptance condition |
 | `validation` | Commands or checks the worker must run, calibrated to risk |
 | `state` | `REPOSTEW_HOME` as the already-selected absolute anchor; skill and managed-repository homes resolved from `paths.json`; SQLite `REPOSTEW_HOME/repostew.sqlite`; never infer roots |
 | `partition` | Org/repo group id; whether this partition may finish independently |
 | `stop` | Packet stop conditions |
+| `worker_context` | Absolute path to the mandatory `references/worker-context.md` |
 
 ## Optional fields
 
