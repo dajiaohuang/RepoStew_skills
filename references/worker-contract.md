@@ -29,6 +29,8 @@ before editing or submitting.
 | `partition` | Org/repo group id; whether this partition may finish independently |
 | `stop` | Packet stop conditions |
 | `worker_context` | Absolute path to the mandatory `references/worker-context.md` |
+| `skill_context` | Absolute path to `SKILL.md` plus every required reference path for this packet |
+| `root_checks` | Exact roots/auth/tool checks the worker must run before repository action |
 
 ## Optional fields
 

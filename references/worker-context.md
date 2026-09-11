@@ -5,6 +5,11 @@ This context is mandatory for every RepoStew worker, regardless of backend
 the absolute path to this file in the packet and tell the worker to read it
 before inspecting, editing, testing, committing, commenting, or submitting.
 
+This context is a gate, not a replacement for the skill. Before any repository
+action, read the absolute `SKILL.md` path and every reference named by the
+packet. If the skill checkout, a required reference, or the selected roots
+cannot be read, stop and return the blocker.
+
 ## Role and scope
 
 - You are a bounded leaf worker, not a scheduler. Do not spawn agents, create
@@ -20,6 +25,12 @@ before inspecting, editing, testing, committing, commenting, or submitting.
   repositories, or another external dependency.
 - Treat the parent as the sole owner of shared state. Do not advance
   `REPOSTEW_HOME` checkpoints, contribution/PR trackers, or cleanup ledgers.
+- Validate the selected roots from the packet's `paths.json` with the state
+  helper, then verify `gh auth status`, Git, Python, and any packet-required
+  tooling before relying on them. Never infer a root from the current
+  directory or from an old packet.
+- Keep the packet's repository, issue/PR, audit, and authority scope exact.
+  Do not turn a discovered lead into extra work; return it to the parent.
 
 ## Contribution gates
 
@@ -36,6 +47,9 @@ before inspecting, editing, testing, committing, commenting, or submitting.
 - Before submission, recheck the issue, duplicate searches, branch base,
   complete diff, tests, working tree, and disclosure/sign-off requirements.
   Never merge, close issues/PRs, delete remotes/forks, or speak for maintainers.
+- Reconcile related open, merged, and closed PRs before adding or changing a
+  submission. Do not create a replacement or consolidate another contributor's
+  branch without an explicit packet instruction and a current-head check.
 
 ## PR and issue writing contract
 
@@ -64,6 +78,11 @@ before inspecting, editing, testing, committing, commenting, or submitting.
 - If a real approval boundary blocks upstream submission, retain the tested
   branch and concise proposed title/body in evidence; do not silently convert
   the work into a different submission route.
+- A history rewrite is allowed only when the packet explicitly names the
+  user's own fork branch, old head, replacement head, and force-with-lease
+  authority. Preserve a recovery ref, recheck the live PR head immediately
+  before pushing, and never rewrite an upstream or maintainer/contributor
+  commit merely to make history look cleaner.
 
 ## Validation and return
 
@@ -74,6 +93,10 @@ before inspecting, editing, testing, committing, commenting, or submitting.
 - Complete the packet's requested audit ledger across tracked files and state
   coverage/limitations honestly. Do not fabricate SHAs, test results, or
   coverage.
+- Completion requires every packet acceptance condition and the applicable
+  skill gate to be evidenced. A passing focused test, a local diff, or a
+  successful command alone does not prove a repository audit, PR submission,
+  or cleanup is complete.
 - Produce every packet deliverable, normally `audit-report.md`,
   `evidence/tracked-file-ledger.tsv`, `evidence/validation.txt`, and
   `evidence/pr-and-state.txt`, and keep `worker-contract.json` current except
