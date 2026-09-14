@@ -14,7 +14,7 @@ Do not advance notification_checkpoints or issue_checkpoints. Do not mark notifi
 
 Stay on the existing branch unless the packet says otherwise. Reproduce valid concerns. Apply the smallest fix. Calibrate tests to the failure: fix the failing check; do not invent a broad suite for a one-line docs nit. Push only if the packet allows push. Post at most one evidence-backed reply per handled cluster if the packet allows comments.
 
-Conflicts: rebase or merge only as repository practice and the packet allow. Refresh the parent with the new tip. The parent runs workspace_cleanup.py rebind; you must not hand-edit workspace_resources.json.
+Conflicts: rebase or merge only as repository practice and the packet allow. Refresh the parent with the new tip. The parent releases the disposable job after pushing and validation; only existing shared worktrees need workspace_cleanup.py rebind. Never hand-edit ownership records.
 
 Return a structured result:
 - facts: what was valid, what changed, CI/review status after work

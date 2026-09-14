@@ -25,7 +25,6 @@ python scripts/loop.py --focus TERM --dry-rounds 3
 ## PR tracker (parent advances checkpoints)
 
 ```bash
-python scripts/pr_tracker.py import-authored
 python scripts/pr_tracker.py add "https://github.com/owner/repo/pull/N" "https://github.com/owner/repo/issues/M"
 python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py notifications --repo owner/repo
@@ -43,7 +42,6 @@ python scripts/pr_tracker.py checkpoint outlook <batch-start-ISO-8601>
 python scripts/contribution_tracker.py add https://github.com/owner/repo/issues/N
 python scripts/contribution_tracker.py add https://github.com/owner/repo
 python scripts/contribution_tracker.py list
-python scripts/scan_known_repos.py
 python scripts/scan_known_repos.py --repo owner/repo
 python scripts/scan_known_repos.py --repo owner/one --repo owner/two
 python scripts/scan_known_repos.py --repo owner/repo --include-decisions
@@ -51,7 +49,20 @@ python scripts/scan_known_repos.py --repo owner/repo --include-decisions
 
 Do not advance a failed or truncated scan cursor.
 
-## Workspace cleanup (never hand-edit workspace_resources)
+## Disposable workspace lifecycle
+
+```bash
+python scripts/workspace_job.py create owner/repo
+python scripts/workspace_job.py release JOB_ID --pr URL
+python scripts/workspace_job.py release JOB_ID --pr URL --apply
+python scripts/workspace_job.py restore JOB_ID
+python scripts/workspace_job.py list
+```
+
+Release immediately after submission/follow-up validation, including OPEN PRs.
+Read [ephemeral-storage.md](ephemeral-storage.md) before creating or releasing.
+
+## Existing shared-worktree compatibility only
 
 ```bash
 python scripts/workspace_cleanup.py register --workspace /absolute/workspace --worktree /absolute/worktree --pr-url URL
@@ -67,7 +78,10 @@ Monthly root sweep only with explicit user authorization.
 
 ```bash
 python scripts/repostew_state.py status
-python scripts/repostew_state.py migrate
-python scripts/repostew_state.py migrate --home /absolute/REPOSTEW_HOME --replace-existing
+python scripts/rebuild_github_state.py
+python scripts/rebuild_github_state.py --apply-reset
 python scripts/repostew_state.py export-json --destination /absolute/dir
 ```
+
+`--apply-reset` requires explicit reset authority. Legacy import/merge tools are
+documented only in [state.md](state.md), not part of routine startup.

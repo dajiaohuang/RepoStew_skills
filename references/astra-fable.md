@@ -107,18 +107,20 @@ unresolved concerns. When a small-model worker implements, review its returned d
 test evidence before any submit.
 
 Commit per repository convention. Re-check competing fixes before `gh pr create`.
-Track with `pr_tracker.py add`. Register worktrees with `workspace_cleanup.py`,
-never by editing the resources file. After the current action/validation,
+Track with `pr_tracker.py add`. Create disposable jobs with `workspace_job.py`,
+never by editing ownership records. After the current action/validation,
 release submitted integration and proven completed-worker resources; the
 parent owns the recovery records and exact-path cleanup results.
 
 ## Cleanup
 
-Guarded `workspace_cleanup.py` immediately after PR submission and follow-up
+Guarded `workspace_job.py release` immediately after PR submission and follow-up
 pushes, including open PRs. Verify live recovery and persist it before deletion;
 retain concrete safety blockers with their owner/reason. Inspect reviews/CI
 remotely. Use remote editing for suitable small changes, or restore a registered
-worktree only when local work is needed, then release again after pushing.
+job only when local work is needed, then release again after pushing. Use
+[ephemeral-storage.md](ephemeral-storage.md). Existing shared-worktree and
+integration-worker proof uses [workspace-cleanup.md](workspace-cleanup.md) only.
 See [workspace-cleanup.md](workspace-cleanup.md). Monthly
 sweep of `REPOSTEW_REPOS_HOME` only if the user explicitly authorized it: cutoff
 is the first day of the current month local time; `LastWriteTime` on direct

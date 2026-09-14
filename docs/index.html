@@ -136,7 +136,7 @@
         <div>
           <h2 id="manifesto-title" data-i18n-html="manifestoTitle">大多数自动化止于 <em>PR 已创建</em>。<br />RepoStew 从那里继续。</h2>
           <p data-i18n="manifestoCopy">
-            真正的开源贡献还包括确认问题没有被修复、尊重目标仓库规则、回应 review、修复 CI、处理冲突，以及在终态后安全清理本地资源。
+            真正的开源贡献还包括确认问题没有被修复、尊重仓库规则、回应 review、修复 CI 和处理冲突。提交后释放本地工作区，后续按需恢复。
           </p>
         </div>
       </section>
@@ -177,9 +177,9 @@
           <article class="capability-card card-wide">
             <span class="card-code">RECOVERY</span>
             <h3 data-i18n="cap5Title">可恢复状态与清理</h3>
-            <p data-i18n="cap5Copy">PR 提交后验证远端、保存恢复记录并释放本地 worktree；需要跟进时选择远端编辑或按需恢复本地环境。</p>
+            <p data-i18n="cap5Copy">一次性克隆在 PR 提交后释放；SQLite 保存恢复证据，GitHub 可重建元数据，需要修改时才恢复本地环境。</p>
             <ul>
-              <li>pr_tracker.py</li><li>merge_state.py</li><li>workspace_cleanup.py</li>
+              <li>pr_tracker.py</li><li>rebuild_github_state.py</li><li>workspace_job.py</li>
             </ul>
           </article>
           <article class="capability-card">

@@ -28,9 +28,8 @@ Ranked campaigns follow `ranked-repository-campaign.md`: ten repositories is an 
   from that record. Any mismatch remains fail-closed.
 - Runtime state is `REPOSTEW_HOME/repostew.sqlite`. Do not hand-edit tracker
   JSON; use the scripts. `paths.json` stays a file. Keep one selected state home
-  as the single live state source; it may itself live in a git repository pushed
-  to a private remote, whose remote and checkouts are recovery, not a second
-  live state source.
+  as the single live state source. Use `state.md` for explicit GitHub rebuilds;
+  never resurrect missing records from loose JSON or private Git history.
 
 ## 2. Mode
 
@@ -100,8 +99,8 @@ Do not classify `ASK_MAINTAINER` merely because nobody confirmed the solution.
 ## 7. Execution route (not a contribution decision)
 
 - Simple `ACCEPT`: stay in this conversation.
-- Complex `ACCEPT`: user-visible handover when available. Do not substitute a
-  hidden subagent for a requested handover.
+- Complex `ACCEPT`: bounded work in the current task; create a user-visible
+  handover only on explicit request. Do not substitute a hidden subagent for it.
 - `ASK_MAINTAINER` with an existing public thread: one evidence+options
   comment, record URL, wait, no bump.
 - After maintainer direction: revalidate, then route by complexity.
@@ -142,10 +141,11 @@ acting.
 ## 11. Cleanup
 
 Default: immediately after each PR submission/follow-up push, review and apply
-`workspace_cleanup.py` on the registered worktree, including `OPEN` PRs. Require
+`workspace_job.py release` on the registered disposable clone, including `OPEN` PRs. Require
 live remote recovery proof and save the recovery record before deletion. Keep
-the remote branch and shared canonical clone. Read notifications remotely;
+the remote branch; do not retain a canonical target clone. Read notifications remotely;
 restore only when an actionable fix requires local editing/testing. Retain
 locked/in-use, dirty, unpushed, excluded or unrecoverable resources with reasons.
 Monthly sweep of `REPOSTEW_REPOS_HOME` only when the user explicitly asks to
-clean that root. Never hand-edit `workspace_resources.json`.
+clean that root. Never hand-edit ownership records. Existing shared worktrees
+use the compatibility procedure in `workspace-cleanup.md`.

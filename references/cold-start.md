@@ -14,9 +14,9 @@ Ask the user to choose three distinct absolute paths:
 2. **State home** (`REPOSTEW_HOME`): SQLite `repostew.sqlite` for trackers,
    notification checkpoints, registries, batch records, and resource ledgers,
    plus `paths.json` as the bootstrap record. See `references/state.md`.
-3. **Managed-repository home** (`REPOSTEW_REPOS_HOME`): canonical target clones,
-   linked worktrees, and other persistent repository workspaces managed by
-   RepoStew.
+3. **Managed-repository home** (`REPOSTEW_REPOS_HOME`): registered disposable
+   jobs, allocated only for actual local editing/testing and released after PR
+   submission. No permanent target clone is required.
 
 Explain the role of each path, show any existing candidate directories, and
 wait for the user's selection before creating or migrating anything. Platform
@@ -43,7 +43,7 @@ anchor is known; set their env vars only if a tool needs them, and keep them
 consistent with the record. `paths.json` in the selected state home is the
 bootstrap record; it does not replace the environment configuration needed to
 locate that directory. The recommended layout keeps skill and state as sibling
-checkouts so their relative paths resolve on any machine:
+directories so their relative paths resolve on any machine:
 
 ```text
 <wrapper>/                    managed-repository home (repos)
@@ -57,23 +57,18 @@ checkout during the same run. Verify activation from the selected location
 after the agent reloads, then archive or remove the old copy only with explicit
 approval.
 
-## 2. Reconcile existing installations and state
+## 2. Select existing state or an explicit clean rebuild
 
-Before writing new state, inventory known RepoStew skill checkouts, mutable
-state directories, and managed-repository roots. If more than one state set
-exists:
+Identify any existing installations before writing. Use the selected live
+SQLite home without automatically combining old trackers or checkpoints.
+If the user requests a clean reconstruction, authenticate first, then follow
+[state.md](state.md): collect complete GitHub pages, preserve an offline backup,
+and reset transactionally. Failed collection must leave live state unchanged.
+Do not import old local paths, handled-event decisions or follow policy.
 
-- compare file identities and record counts;
-- merge domain records by stable identity instead of choosing the newest file;
-- choose the earlier notification checkpoint when cursors disagree so work is
-  replayed rather than skipped;
-- preserve both originals with paths, sizes, and SHA-256 hashes before writing;
-- verify the merged JSON and retain a reversible migration archive;
-- remove or archive obsolete roots only after the selected state is verified.
-
-Use `scripts/merge_state.py` for its supported JSON files. It is dry-run by
-default; `--apply` requires an empty backup directory. Stop on an unknown
-conflicting file rather than guessing.
+If the user instead explicitly chooses to preserve legacy state, use the
+compatibility import/merge section in [state.md](state.md). Do not delete or
+merge other installations merely because they were found.
 
 ## 3. Check authentication and tools
 
@@ -87,10 +82,8 @@ If GitHub CLI is unavailable, direct the user to
 <https://github.com/cli/cli/releases> or their package manager, then authenticate
 with `gh auth login`.
 
-Keep one selected state home as the single live state source. It may itself live
-in a git repository that is pushed to a private remote; that remote and any
-checkout of it are recovery storage, never a second live state source. Do not
-keep a second local copy of the selected state home as an editable source.
+Keep one live SQLite state home. Offline backups are recovery artifacts, never
+a second editable source or an automatic fallback after a reset.
 
 ## 4. Set up workspace registries
 

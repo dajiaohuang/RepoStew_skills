@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
@@ -34,6 +35,19 @@ class SiteParser(HTMLParser):
 
 
 class SiteTests(unittest.TestCase):
+    def test_skill_and_reference_markdown_links_resolve(self):
+        sources = [ROOT / "SKILL.md", ROOT / "README.md", ROOT / "README.en.md"]
+        sources.extend((ROOT / "references").glob("*.md"))
+        missing = []
+        for source in sources:
+            for reference in re.findall(r"\]\(([^)]+)\)", source.read_text(encoding="utf-8")):
+                parsed = urlparse(reference)
+                if parsed.scheme or not parsed.path or "<" in reference:
+                    continue
+                if not (source.parent / parsed.path).exists():
+                    missing.append(f"{source.relative_to(ROOT)}: {reference}")
+        self.assertEqual(missing, [])
+
     @classmethod
     def setUpClass(cls):
         cls.html = (DOCS / "index.html").read_text(encoding="utf-8")

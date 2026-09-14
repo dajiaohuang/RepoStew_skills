@@ -28,15 +28,15 @@ blocker first.
 ## Isolate work, then integrate once
 
 1. Revalidate the maintained authority, repository instructions, default
-   branch, current issue/PR state, and clean canonical clone before creating
-   worktrees. An enabled authority row avoids repeated contributor-eligibility
+   branch and current issue/PR state, then create a disposable parent job with
+   `workspace_job.py create`. An enabled authority row avoids repeated contributor-eligibility
    checks; it does not replace current-state, policy, or engineering checks.
 2. Give each independent worker a narrow task and an isolated linked worktree.
    Workers must not mutate the parent-owned integration worktree, default
    branch, another worker's worktree, shared durable state, or remote branches.
    The parent collects each result with its diff, commit(s), validation, and
    unresolved risks.
-3. Create exactly one explicitly parent-owned integration worktree and branch
+3. Use the parent job checkout as the single integration workspace and branch
    for the batch. Review and integrate worker output there, resolving conflicts
    deliberately. Worker branches and worktrees are not substitutes for the
    integration branch or its PR.
@@ -44,21 +44,12 @@ blocker first.
    required validation on the complete integration result. Review the complete
    diff, untracked files, commit range, and secret exposure before pushing.
 5. Open, track, and keep one reviewable integration PR for the batch. After the
-   PR tracker contains its current head, register the **exact integration
-   worktree** against that PR:
-
-   ```bash
-   python scripts/workspace_cleanup.py register \
-     --workspace "$REPOSTEW_REPOS_HOME" \
-     --worktree "$REPOSTEW_REPOS_HOME/<exact-integration-worktree>" \
-     --pr-url https://github.com/owner/repo/pull/123
-   ```
-
-   The registration is evidence of ownership, not permission to remove a
-   worktree. Do not use ordinary `register` for worker worktrees. Retain each
+   PR tracker contains its current head, associate its URL with the parent job
+   in the batch record. Do not use linked-worktree `register` for the standalone
+   parent clone. Retain each
    worker's exact path, branch, head, and the batch starting commit in the batch
    record so it can be proven after the integration PR is submitted. Release
-   the integration worktree and fully represented completed workers immediately
+   fully represented completed workers first, then the parent job immediately
    after the current action/validation; keep their recovery records while the
    PR proceeds through review and CI.
 
@@ -94,10 +85,10 @@ durable recovery record before deletion. Dirty workers, unknown ignored data,
 credentials, changed heads, missing patches, ambiguous merge history, and
 unregistered workers remain protected.
 
-Then run:
+For each exact completed worker, preview then apply:
 
 ```bash
-python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --json
+python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --worktree <exact-worker-path> --json
 ```
 
 Review the dry-run result. Apply it only with cleanup authority, using the same
@@ -119,6 +110,14 @@ dirty, unpushed, unregistered, mismatched, incompletely integrated, or
 unknown-data worker worktree untouched. Worker registration does not weaken the
 normal submitted-PR, repository, exact-head, clean-state, ignored-data, non-force
 removal, or no-remote-deletion gates.
+
+Once all dependent worker worktrees are released, preview and apply
+`workspace_job.py release JOB_ID --pr URL --apply` for the parent clone.
+If worker refs remain, verify they are represented by the submitted head before
+removing those task-owned local refs; do not force past the job's unmerged-branch
+guard. A blocked worker keeps the parent job with an explicit reason. Do not
+retain a canonical clone after the batch. Existing shared installations instead
+use their original integration-worktree compatibility procedure.
 
 Only after the terminal state and cleanup outcome are durably recorded may the
 parent select the next bounded batch. Keep target-repository implementation

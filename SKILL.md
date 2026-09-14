@@ -8,7 +8,7 @@ description: >-
   repository, find open-source work or active high-star repositories in a
   technical direction, audit a repo, contribute a patch, maintain submitted
   PRs, maintain repositories the user owns or administers, respond to reviews,
-  follow repositories already contributed to, or clean up after terminal
+  follow explicitly selected repositories, or release submitted
   contributions. Apply before cloning, editing, commenting, filing issues, or
   opening PRs. One model-agnostic skill with an in-file model fork: a GPT-6
   Astra or Fable parent follows the delegation path inside; every other parent
@@ -99,7 +99,8 @@ Read a specialist reference only when that gate is active:
 | Bounded maintained-repo batches | [batched-iteration.md](references/batched-iteration.md) |
 | Ranked repository campaign from day/week/month reports | [ranked-repository-campaign.md](references/ranked-repository-campaign.md) |
 | Audit coverage | [repository-audit.md](references/repository-audit.md) |
-| Worktree cleanup / monthly sweep | [workspace-cleanup.md](references/workspace-cleanup.md) |
+| Disposable jobs / state rebuild | [ephemeral-storage.md](references/ephemeral-storage.md) |
+| Shared-worktree compatibility / monthly sweep | [workspace-cleanup.md](references/workspace-cleanup.md) |
 
 ## Select the operating mode
 
@@ -151,7 +152,7 @@ Brevity never trims an honest material caveat a reviewer or maintainer needs.
 
 Read [references/taste-and-permissions.md](references/taste-and-permissions.md) when candidate suitability, contributor authority, dependencies, security, or issue filing is in question.
 
-Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected skill, state, and managed-repository roots. Keep one selected state home as the single live state source; it may itself live in a git repository that is pushed to a private remote, whose remote and checkouts are recovery storage, never a second live state source.
+Read [references/cold-start.md](references/cold-start.md) for first-time setup of the selected roots. Keep one live SQLite state home; GitHub rebuilds and offline backups follow [references/state.md](references/state.md).
 
 Before any stateful helper, require an explicit validated `REPOSTEW_HOME` anchor
 and a readable `paths.json` at its root; `resolved_roots()` derives the skill and
@@ -217,33 +218,22 @@ before creating, verifying, changing, or relying on the authority registry.
 
 ## Release task storage after every submitted PR
 
-**Default for new work: disposable standalone jobs, not permanent clones.**
+Use disposable standalone jobs, not permanent target clones.
 Read [references/ephemeral-storage.md](references/ephemeral-storage.md) before
 creating a workspace or rebuilding state. Use `workspace_job.py create`, then
 `workspace_job.py release --pr ... --apply` immediately after every submitted
 PR/follow-up push and local validation. Waiting for remote CI/review requires no
 checkout. The registered job includes disposable ignored dependencies/build
 outputs; never place credentials or irreplaceable data in it. Restore only for
-the next actual edit. The linked-worktree procedure below is a compatibility
-path for already registered shared clones, not the default for new work.
+the next actual edit. Stop task-owned processes first, verify live remote
+recovery, and persist proof before deletion. Retain concrete safety blockers
+with an owner/reason; preserve remote branches and recovery history.
 
-After pushing, tracking the PR, and completing the current action/validation,
-register the exact contribution worktree, review its dry run, and apply guarded
-cleanup immediately, including while the PR is `OPEN`. Do not keep dependency
-trees and build outputs locally merely to await review or CI. Stop task-owned
-processes first; retain locked/in-use, dirty, unpushed, excluded, or otherwise
-unrecoverable resources with an explicit reason. Live PR/ref verification and
-a durable recovery record must precede deletion. Preserve the remote branch,
-shared canonical clone, tracker and recovery history.
-
-Inspect follow-up notifications remotely. For an actionable small edit, use the
-existing remote PR branch when policy and CI validation allow it; restore the
-registered worktree only for work requiring local editing/testing. After a
-follow-up push, refresh/rebind and release again. Read
-[references/workspace-cleanup.md](references/workspace-cleanup.md) for the
-commands, integration-worker proof, recovery procedure and cache boundaries.
-This is part of the standing contribution lifecycle, not a separate approval
-request. Broad drive/cache sweeps still need their own user-authorized scope.
+For existing shared worktrees only, use the compatibility procedure in
+[references/workspace-cleanup.md](references/workspace-cleanup.md). That
+reference also covers separately authorized monthly sweeps. Submission-time
+release is part of the contribution lifecycle, not a new approval request;
+broad drive/cache sweeps still require their own scope.
 
 ## Run a batched continuous iteration cycle
 

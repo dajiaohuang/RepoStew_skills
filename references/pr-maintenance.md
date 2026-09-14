@@ -26,7 +26,6 @@ without skipping the notification cursor or full current-state refresh.
 Use GitHub Notifications to identify the small set of tracked pull requests that changed:
 
 ```bash
-python scripts/pr_tracker.py import-authored
 python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py notifications --repo <owner/repo>
 python scripts/pr_tracker.py notifications --json
@@ -160,15 +159,17 @@ Match the repository's own voice and conventions when replying and when resolvin
 
 ## Diagnose CI and conflicts
 
-Read CI/review state remotely first. Submitted worktrees should already be
-released under [workspace-cleanup.md](workspace-cleanup.md). For a small
+Read CI/review state remotely first. Submitted jobs should already be
+released under [ephemeral-storage.md](ephemeral-storage.md). For a small
 text/config edit, use the existing remote PR branch with a current-SHA guard
 when repository policy and required CI permit it. When local reproduction,
 editing, conflict resolution or testing is needed, refresh the tracker and use
-`workspace_cleanup.py restore` for the recorded path. Install only the required
-dependencies. After the follow-up push, refresh/rebind ownership, review the
+`workspace_job.py restore JOB_ID` for a new disposable clone. Install only the required
+dependencies. After the follow-up push, refresh the tracker, review the
 exact-path dry run, and release again. An open PR does not require a permanent
 checkout; unresolved safety blockers do require an explicit retention record.
+Existing shared worktrees alone use `workspace_cleanup.py restore/rebind`;
+new jobs follow [ephemeral-storage.md](ephemeral-storage.md).
 
 For CI:
 

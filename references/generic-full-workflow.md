@@ -10,8 +10,6 @@ specialist reference only when the gate that names it is active.
 
 For new local work, use [ephemeral-storage.md](ephemeral-storage.md): a registered
 disposable clone, removed immediately after PR submission/follow-up validation.
-Linked-worktree examples later in this document apply only to existing shared
-repositories. Do not create a permanent clone just to follow those examples.
 
 Before cloning or editing:
 
@@ -86,7 +84,6 @@ and managed repositories resolve from `paths.json` under that one anchor.
 
 ```bash
 python scripts/repostew_state.py status
-python scripts/repostew_state.py migrate
 ```
 
 ## Audit repositories and contribute findings
@@ -130,7 +127,7 @@ After a candidate is selected:
    gh repo fork <owner/repo> --clone=false
    ```
 
-3. Clone the authenticated user's fork into a user-approved workspace or a safe new subdirectory.
+3. Create a registered disposable clone with `python scripts/workspace_job.py create <authenticated-user/repo>` and use the returned path and job ID.
 4. Add the upstream remote and fetch the default branch.
 5. Create a focused branch. Follow repository naming rules; otherwise use `fix/<issue>-<slug>` or `docs/<issue>-<slug>`.
 6. Keep target-repository work separate from RepoStew self-maintenance changes.
@@ -183,18 +180,16 @@ python scripts/pr_tracker.py add \
   "https://github.com/owner/repo/issues/M"
 ```
 
-When RepoStew created a linked worktree for the contribution, record its exact
-ownership after tracking the PR, then review and apply exact-path cleanup after
-the current validation/action, even while the PR is open. Save recovery proof;
-keep the remote branch and tracker. This avoids inferring ownership from a
-directory name or retaining build/dependency trees throughout review. Read
-[workspace-cleanup.md](workspace-cleanup.md) before
-registration or cleanup.
+Immediately release the registered job after the current local validation:
 
-If later review work rebases, amends, or force-pushes that same PR branch,
-refresh the tracker and use the guarded `workspace_cleanup.py rebind` command.
-Never hand-edit `workspace_resources.json`; rebind must revalidate the exact PR,
-branch, repository remotes, linked worktree, and pushed replacement tip.
+```bash
+python scripts/workspace_job.py release JOB_ID --pr https://github.com/owner/repo/pull/N
+python scripts/workspace_job.py release JOB_ID --pr https://github.com/owner/repo/pull/N --apply
+```
+
+Use [ephemeral-storage.md](ephemeral-storage.md) for recovery and blockers.
+Existing shared worktrees alone use [workspace-cleanup.md](workspace-cleanup.md)
+for registration, rebind and release; never hand-edit ownership records.
 
 ## Maintain pull requests
 
@@ -204,11 +199,10 @@ When both workspace registries exist, intersect active/self follow scope with
 enabled maintained authority to select the owner/maintainer quick path. Do not
 refresh a repository merely because verified authority exists.
 
-Import the authenticated contributor's accessible PR history once before the first maintenance pass. Terminal PRs become history; open PRs receive a detailed refresh:
-
-```bash
-python scripts/pr_tracker.py import-authored
-```
+Use the current SQLite tracker. If the user requests a clean reconstruction,
+follow [state.md](state.md); do not reset or import history as a routine
+maintenance prerequisite. Refresh complete comments/reviews/CI for each PR
+before acting; a rebuilt metadata snapshot is not a completed review.
 
 ```bash
 python scripts/pr_tracker.py notifications
@@ -239,7 +233,7 @@ python scripts/pr_tracker.py notifications --repo owner/repo
 Never resolve unread or unhandled activity. Read [pr-maintenance.md](pr-maintenance.md) before responding to reviews, resolving conflicts, diagnosing CI, replying to inline threads, or producing the maintenance table.
 
 For recurring notification, new-issue, missed-comment, CI reconciliation, and
-terminal-resource cleanup examples, read
+submitted-resource cleanup examples, read
 [scheduled-maintenance.md](scheduled-maintenance.md).
 Scheduled maintenance must not expand into a comprehensive repository audit or
 proactive audit-driven issue filing; those require a separate explicit request.
@@ -254,10 +248,10 @@ python scripts/contribution_tracker.py add https://github.com/owner/repo
 python scripts/contribution_tracker.py list
 ```
 
-Periodically scan new issues in this persistent set:
+Scan only explicitly selected active/self follow scope, not every historical
+contribution repository:
 
 ```bash
-python scripts/scan_known_repos.py
 python scripts/scan_known_repos.py --repo owner/repo
 python scripts/scan_known_repos.py --repo owner/one --repo owner/two
 python scripts/scan_known_repos.py --repo owner/repo --include-decisions
@@ -271,13 +265,9 @@ The output always includes per-repository counts for candidates, filtered issues
 
 ## Release submitted local resources and restore on demand
 
-The guarded `workspace_cleanup.py` workflow remains the default for ordinary
-RepoStew maintenance. Release registered PR worktrees and local branches after
-submission and each follow-up push, using live remote verification and a saved
-recovery record. Inspect notifications remotely; edit the existing PR branch
-remotely when the change and required CI allow, or use `workspace_cleanup.py
-restore` for local reproduction/testing. Do not reinstall dependencies just to
-read PR state. Retain concrete safety blockers, not open PRs by default.
+Use `workspace_job.py release` after submission and each follow-up push;
+use `workspace_job.py restore JOB_ID` only for the next local edit/test.
+Inspect notifications remotely and retain only concrete safety blockers.
 When the user explicitly authorizes a monthly cleanup of the selected
 `REPOSTEW_REPOS_HOME`, the user-authorized workspace sweep is also permitted:
 
@@ -303,15 +293,11 @@ workspace instructions, active/canonical resources, dirty repositories, or
 remote branches. It may remove an unregistered clean worktree or clone when
 the user explicitly selected the broad monthly cleanup policy.
 
-```bash
-python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace
-python scripts/workspace_cleanup.py cleanup --workspace /absolute/workspace --apply --json
-```
-
-Read [workspace-cleanup.md](workspace-cleanup.md) before
-registering or applying cleanup. Preserve `workspace_resources.json` as the
-ownership and cleanup-history ledger, and report estimated and actual freed
-logical bytes.
+Read [workspace-cleanup.md](workspace-cleanup.md) for the monthly sweep and
+existing shared-worktree compatibility procedures. Disposable-job ownership
+lives in `workspace_jobs.json` inside SQLite; the legacy ledger is
+`workspace_resources.json`. Report measured free-space changes separately from
+logical sizes.
 
 ## Run the optional autonomous dispatcher
 

@@ -30,7 +30,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 - 优先实现最小、完整、可逆、可测试的改动；
 - 以 GitHub Notifications 驱动 review、CI 与冲突跟进；
 - 用持久 checkpoint 保存未处理活动，不依赖 unread 状态；
-- 只清理显式登记、已推送、状态终结且重新核验过的本地资源。
+- PR 提交后立即释放显式登记、已推送且重新核验过的一次性工作区。
 
 ## 一眼了解
 
@@ -76,7 +76,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 
 ### 4. PR 持续维护
 
-- 首次导入贡献者可访问的 PR 历史；
+- 使用 SQLite 中的 PR 记录；明确要求重建时从 GitHub 完整分页同步；
 - 使用通知作为主要触发源，并为每个命中读取完整当前状态；
 - 持久保存 review、普通评论、inline 评论、CI、冲突与待处理活动；
 - 完成修改、测试、推送和回复后，才把活动标记为已处理；
@@ -94,13 +94,13 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 - 将明确要求的持续维护范围拆成有边界、可持久记录的批次；
 - 隔离独立 worker，再将已审查的结果汇入一个由父任务拥有的 integration worktree、分支和 PR；
 - 集成期间先运行聚焦验证，再在评审前运行仓库要求的验证；
-- 只有得到用户明确授权才合并；PR 终态后先证明已完成 worker 已被冻结的集成结果包含，再 dry-run 安全清理、记录实际回收字节，然后选择下一批。
+- 提交后证明已完成 worker 被集成结果包含，先释放 worker 再释放父任务；只有明确授权才合并，PR 终态仅控制何时开始下一批。
 
 ### 7. 安全回收本地资源
 
-- 只处理显式登记且关联 PR 已 `MERGED` 或 `CLOSED` 的 linked worktree；
+- 默认使用显式登记的一次性克隆，提交后立即释放，包括 `OPEN` PR；
 - 默认 dry run；应用前重新核验路径边界、remote、分支、已推送 tip、工作区状态与资源归属；
-- 不删除 canonical clone、远端分支、fork、活动 PR 资源、凭据或未知忽略数据；
+- 不保留常驻目标克隆；保留远端分支、fork、未提交/未推送内容和凭据；一次性目录中的可丢弃依赖与构建产物随任务释放；
 - 清理历史保留在持久状态中，便于恢复和审计。
 
 ## 支持的智能体
@@ -158,7 +158,7 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
-如果 skill 位于智能体无法直接发现的位置，经用户同意后创建链接到所选路径；不要为了匹配示例再复制一份 checkout。完整的路径选择与旧状态合并到单一状态目录的流程见 [`references/cold-start.md`](references/cold-start.md)。
+如果 skill 位于智能体无法直接发现的位置，经用户同意后创建链接到所选路径；不要为了匹配示例再复制一份 checkout。路径选择、复用既定 state 或显式重建的流程见 [`references/cold-start.md`](references/cold-start.md)。
 
 更新始终在已选 skill 路径执行：
 
@@ -204,11 +204,11 @@ git -C <selected-skill-home> pull --ff-only
 | `ASK_MAINTAINER` | 应用直接 PR 判断门槛后，仍有真实的需求、API、架构、依赖、服务、安全、权限或兼容性决定需要维护者批准 |
 | `SKIP` | 重复、已认领、已修复、被政策禁止、纯推测、无法验证或缺少必要访问 |
 
-复杂度只决定执行位置：清晰且局部的工作留在当前对话；跨子系统审计、多 issue 活动或长期维护在宿主支持时交接到单独的用户可见任务。复杂本身不是拒绝理由。
+复杂度决定如何划分工作，不自动创建新任务。默认在当前对话完成，只有用户明确要求时才交接到单独的可见任务。复杂本身不是拒绝理由。
 
 自主模式下，只有在仓库允许、问题仍可处理、预期行为证据充分、方案最小且兼容、不跨越依赖/服务/权限/安全/公共 API/架构审批边界、验证通过、且所有写给人的文本符合下文的 repo-first 规则时，RepoStew 才直接创建普通 PR。详情见 [`SKILL.md`](SKILL.md) 与 [`references/taste-and-permissions.md`](references/taste-and-permissions.md)。
 
-明确要求持续维护时，请遵循 [`references/batched-iteration.md`](references/batched-iteration.md)：它定义了从隔离 worker 汇入 integration PR、再经终态清理门控进入下一批的流程。
+明确要求持续维护时，请遵循 [`references/batched-iteration.md`](references/batched-iteration.md)：提交 integration PR 后释放本地资源，PR 终态控制何时进入下一批。
 
 ### 写给目标仓库的文本
 
@@ -231,8 +231,9 @@ RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue�
 | `contribution_tracker.py` | 保存参与过的仓库、issue 与 PR |
 | `pr_tracker.py` | 保存 PR、通知、review、评论、CI 与未处理活动 |
 | `maintained_repositories.py` | 校验独立的 owner/admin/maintain 权限登记表 |
-| `merge_state.py` | 可恢复地合并持久状态 |
-| `workspace_cleanup.py` | PR 提交后即验证远端并释放本地资源，需要跟进时按需恢复 |
+| `rebuild_github_state.py` | 完整分页读取 GitHub，在明确授权后事务性重建 state |
+| `workspace_job.py` | 创建一次性克隆、提交后释放、按需恢复 |
+| `workspace_cleanup.py` | 已有共享工作树与集成 worker 的兼容清理 |
 | `auto_fix.py` | 可选的供应商无关非交互调度器 |
 | `auto_fix.sh` | `auto_fix.py` 的 POSIX 包装脚本 |
 
@@ -243,8 +244,7 @@ RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue�
 python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
   --focus agentic --focus "agent framework" --focus "agent harness"
 
-# 导入并查看 PR 状态
-python scripts/pr_tracker.py import-authored
+# 查看当前 PR 状态
 python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py list
 
@@ -255,24 +255,27 @@ python scripts/scan_known_repos.py --repo owner/one --repo owner/two --include-d
 python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
 
 # 本地资源清理：先预览，再应用
-python scripts/workspace_cleanup.py cleanup --workspace <workspace>
-python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --json
-python scripts/workspace_cleanup.py restore --workspace <workspace> --worktree <released-worktree> --pr-url <pr-url> --json
+python scripts/workspace_job.py create owner/repo
+python scripts/workspace_job.py release JOB_ID --pr <pr-url>
+python scripts/workspace_job.py release JOB_ID --pr <pr-url> --apply
+python scripts/workspace_job.py restore JOB_ID
 ```
 
 发现脚本只产生机械候选；每项工作仍必须经过政策、重复项、认领、关联 PR、相关性、证据与范围核验。
 
 ## 状态与目录
 
-RepoStew 以 `REPOSTEW_HOME` 为唯一绝对锚点，其余两处根由 `paths.json` 解析（推荐布局：skill 与 state 作为兄弟 checkout）：
+RepoStew 以 `REPOSTEW_HOME` 为唯一绝对锚点，其余两处根由 `paths.json` 解析（推荐布局：skill 与 state 放在相邻目录，state 无需 Git checkout）：
 
 ```text
 <skill-home>/          SKILL.md、references、scripts、tests
 <state-home>/          checkpoint、PR tracker、贡献记录、通知 inbox、资源台账（paths.json）
-<repos-home>/          canonical clones 与 linked worktrees
+<repos-home>/          实际编辑/测试时创建的一次性 job
 ```
 
 脚本不会回退到用户主目录或当前目录。路径记录缺失、不可读或互相冲突时，RepoStew 会 fail closed，并要求先完成或修复冷启动配置。个人状态文件不应提交到公开 skill 仓库。
+
+`rebuild_github_state.py --apply-reset` 仅在明确授权重置时运行：先完整分页读取 GitHub，保留离线备份，再事务性替换 SQLite。旧路径、已处理事件判定与检查点不回灌；缺失记录不回退到散落 JSON。评论、review 和 CI 在实际行动前重新检查。详见 [`references/ephemeral-storage.md`](references/ephemeral-storage.md)。
 
 ## 安全边界
 

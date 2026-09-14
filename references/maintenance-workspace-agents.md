@@ -2,7 +2,7 @@
 
 Copy this into the workspace root as `AGENTS.md`. Replace `[skill-checkout]` and
 `[state-checkout]` with the checkout folder names only if the layout differs
-from the canonical sibling-checkout layout (see `cold-start.md`); normally the
+from the selected sibling-directory layout (see `cold-start.md`); normally the
 names already fit. On a Claude Code host, copy the same text to `CLAUDE.md` —
 see [maintenance-workspace-claude.md](maintenance-workspace-claude.md).
 
@@ -19,8 +19,9 @@ its `references/` are the single source of truth — do not duplicate that polic
 in this file.
 
 - One live state home: `[state-checkout]/.repostew` — `REPOSTEW_HOME` must point
-  there (`repostew.sqlite`, `paths.json`, working artifacts). Sync state by
-  committing and pushing inside `[state-checkout]`.
+  there (`repostew.sqlite`, `paths.json`). Use the skill's explicit GitHub
+  rebuild procedure; do not auto-import old JSON or private Git history.
+  Put temporary artifacts in disposable jobs, not state.
 - Each sub-checkout is its own git repository: commit and push inside it.
 - Resolve the three roots with
   `python [skill-checkout]/scripts/repostew_state.py roots`.

@@ -38,7 +38,9 @@ Chinese-first bilingual documentation site.
   - `contribution_tracker.py` - Track contributed repositories and issues
   - `pr_tracker.py` - Track submitted pull requests
   - `maintained_repositories.py` - Validate maintained-repository authority
-  - `workspace_cleanup.py` - Release submitted PR worktrees with live recovery proof; restore for follow-up
+  - `workspace_job.py` - Disposable clones, submission-time release and on-demand restore
+  - `rebuild_github_state.py` - Explicit transactional GitHub state reconstruction
+  - `workspace_cleanup.py` - Shared-worktree and integration-worker compatibility cleanup
   - `scan_known_repos.py` - Scan tracked repositories for new issues
   - `discover.py` - Discover relevant repositories
   - `loop.py` - Broadened discovery loop
@@ -47,8 +49,8 @@ Chinese-first bilingual documentation site.
 ## Cold Start
 
 First invocation follows `references/cold-start.md`: choose and validate distinct
-absolute skill, state, and managed-repository roots, reconcile any existing state
-into one state home, and verify `gh` authentication.
+absolute skill, state, and managed-repository roots, reuse the selected state
+or explicitly rebuild it from GitHub, and verify `gh` authentication.
 
 ## Safety
 

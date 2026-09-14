@@ -45,7 +45,7 @@ class StateTests(unittest.TestCase):
 
 
 class PolicyTests(unittest.TestCase):
-    def test_batched_iteration_converges_into_one_terminally_cleaned_pr(self):
+    def test_batched_iteration_releases_jobs_before_next_batch_gate(self):
         root = Path(__file__).resolve().parents[1]
         skill = (root / "SKILL.md").read_text(encoding="utf-8")
         batched = (root / "references" / "batched-iteration.md").read_text(encoding="utf-8")
@@ -54,8 +54,8 @@ class PolicyTests(unittest.TestCase):
 
         self.assertIn("references/batched-iteration.md", skill)
         self.assertIn("one parent-owned integration\nworktree, branch, and reviewable PR per batch", skill)
-        self.assertIn("one explicitly parent-owned integration worktree and branch", batched)
-        self.assertIn("exact integration\n   worktree", batched)
+        self.assertIn("single integration workspace and branch", batched)
+        self.assertIn("workspace_job.py release JOB_ID", batched)
         self.assertIn("focused validation", batched)
         self.assertIn("repository's\n   required validation", batched)
         self.assertIn("user explicitly authorizes that exact merge", batched)

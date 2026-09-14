@@ -30,7 +30,7 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 - prefer the smallest complete, reversible, testable change;
 - drive review, CI, and conflict work from GitHub Notifications;
 - retain unresolved activity with durable checkpoints instead of unread state; and
-- retire only explicitly registered, pushed, terminal, and reverified local resources.
+- release explicitly registered, pushed and reverified disposable jobs after PR submission.
 
 ## At a glance
 
@@ -49,7 +49,8 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 For broad activity-report discovery, RepoStew recommends a ranked campaign:
 capture daily/weekly/monthly report provenance and a batch-start timestamp,
 deduplicate against durable RepoStew records and active tasks, select at most
-10 repositories, and create one independent user-visible task per repository.
+10 repositories, and keep bounded repository work in the current task unless
+the user explicitly asks for separate visible tasks.
 Each task runs the recent issue/PR gates and full audit before qualifying issue
 or PR work. On OpenAI hosts, Luna is the default campaign model; Spark requires
 an explicit user request. Launch-only requests persist the task map and stop
@@ -64,7 +65,7 @@ without polling the created tasks. See
 - Scan one repository for worthwhile contribution candidates.
 - Find recently active repositories and issues in a technical direction.
 - Rank a bounded batch from daily, weekly, or monthly activity reports, with
-  one independent visible task per selected repository.
+  bounded repository work; create visible tasks only on explicit request.
 - Search linked PRs, competing PRs in all states, commits, and recent history.
 - Treat labels as discovery signals, never as permission.
 
@@ -86,7 +87,7 @@ without polling the created tasks. See
 
 ### 4. Continuous PR maintenance
 
-- Import the contributor's accessible PR history once.
+- Use the SQLite PR tracker; paginate GitHub completely when an explicit rebuild is requested.
 - Use notifications as the primary trigger and fetch a complete current snapshot for each hit.
 - Persist reviews, general and inline comments, CI, conflicts, and pending activity.
 - Mark activity handled only after the change, tests, push, and reply are complete.
@@ -104,13 +105,13 @@ without polling the created tasks. See
 - Turn an explicitly requested continuous-maintenance scope into bounded, durable batches.
 - Isolate independent workers, then converge their reviewed output into one parent-owned integration worktree, branch, and PR.
 - Run focused validation during integration and the repository-required suite before review.
-- Merge only with explicit user authority; wait for the PR to be terminal, prove any completed workers against its frozen head, dry-run guarded cleanup, record actual reclaimed bytes, then select the next batch.
+- After submission, prove completed workers against the integrated head and release workers before the parent job. Merge only with explicit authority; terminal PR state controls starting the next batch, not disk retention.
 
 ### 7. Guarded local cleanup
 
-- Consider only explicitly registered linked worktrees whose PR is `MERGED` or `CLOSED`.
+- Use registered disposable clones by default and release them after submission, including `OPEN` PRs.
 - Default to dry run; before apply, recheck boundaries, remotes, branch, pushed tip, working state, and ownership.
-- Never remove canonical clones, remote branches, forks, active-PR resources, credentials, or unknown ignored data.
+- Keep no permanent target clone. Preserve remote branches, forks, uncommitted/unpushed work and credentials; disposable job dependencies and build outputs are released with the clone.
 - Preserve cleanup history in durable state for recovery and audit.
 
 ## Supported agents
@@ -171,7 +172,7 @@ repository roots are stored as POSIX paths relative to the state home, so the
 file stays portable across machines. Only `REPOSTEW_HOME`, the one absolute
 anchor, changes per machine.
 
-If the selected skill path is outside the agent's discovery locations, create a user-approved link to that checkout instead of a second copy. See [`references/cold-start.md`](references/cold-start.md) for path selection and old-state reconciliation into one state home.
+If the selected skill path is outside the agent's discovery locations, create a user-approved link instead of a second copy. See [`references/cold-start.md`](references/cold-start.md) for root selection, existing-state reuse and explicit reconstruction.
 
 Always update the selected checkout:
 
@@ -217,7 +218,7 @@ Explicit words such as `autonomous`, `automatic`, `continuous`, `no confirmation
 | `ASK_MAINTAINER` | a real requirements, API, architecture, dependency, service, security, authority, or compatibility decision remains after applying the direct-PR gate |
 | `SKIP` | the work is duplicate, assigned, fixed, prohibited, speculative, unverifiable, or blocked by missing access |
 
-Complexity controls execution location, not value. Clear localized work stays in the current conversation; cross-subsystem audits, multi-issue campaigns, and persistent maintenance use a separate user-visible task when the host supports one.
+Complexity controls partitioning, not value or permission to create tasks. Work stays in the current conversation unless the user explicitly requests a separate visible task.
 
 In autonomous mode, RepoStew opens a regular PR only when policy allows it, the work remains available, expected behavior is strongly supported, the solution is minimal and compatible, no approval-gated dependency/service/permission/security/public-API/architecture boundary is crossed, validation passes, and any text it writes for people follows the repo-first rule below. See [`SKILL.md`](SKILL.md) and [`references/taste-and-permissions.md`](references/taste-and-permissions.md).
 
@@ -245,8 +246,9 @@ Everything in [`scripts/`](scripts/) uses the Python standard library plus exter
 | `contribution_tracker.py` | retain contributed repositories, issues, and PRs |
 | `pr_tracker.py` | retain PRs, notifications, reviews, comments, CI, and unresolved activity |
 | `maintained_repositories.py` | validate the separate owner/admin/maintain registry |
-| `merge_state.py` | reconcile durable state recoverably |
-| `workspace_cleanup.py` | dry-run-first retirement of verified terminal-PR local resources |
+| `rebuild_github_state.py` | fully paginate GitHub and transactionally rebuild state with explicit reset authority |
+| `workspace_job.py` | create disposable clones, release after submission, restore on demand |
+| `workspace_cleanup.py` | compatibility cleanup for existing shared worktrees and integration workers |
 | `auto_fix.py` | optional provider-neutral non-interactive dispatcher |
 | `auto_fix.sh` | POSIX wrapper for `auto_fix.py` |
 
@@ -257,8 +259,7 @@ Common commands:
 python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
   --focus agentic --focus "agent framework" --focus "agent harness"
 
-# Import and inspect PR state
-python scripts/pr_tracker.py import-authored
+# Inspect current PR state
 python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py list
 
@@ -269,8 +270,10 @@ python scripts/scan_known_repos.py --repo owner/one --repo owner/two --include-d
 python scripts/maintained_repositories.py MAINTAINED_REPOSITORIES.md
 
 # Preview local cleanup, then apply
-python scripts/workspace_cleanup.py cleanup --workspace <workspace>
-python scripts/workspace_cleanup.py cleanup --workspace <workspace> --apply --json
+python scripts/workspace_job.py create owner/repo
+python scripts/workspace_job.py release JOB_ID --pr <pr-url>
+python scripts/workspace_job.py release JOB_ID --pr <pr-url> --apply
+python scripts/workspace_job.py restore JOB_ID
 ```
 
 Discovery scripts produce mechanical candidates only. Every item still needs policy, duplicate, assignment, linked-PR, relevance, evidence, and scope verification.
@@ -282,7 +285,7 @@ RepoStew uses only the three roots selected during cold start:
 ```text
 <skill-home>/          SKILL.md, references, scripts, tests
 <state-home>/          checkpoints, PR tracker, contributions, inbox, resource ledger
-<repos-home>/          canonical clones and linked worktrees
+<repos-home>/          disposable jobs allocated for actual edits/tests
 ```
 
 Scripts do not fall back to the user profile or current directory. Missing, unreadable, or conflicting path records fail closed and require cold-start configuration or deliberate reconciliation. Personal state must not be committed to the public skill repository.
@@ -302,7 +305,13 @@ RepoStew's autonomy always remains inside these rules:
 
 See [`references/taste-and-permissions.md`](references/taste-and-permissions.md) for the contribution and authority model, [`references/pr-maintenance.md`](references/pr-maintenance.md) for PR follow-up, [`references/repository-audit.md`](references/repository-audit.md) for audits, and [`references/workspace-cleanup.md`](references/workspace-cleanup.md) for cleanup.
 
-For explicitly requested continuous maintenance, [`references/batched-iteration.md`](references/batched-iteration.md) defines the bounded worker-to-integration-PR cycle and terminal cleanup gate.
+For explicitly requested continuous maintenance, [`references/batched-iteration.md`](references/batched-iteration.md) defines submission-time release and the terminal gate for starting the next batch.
+
+Run `rebuild_github_state.py --apply-reset` only with explicit reset authority:
+fully paginate GitHub, retain an offline backup, then replace SQLite in one
+transaction. Do not import old paths, handled-event claims or checkpoints;
+missing records never fall back to loose JSON. Recheck comments, reviews and CI
+before acting. See [`references/ephemeral-storage.md`](references/ephemeral-storage.md).
 
 ## Develop and validate
 

@@ -28,30 +28,36 @@ Canonical collections:
 | `workspace_resources.json` | Registered worktrees and cleanup history |
 | `issue_checkpoints.json` | New-issue intake cursors |
 | `maintenance_batches.json` | Bounded iteration batch records |
+| `workspace_jobs.json` | Disposable-job ownership and remote recovery proof |
+| `github_repositories.json` | Accessible repository metadata, not active-follow policy |
+| `github_issues.json` | Authored issue metadata, not processed-issue decisions |
+| `rebuild_manifest.json` | Source coverage, snapshot time and reconstruction limits |
 
 Scripts still use those names through `load_json` / `save_json`. They no longer
 rewrite pretty-printed JSON on every update.
 
 ```bash
 python scripts/repostew_state.py status
-python scripts/repostew_state.py migrate
+python scripts/rebuild_github_state.py
+python scripts/rebuild_github_state.py --apply-reset
 python scripts/repostew_state.py export-json --destination /absolute/export-dir
 ```
 
-`migrate` imports existing canonical JSON files, verifies a round trip, then
-moves them to `REPOSTEW_HOME/legacy-json/`. `paths.json` and unrelated JSON
-artifacts in the state home are left as files.
+Rebuild without `--apply-reset` is a live coverage preview. Reset requires the
+user's explicit authority and no concurrent state-writing tasks; follow
+[ephemeral-storage.md](ephemeral-storage.md). It is not a routine startup step.
 
-Merge two state directories with `merge_state.py` as before; it reads SQLite
-when `repostew.sqlite` is present.
-
-Never hand-edit `workspace_resources` records. Use `workspace_cleanup.py`.
+Never hand-edit job ownership; use `workspace_job.py`. Existing shared-worktree
+records use `workspace_cleanup.py` only.
 Never infer `REPOSTEW_HOME` from the user profile or current directory.
-Keep one selected state home as the single live state source. It may itself live
-in a git repository that is pushed to a private remote; that remote and any
-checkout of it are recovery storage, never a second live state source.
-Keep the state home slim: SQLite, `paths.json`, canonical collections, and the
-working artifacts of active runs only. Session handover / session-resume notes
-are not state; never commit `HANDOVER*` / `SESSION_HANDOVER*` documents into a
-state repository (root or `.repostew/`). Keep handover context in the active
-conversation or an untracked wrapper file and delete it once obsolete.
+Keep one live state home: SQLite and `paths.json`. Keep build logs, downloads,
+dependencies and temporary artifacts in disposable jobs, not state. Persist
+short evidence summaries and URLs, and keep session handover in the conversation.
+
+## Explicit legacy import only
+
+`repostew_state.py migrate` and `merge_state.py` remain compatibility tools for
+users explicitly choosing to preserve an older installation. They are not part
+of a clean GitHub rebuild or normal startup. Migration archives imported JSON
+under `legacy-json`; merge is dry-run by default and needs an empty backup
+directory for `--apply`. Never use either to undo an intentional reset.

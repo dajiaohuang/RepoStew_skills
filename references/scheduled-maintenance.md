@@ -84,7 +84,7 @@ repeating external-contributor eligibility, CLA, PR-acceptance, or branch-push
 questions, while preserving every required current-state and engineering check
 from the maintained-repository reference. Triage genuinely new
 issues under the normal RepoStew availability, duplicate, policy, taste, and
-direct-PR gates; use an isolated linked worktree and the smallest tested PR only
+direct-PR gates; use a registered disposable job and the smallest tested PR only
 when the standing autonomous scope authorizes it. Do not merge or close.
 
 Also run the configured low-frequency reconciliation when due so missed
@@ -127,12 +127,13 @@ instructions. Initialize any unset process variable for this run from the
 matching verified value; stop on an unreadable record, an unfilled placeholder,
 a mismatch, or a missing root, but not merely because the scheduler did not
 inherit a verified variable.
-Start with the deterministic inventory/dry run and review every reported safety check. Apply
-cleanup only to explicitly registered RepoStew-owned linked worktrees whose PR
-tracker state is OPEN, MERGED or CLOSED and whose exact absolute path, canonical-clone
-boundary, clean tracked/untracked state, pushed tip, remote provenance, branch
-ownership, lock/in-use, and ignored-output safety checks all pass. Verify the
-live PR head and fetchable recovery ref; persist recovery before deletion.
+List registered jobs with workspace_job.py list. For submitted jobs, preview
+workspace_job.py release JOB_ID --pr URL, then apply only when its exact path,
+ownership, clean-state, PR-head and remote-recovery checks pass. Stop task-owned
+processes first; the disposable contract includes ignored dependency/build
+outputs, never credentials or irreplaceable data. Existing shared worktrees
+alone use the workspace-cleanup.md compatibility inventory. Persist recovery
+before deletion.
 Re-evaluate each item immediately before applying. This scheduled run is a
 safety net: normal submission/follow-up already releases local resources.
 Report logical sizes separately from filesystem free-space changes and retain
