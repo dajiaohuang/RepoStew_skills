@@ -10,6 +10,14 @@ action, read the absolute `SKILL.md` path and every reference named by the
 packet. If the skill checkout, a required reference, or the selected roots
 cannot be read, stop and return the blocker.
 
+Read required documents once in the current usable context, without both
+pasting and rereading identical contents. Load conditional references when
+their gate is reached, fully reading each selected reference before acting.
+After compaction, reuse or instruction changes, confirm the required content
+is still available and current; a remembered path/hash alone is insufficient.
+Do not load root queue history or sibling results unless the packet depends
+on them. This reduces duplication, not the mandatory policy or evidence gates.
+
 ## Role and scope
 
 - You are a bounded leaf worker, not a scheduler. Do not spawn agents, create

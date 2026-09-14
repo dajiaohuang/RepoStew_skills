@@ -27,9 +27,11 @@ Before dispatch, read [references/worker-scheduling.md](references/worker-schedu
 and send [references/worker-contract.md](references/worker-contract.md).
 Every leaf must read [references/worker-context.md](references/worker-context.md).
 Use [references/full-workflow.md](references/full-workflow.md) for detailed
-contribution steps on every backend. Optional native role templates live in
-`references/worker-agents/`; model selection follows the user and host, not
-a model-specific skill fork.
+contribution steps on every backend. For an explicit Luna xhigh selection,
+read [references/luna-xhigh.md](references/luna-xhigh.md) for separate scheduler
+and leaf goals, opt-in configuration and context economy. Its native templates
+live in `references/worker-agents/`. This is an execution profile, not a
+model-specific discovery workflow; other backend/model selections remain valid.
 
 ## Instruction priority
 

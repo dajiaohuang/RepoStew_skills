@@ -72,6 +72,10 @@ or keep writing in a workspace that the root is releasing.
 
 ## Native subagent lifecycle
 
+When Luna xhigh is explicitly selected, use [luna-xhigh.md](luna-xhigh.md) for
+the separate root/leaf goals and minimal-context dispatch. Do not load the root
+scheduler's operational history into every repository leaf.
+
 Use supported host dispatch APIs and available model IDs. Follow explicit model
 choices and host inheritance rules. Send minimal self-contained context when
 safe; do not fork the entire campaign history merely to supply the skill.
