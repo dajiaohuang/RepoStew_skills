@@ -1,4 +1,4 @@
-# Opt-in CLI profile; install as CODEX_HOME/repostew-luna-xhigh.config.toml.
+# Opt-in workspace config; merge into the selected workspace's .codex/config.toml.
 # Role goals: references/luna-xhigh.md. Leaves: references/worker-agents/.
 model = "gpt-5.6-luna"
 model_reasoning_effort = "xhigh"

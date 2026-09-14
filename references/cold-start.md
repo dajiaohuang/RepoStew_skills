@@ -9,8 +9,9 @@ current directory, a platform example, or a previous machine's layout.
 Ask the user to choose three distinct absolute paths:
 
 1. **Skill home** (`REPOSTEW_SKILL_HOME`): the canonical RepoStew skill
-   checkout. It must be directly discoverable by the selected agent, or have a
-   user-approved platform discovery link that points to it.
+   checkout. The workspace AGENTS.md may route directly to its SKILL.md, or a
+   user-approved workspace discovery link may point to it. A user-home skill
+   installation is not required.
 2. **State home** (`REPOSTEW_HOME`): SQLite `repostew.sqlite` for trackers,
    notification checkpoints, registries, batch records, and resource ledgers,
    plus `paths.json` as the bootstrap record. See `references/state.md`.
@@ -36,8 +37,12 @@ python <selected-skill-home>/scripts/configure_paths.py \
   --repos-home <selected-managed-repository-home>
 ```
 
-Persist `REPOSTEW_HOME` (the one absolute anchor) using the host's supported
-settings only with the user's approval. Make sure scheduled tasks receive it.
+For workspace-local operation, record the selected roots in the workspace
+AGENTS.md and initialize process-only environment values after checking
+paths.json. Keep role/model configuration in that workspace too; do not write
+RepoStew-specific user-home profiles, rules or automations. Persist
+`REPOSTEW_HOME` through host settings only if the user separately requests it.
+Make sure any explicitly requested scheduled task receives the selected roots.
 The skill and managed-repository homes are derived from `paths.json` once that
 anchor is known; set their env vars only if a tool needs them, and keep them
 consistent with the record. `paths.json` in the selected state home is the

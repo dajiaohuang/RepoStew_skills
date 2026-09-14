@@ -17,7 +17,7 @@ Chinese-first bilingual documentation site.
   - `full-workflow.md` - Detailed contribution steps for every executor
   - `discovery-campaign.md` - Complete intake, issue-first audits and completion
   - `worker-scheduling.md` - Native, external CLI and mixed execution
-  - `luna-xhigh.md` / `luna-xhigh.config.toml` - Opt-in scheduler/leaf goals and CLI model profile
+  - `luna-xhigh.md` / `luna-xhigh.config.toml` - Opt-in scheduler/leaf goals and workspace model settings
   - `worker-agents/*.toml` - Optional Luna xhigh leaf role templates
   - `worker-contract.md` - Backend-neutral packet and acceptance contract
   - `commands.md` - Command quick reference

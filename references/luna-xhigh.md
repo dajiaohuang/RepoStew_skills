@@ -8,15 +8,16 @@ Keep external CLI workers on their separately selected provider/model.
 ## Settings and activation
 
 The exact selection is `gpt-5.6-luna` with `xhigh`. Both are explicit in
-[the CLI profile](luna-xhigh.config.toml) and the five
+[the workspace configuration](luna-xhigh.config.toml) and the five
 [native templates](worker-agents/repostew-repository.toml).
 Do not silently downgrade effort, upgrade models or use this selection as
 permission to start unrelated agents.
 
-For current Codex CLI, install the profile as
-`CODEX_HOME/repostew-luna-xhigh.config.toml`, then select
-`codex --profile repostew-luna-xhigh`. Put or link the native templates under
-the intended project's `.codex/agents/`; do not copy the scheduler goal into
+Merge the configuration into the selected workspace's `.codex/config.toml`,
+then start Codex in that workspace (or use `codex -C <workspace>`).
+Do not install a RepoStew profile under `CODEX_HOME`. Project settings require
+the host's normal project-trust flow; never bypass that flow. Put or link the
+native templates under the project's `.codex/agents/`; do not copy the scheduler goal into
 that directory as a spawnable leaf. Preserve unrelated config, credentials and
 approval settings. Existing sessions are not retroactively changed.
 The desktop composer must actually select Luna and Extra High; a prompt that
@@ -30,7 +31,7 @@ instructions in the packet and explicitly request the model/effort.
 
 These settings follow the official [Luna model](https://developers.openai.com/api/docs/models/gpt-5.6-luna),
 [custom agent schema](https://learn.chatgpt.com/docs/agent-configuration/subagents)
-and [CLI profile format](https://learn.chatgpt.com/docs/config-file/config-advanced).
+and [project configuration](https://learn.chatgpt.com/docs/config-file/config-advanced).
 Verify availability on the actual host; syntax validation alone is not a model run.
 
 ## Scheduler goal
