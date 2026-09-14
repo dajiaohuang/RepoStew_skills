@@ -12,15 +12,13 @@ Chinese-first bilingual documentation site.
 
 ## Skill Structure
 
-- `SKILL.md` - Single model-agnostic RepoStew skill with an in-file model fork: a
-  GPT-6 Astra / Fable parent is the orchestrator and delegates bounded work to
-  small models (Luna on OpenAI hosts, Haiku on Anthropic hosts); every other
-  parent follows the full detailed workflow in `references/generic-full-workflow.md`.
-- `references/` - Model-fork and full reference documents
-  - `generic-full-workflow.md` - Full detailed workflow (non-Astra/Fable parents)
-  - `astra-fable.md` - Orchestration profile for GPT-6 Astra / Fable parents
-  - `luna-agents/*.toml` - Codex Luna worker definitions (OpenAI hosts)
-  - `worker-contract.md` - Worker packet spec for spawned subagents
+- `SKILL.md` - One backend-neutral workflow with a root-owned discovery queue
+- `references/` - Shared execution and specialist gate documents
+  - `full-workflow.md` - Detailed contribution steps for every executor
+  - `discovery-campaign.md` - Complete intake, issue-first audits and completion
+  - `worker-scheduling.md` - Native, external CLI and mixed execution
+  - `worker-agents/*.toml` - Optional native leaf role templates; models inherited
+  - `worker-contract.md` - Backend-neutral packet and acceptance contract
   - `commands.md` - Command quick reference
   - `workflow.md` - Canonical yes/no tree
   - `state.md` - SQLite state store
@@ -28,7 +26,6 @@ Chinese-first bilingual documentation site.
   - `pr-maintenance.md` - PR follow-up workflow
   - `maintaining-owned-repositories.md` - Verified owner/admin/maintain workflow
   - `batched-iteration.md` - Bounded integration workflow for maintained repositories
-  - `ranked-repository-campaign.md` - Ranked day/week/month report campaigns with queued repository work and bounded leaf workers
   - `taste-and-permissions.md` - Contribution guidelines
   - `maintenance-workspace-agents.md` - Slim workspace `AGENTS.md` template
   - `maintenance-workspace-claude.md` - Slim wrapper `CLAUDE.md` template (Claude Code)
@@ -43,8 +40,6 @@ Chinese-first bilingual documentation site.
   - `workspace_cleanup.py` - Shared-worktree and integration-worker compatibility cleanup
   - `scan_known_repos.py` - Scan tracked repositories for new issues
   - `discover.py` - Discover relevant repositories
-  - `loop.py` - Broadened discovery loop
-  - `auto_fix.py` - Autonomous fix dispatcher
 
 ## Cold Start
 

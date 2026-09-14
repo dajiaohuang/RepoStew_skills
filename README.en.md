@@ -16,7 +16,14 @@ discover → verify → patch → validate → submit → maintain
     └────────── durable state + feedback ─────┘
 ```
 
-The governing workflow lives in [`SKILL.md`](SKILL.md): one model-agnostic skill with an in-file model fork. A GPT-6 Astra or Fable parent acts as orchestrator and delegates clearly bounded read-only/parallel work to small models — Luna on OpenAI hosts, Haiku on Anthropic hosts; every other parent follows the full detailed workflow in [`references/generic-full-workflow.md`](references/generic-full-workflow.md). Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see [`references/state.md`](references/state.md). The optional Python scripts in [`scripts/`](scripts/) use only the standard library plus the external `git` / `gh` CLIs, and RepoStew is not bound to a model vendor, GitHub username, workspace path, operating system, or shell.
+The governing workflow lives in [`SKILL.md`](SKILL.md): one backend-neutral
+procedure with a root-owned queue and native subagents, external agent CLIs,
+mixed execution or root-only execution. All routes use the same contribution
+gates in [`references/full-workflow.md`](references/full-workflow.md).
+Mutable state is SQLite at `$REPOSTEW_HOME/repostew.sqlite`; see
+[`references/state.md`](references/state.md). Optional Python scripts use the
+standard library plus external `git` / `gh` CLIs. RepoStew is not bound to a
+model vendor, GitHub username, workspace path, operating system or shell.
 
 ## Why RepoStew exists
 
@@ -46,16 +53,16 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 | Script dependencies | Python standard library; no runtime package install |
 | License | MIT |
 
-For broad activity-report discovery, RepoStew recommends a ranked campaign:
-capture daily/weekly/monthly report provenance and a batch-start timestamp,
-deduplicate against durable RepoStew records and active tasks, select at most
-10 repositories, and keep bounded repository work in the current task unless
-the user explicitly asks for separate visible tasks.
-Each task runs the recent issue/PR gates and full audit before qualifying issue
-or PR work. On OpenAI hosts, Luna is the default campaign model; Spark requires
-an explicit user request. Launch-only requests persist the task map and stop
-without polling the created tasks. See
-[`references/ranked-repository-campaign.md`](references/ranked-repository-campaign.md).
+Discovery uses one [campaign workflow](references/discovery-campaign.md):
+collect the complete authorized lists, deduplicate into a durable queue, and
+give each repository one executor. Finish its recent issue window before an
+authorized full audit, then submit qualifying tested findings. There is no
+fixed repository quota. [Scheduling](references/worker-scheduling.md) supports
+subagent-only, external CLI-only and mixed pools under measured resource and
+provider limits. A CLI client and its actual model are recorded separately.
+Honor the latest user selection, use completion signals instead of repeated
+polling, and verify results before releasing submitted disposable jobs.
+Launch-only work distinguishes admitted jobs from pending queue entries.
 
 ## Capability map
 
@@ -192,7 +199,8 @@ Use RepoStew to find 3 well-scoped open-source issues
 Use RepoStew to check and maintain my tracked pull requests
 Use RepoStew to maintain my verified owned and administered repositories
 Use RepoStew to run one bounded iteration batch for my maintained repository
-Use RepoStew autonomously and stop after 3 dry discovery rounds
+Use RepoStew autonomously to finish the entire queued repository list
+Use RepoStew to discover continuously with subagents and external CLIs in parallel
 ```
 
 ### Confirm mode (default)
@@ -241,7 +249,6 @@ Everything in [`scripts/`](scripts/) uses the Python standard library plus exter
 |---|---|
 | `configure_paths.py` | validate and record the three selected storage roots |
 | `discover.py` | rank active repositories, run directional search, and find issue candidates |
-| `loop.py` | run bounded, progressively broader discovery rounds |
 | `scan_known_repos.py` | scan the persistent contribution set or explicit repositories for new issues |
 | `contribution_tracker.py` | retain contributed repositories, issues, and PRs |
 | `pr_tracker.py` | retain PRs, notifications, reviews, comments, CI, and unresolved activity |
@@ -249,8 +256,6 @@ Everything in [`scripts/`](scripts/) uses the Python standard library plus exter
 | `rebuild_github_state.py` | fully paginate GitHub and transactionally rebuild state with explicit reset authority |
 | `workspace_job.py` | create disposable clones, release after submission, restore on demand |
 | `workspace_cleanup.py` | compatibility cleanup for existing shared worktrees and integration workers |
-| `auto_fix.py` | optional provider-neutral non-interactive dispatcher |
-| `auto_fix.sh` | POSIX wrapper for `auto_fix.py` |
 
 Common commands:
 

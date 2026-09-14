@@ -1,8 +1,8 @@
 # Standard RepoStew worker context
 
 This context is mandatory for every RepoStew worker, regardless of backend
-(Claude CLI, Luna, or another explicitly admitted leaf). The parent must put
-the absolute path to this file in the packet and tell the worker to read it
+(native subagent, external agent CLI, or either leaf in a mixed pool). The parent
+must put the absolute path to this file in the packet and tell the worker to read it
 before inspecting, editing, testing, committing, commenting, or submitting.
 
 This context is a gate, not a replacement for the skill. Before any repository
@@ -30,7 +30,14 @@ cannot be read, stop and return the blocker.
   tooling before relying on them. Never infer a root from the current
   directory or from an old packet.
 - Keep the packet's repository, issue/PR, audit, and authority scope exact.
-  Do not turn a discovered lead into extra work; return it to the parent.
+  Complete all in-scope recent issues before the authorized full audit and
+  findings-to-PR phase. Do not stop at the first candidate in a full repository
+  packet. New out-of-scope leads return to the parent.
+- Use only the root-created registered job. Return pushed URLs/heads immediately
+  for root-owned tracking and submission-time release; persist evidence outside
+  disposable storage. Resume local work only after the root restores the job.
+- Do not launch another agent CLI, reuse another worker's session or change the
+  configured provider/model. Complete only this leaf packet.
 
 ## Contribution gates
 
@@ -97,10 +104,10 @@ cannot be read, stop and return the blocker.
   skill gate to be evidenced. A passing focused test, a local diff, or a
   successful command alone does not prove a repository audit, PR submission,
   or cleanup is complete.
-- Produce every packet deliverable, normally `audit-report.md`,
-  `evidence/tracked-file-ledger.tsv`, `evidence/validation.txt`, and
-  `evidence/pr-and-state.txt`, and keep `worker-contract.json` current except
-  for parent-owned fields explicitly reserved by the packet.
+- Produce the packet's durable result and validation evidence. Full audit
+  packets additionally require an audit report and tracked-file coverage ledger;
+  read-only exploration or a focused fix does not invent audit coverage. Use
+  the exact evidence paths supplied by the root, not a second state registry.
 - Return exactly the bounded facts the parent needs: classification, facts,
   URLs, blockers, files, branch/commit/PR state, commands run, and next action.
 

@@ -147,7 +147,7 @@
             <p class="section-marker">SURFACE / 能力面</p>
             <h2 id="capabilities-title" data-i18n="capabilitiesTitle">不是一个脚本，而是一套守则。</h2>
           </div>
-          <p data-i18n="capabilitiesIntro">单一、模型无关的 SKILL.md 内含模型分叉：Astra/Fable 父代编排并把有界只读/并行工作委派给小模型，其余父代走完整详细流程；确定性脚本负责发现、持久状态与安全清理。</p>
+          <p data-i18n="capabilitiesIntro">统一根任务管理发现队列；原生 subagent、外部 CLI 和混合执行共用贡献、验证与清理门槛，不按父模型分叉。</p>
         </div>
 
         <div class="capability-grid">
@@ -156,7 +156,7 @@
             <h3 data-i18n="cap1Title">发现与筛选</h3>
             <p data-i18n="cap1Copy">从具体 issue、单仓库或技术方向出发；机械检查分配、重复项、活跃度与仓库适配度。</p>
             <ul>
-              <li>discover.py</li><li>scan_known_repos.py</li><li>loop.py</li>
+              <li>discover.py</li><li>scan_known_repos.py</li>
             </ul>
           </article>
           <article class="capability-card">
@@ -184,8 +184,8 @@
           </article>
           <article class="capability-card">
             <span class="card-code">CAMPAIGN</span>
-            <h3 data-i18n="cap6Title">报告排名批次</h3>
-            <p data-i18n="cap6Copy">从日、周、月活跃报告中去重并排名，每批最多 10 个仓库；当前根任务统一排队，以有限叶子 worker 完成各仓库完整审计。</p>
+            <h3 data-i18n="cap6Title">统一发现队列</h3>
+            <p data-i18n="cap6Copy">收齐授权榜单与搜索结果并持久排队；每库先处理近期 issue，再做获授权的完整审计，以实测资源调度 worker 并验收结果。</p>
           </article>
         </div>
       </section>

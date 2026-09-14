@@ -10,35 +10,26 @@ description: >-
   PRs, maintain repositories the user owns or administers, respond to reviews,
   follow explicitly selected repositories, or release submitted
   contributions. Apply before cloning, editing, commenting, filing issues, or
-  opening PRs. One model-agnostic skill with an in-file model fork: a GPT-6
-  Astra or Fable parent follows the delegation path inside; every other parent
-  follows the full detailed workflow in references/generic-full-workflow.md.
+  opening PRs. One backend-neutral workflow: a root-owned discovery queue
+  with native subagents, external agent CLIs, mixed execution, or root-only
+  execution under the same contribution and validation gates.
 ---
 
 # RepoStew
 
-One skill, two operating paths. The universal gates, safety rules, and judgment
-labels in this file apply to every run regardless of path. Where the full
-procedure lives depends on the parent:
+One skill and one workflow, regardless of parent model. The current root owns
+scope, the durable queue, worker admission, result acceptance and shared state.
+Native subagents, external agent CLIs and mixed execution are interchangeable
+execution routes only when the user's current instructions allow them.
 
-- **GPT-6 Astra or Fable parent** — you are the orchestrator: plan, classify,
-  talk to the user, integrate results, and own the shared checkpoints; delegate
-  only clearly bounded, independent, read-heavy or parallel partitions to small
-  models (Luna on OpenAI hosts, Haiku on Anthropic hosts) as subagents. Follow
-  the "Astra / Fable parent" section below and
-  read [references/astra-fable.md](references/astra-fable.md) before
-  partitioning. Copy the Luna definitions from `references/luna-agents/` into
-  the Codex project so the host can spawn them.
-- **Any other parent** — you are the single working agent. After this file, read
-  [references/generic-full-workflow.md](references/generic-full-workflow.md) and
-  follow it as the complete detailed procedure. Delegate only clearly bounded,
-  read-heavy, parallel side work to a smaller model (Luna or Haiku) when that saves
-  time; never spawn a subagent for work you can do inline.
-
-Use the host agent's native file, shell, planning, browser, and GitHub tools; do
-not assume a particular AI product or operating system.
-
-Read [references/worker-scheduling.md](references/worker-scheduling.md) before any delegation, on either operating path. Every dispatched worker must also read [references/worker-context.md](references/worker-context.md) before any repository action. A Luna root may schedule bounded Luna workers under this same policy.
+For discovery, read [references/discovery-campaign.md](references/discovery-campaign.md).
+Before dispatch, read [references/worker-scheduling.md](references/worker-scheduling.md)
+and send [references/worker-contract.md](references/worker-contract.md).
+Every leaf must read [references/worker-context.md](references/worker-context.md).
+Use [references/full-workflow.md](references/full-workflow.md) for detailed
+contribution steps on every backend. Optional native role templates live in
+`references/worker-agents/`; model selection follows the user and host, not
+a model-specific skill fork.
 
 ## Instruction priority
 
@@ -97,7 +88,7 @@ Read a specialist reference only when that gate is active:
 | PR inbox, comments, CI | [pr-maintenance.md](references/pr-maintenance.md) |
 | Scheduled notification/issue loops | [scheduled-maintenance.md](references/scheduled-maintenance.md) |
 | Bounded maintained-repo batches | [batched-iteration.md](references/batched-iteration.md) |
-| Ranked repository campaign from day/week/month reports | [ranked-repository-campaign.md](references/ranked-repository-campaign.md) |
+| Repository scans, report/search intake and continuous discovery | [discovery-campaign.md](references/discovery-campaign.md) |
 | Audit coverage | [repository-audit.md](references/repository-audit.md) |
 | Disposable jobs / state rebuild | [ephemeral-storage.md](references/ephemeral-storage.md) |
 | Shared-worktree compatibility / monthly sweep | [workspace-cleanup.md](references/workspace-cleanup.md) |
@@ -121,9 +112,12 @@ Exception: the user grants standing authority for one focused clarification comm
 
 Proceed through discovery, assessment, implementation, validation, commit, push, PR creation, and tracking without intermediate user confirmation, but stay within the user's stated scope. Stop when:
 
-- three consecutive broadened discovery rounds find no actionable candidate;
+- the requested finite queue is fully handled, with blockers explicitly retained;
+- authorized discovery is exhausted and no safe queued work remains (do not impose
+  a fixed empty-round stop on an explicit continuous request);
 - the user interrupts;
-- access, repository policy, missing requirements, or maintainer approval blocks safe progress.
+- access, repository policy, missing requirements, or maintainer approval blocks
+  further safe progress; retain that item and continue independent authorized work.
 
 Autonomy does not grant maintainer authority and does not override repository rules, platform approvals, or the dependency gate.
 
@@ -173,11 +167,10 @@ error; missing inherited variables alone do not restart cold-start selection.
 Choose one workflow:
 
 - **Specific issue:** the user gives an issue URL or `owner/repo#N`.
-- **Repository scan:** the user gives `owner/repo` without an issue number.
-- **GitHub discovery:** the user asks for suitable issues across repositories.
-- **Ranked repository campaign:** the user asks for a recent/popular repository
-  batch sourced from daily, weekly, or monthly reports. Read
-  [ranked-repository-campaign.md](references/ranked-repository-campaign.md).
+- **Discovery campaign:** a named-repository scan, technical-direction search,
+  daily/weekly/monthly report intake, or continuous discovery. Use
+  [discovery-campaign.md](references/discovery-campaign.md); source selection
+  does not create a separate operating mode.
 - **Repository audit:** the user asks to inspect a repository and propose or file issues.
 - **PR maintenance:** the user asks to check or respond to existing pull requests.
 - **Owned/maintained repository maintenance:** the user asks to maintain repositories they own or administer.
@@ -193,11 +186,20 @@ python --version
 
 If `gh` is unavailable, use an available GitHub connector or API. Do not silently downgrade mechanical verification.
 
-## Recommended ranked repository campaign
+## Run discovery through one queue
 
-For broad discovery from activity reports, use the ranked campaign reference. Capture report evidence and batch-start time, deduplicate durable records, and select at most 10 repositories per batch. Keep a separate repository work item and complete audit coverage for each.
+The root records the complete authorized intake, deduplicates across sources
+and active ownership, then assigns one repository lifecycle per executor:
+recent issues first, complete audit second when authorized, and tested
+non-duplicate findings through issue/PR submission. Do not stop at the first
+candidate or silently discard queued repositories.
 
-Follow [references/worker-scheduling.md](references/worker-scheduling.md) for every parent model, including Luna: the current root owns a durable queue. The default is at most three direct workers, while an explicit user request to use available local resources or heterogeneous Luna + Claude CLI execution enables dynamic admission with a root reserve, shared accounting, re-measurement, and durable backend mapping. Workers never spawn workers or conversations. Use Luna workers on OpenAI hosts and Claude CLI leaf processes when authorized and available; obey each backend's model, account, and rate limits. Create user-visible tasks only when explicitly requested. Launch-only requests report launched and queued work separately; pending work is not automatically scheduled.
+Use [references/discovery-campaign.md](references/discovery-campaign.md) for
+coverage and stopping, and [references/worker-scheduling.md](references/worker-scheduling.md)
+for subagent-only, CLI-only and mixed admission. Concurrency follows the user's
+target and measured host/provider capacity, not a fixed repository batch size.
+Await completion signals, verify results, update shared state and release
+submitted disposable jobs. Launch-only dispatch is not automatic future work.
 
 ## Use verified owner or maintainer authority
 
@@ -334,29 +336,9 @@ When handing over, include the repository and issue links, verified current stat
 
 If the host cannot create a user-visible task, explain the limitation and continue in the current conversation only when the context and workspace remain safe; otherwise ask the user to start the isolated task.
 
-## Astra / Fable parent
+## Detailed execution
 
-If you are a GPT-6 Astra or Fable parent, this run is an orchestration run: you
-keep every universal gate above, and only the executor changes. Default to
-yourself and avoid needless delegation. Spawn a small subagent — Luna on OpenAI
-hosts, Haiku on Anthropic hosts — only for clearly bounded, independent,
-read-heavy or parallel work whose coordination cost the split repays. You plan,
-classify, talk to the user, integrate results, and own the shared checkpoints.
-
-- Read [references/astra-fable.md](references/astra-fable.md) before
-  partitioning; it holds the delegation model, worker roster, checkpoint
-  ownership, and cleanup rules for this path.
-- On a Codex host, copy the four Luna worker definitions from
-  `references/luna-agents/*.toml` into the Codex project's agent directory so
-  the host can spawn them.
-- Packet every worker from
-  [references/worker-contract.md](references/worker-contract.md); workers
-  revalidate GitHub and never advance shared checkpoints.
-- On an Anthropic host, use the equivalent small model (Haiku) for the same
-  bounded worker roles instead of spawning a copy of yourself.
-
-## Full detailed procedure (generic parent)
-
-A parent that is not GPT-6 Astra or Fable is the single working agent: after
-this file, open [references/generic-full-workflow.md](references/generic-full-workflow.md)
-and follow it as the complete step-by-step procedure for every remaining gate.
+Every executor follows [references/full-workflow.md](references/full-workflow.md)
+for verification, implementation, submission and maintenance. Discovery scope
+and scheduling remain single-sourced in the references above; a different
+parent model or CLI does not introduce another procedure.

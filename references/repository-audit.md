@@ -3,10 +3,9 @@
 Read this reference for a repository-wide audit, a multi-repository audit, or
 an audit that may continue into filed issues and pull requests.
 
-For a batch selected from daily, weekly, or monthly activity reports, also read
-[ranked-repository-campaign.md](ranked-repository-campaign.md). That reference
-defines the report provenance, deduplication, 10-repository batch cap, Luna
-default, launch-only behavior, and per-repository task manifest.
+For discovery-driven audits, read [discovery-campaign.md](discovery-campaign.md)
+for source coverage, deduplication, the recent-issue phase before audit, and
+per-repository completion. Backend selection does not change the audit standard.
 
 ## Contents
 
@@ -256,7 +255,7 @@ direction.
 
 ## Multi-repository routing
 
-Keep separate repository workspaces and coverage ledgers. Follow [worker-scheduling.md](worker-scheduling.md) for bounded leaf packets and [ranked-repository-campaign.md](ranked-repository-campaign.md) for report provenance, deduplication, the ten-repository intake cap, and launch-only queue accounting. The current root owns mapping, progress, integration, and shared checkpoints. Every worker revalidates time-sensitive state. Create visible tasks only when explicitly requested.
+Keep separate repository workspaces and coverage ledgers. Follow [worker-scheduling.md](worker-scheduling.md) for every backend and [discovery-campaign.md](discovery-campaign.md) for source coverage, issue-first phase ordering and queue completion. The root owns mapping, admission, acceptance and shared checkpoints. Every worker revalidates time-sensitive state. Create visible tasks only when explicitly requested.
 
 Do not use hidden delegation when the user asks for visible handover. Respect
 host concurrency and resource limits, but do not silently reduce repository or

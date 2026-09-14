@@ -1,10 +1,10 @@
-# RepoStew full detailed workflow (generic parent)
+# RepoStew full detailed workflow
 
-Read this after the root `SKILL.md` on every run whose parent is **not** GPT-6
-Astra or Fable. It is the complete step-by-step procedure a single-agent generic
-run follows. The universal gates, safety rules, labels, and model fork live in
-`SKILL.md`; the yes/no decision tree is [workflow.md](workflow.md). Read a
-specialist reference only when the gate that names it is active.
+Read this after the root `SKILL.md` for detailed contribution steps on every
+backend. The universal gates and safety rules live there; the decision tree is
+[workflow.md](workflow.md). Discovery scope and repository phase ordering are
+defined only in [discovery-campaign.md](discovery-campaign.md), and execution
+admission in [worker-scheduling.md](worker-scheduling.md).
 
 ## Verify a specific issue
 
@@ -35,56 +35,14 @@ Before cloning or editing:
 
 In confirm mode, stop here and present the plan, affected files, validation strategy, risks, and rough size.
 
-## Scan one repository
+## Discover and scan repositories
 
-Do not clone until a candidate survives remote checks.
-
-1. Fetch open issues and sort newest first. Request enough JSON fields to judge assignment, engagement, and content.
-2. Walk at most 50 issues, stopping earlier when any condition holds:
-   - five actionable candidates found;
-   - issues are older than 90 days and at least one candidate exists;
-   - autonomous mode finds one actionable candidate.
-3. For each issue, perform assignment, linked-PR, PR-search, staleness, policy, and taste checks.
-4. In confirm mode, present candidates with issue link, type, effort, likely files, verification, why each passed, and whether it should run here or in a handed-over task.
-5. If none pass, summarize skip reasons and offer a broader scan.
-
-## Discover candidates across GitHub
-
-For a user-selected technical direction, first translate the direction into two to five concise, overlapping search terms. Include a representative project name when the user provides one; it anchors the search without becoming a permanent allowlist. Return active repositories ranked by stars before choosing where to inspect issues. Repeat `--focus` to search related terms; `--min-stars` is only a lower bound and RepoStew never imposes a maximum star count.
-
-```bash
-python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
-  --focus agentic --focus "agent framework" --focus "agent harness" --focus nanobot
-```
-
-Use the returned descriptions, topics, activity dates, licenses, and repository instructions to remove false positives. Do not assume a keyword match makes a repository relevant or contribution-friendly. When focus terms are supplied, keep discovery inside matching repositories rather than mixing in the broad direct-issue stream.
-
-Run the bundled discovery script from the skill directory:
-
-```bash
-python scripts/discover.py --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates 5
-```
-
-The script performs mechanical filtering only. Manually read each returned issue and apply the taste gate before selecting it. Do not treat labels such as `good first issue` as approval.
-
-For broadened bounded discovery:
-
-```bash
-python scripts/loop.py --dry-rounds 3 --max-candidates 5
-python scripts/loop.py --focus agent --focus harness --dry-rounds 3
-```
-
-When the user asks for ranked activity-report batches, follow [ranked-repository-campaign.md](ranked-repository-campaign.md): preserve provenance, deduplicate, and queue at most 10 repositories per batch. Complete all audit and issue/PR gates. Use [worker-scheduling.md](worker-scheduling.md): one current root and a durable queue; the default is at most three direct workers, with dynamic heterogeneous Luna + Claude CLI mode available when the user explicitly requests local-resource parallelism. Workers must not delegate. Create visible tasks only on explicit user request; launch-only execution records launched versus queued work without promising unattended queue draining.
-
-Mutable state is stored only under the user-selected absolute
-`REPOSTEW_HOME`, in `repostew.sqlite`. RepoStew has no implicit mutable-state
-default. JSON files in that directory are a legacy import/export format;
-runtime scripts read and write the SQLite store. The canonical skill checkout
-and managed repositories resolve from `paths.json` under that one anchor.
-
-```bash
-python scripts/repostew_state.py status
-```
+Follow [discovery-campaign.md](discovery-campaign.md) for named repositories,
+technical-direction searches, activity reports and continuous discovery.
+Enumerate the full declared window, retain every queued item, and finish
+actionable recent issues before a requested audit. The discovery scripts are
+bounded lead collectors, not alternate stopping or contribution policies.
+See [commands.md](commands.md) for mechanical query examples.
 
 ## Audit repositories and contribute findings
 
@@ -299,15 +257,14 @@ lives in `workspace_jobs.json` inside SQLite; the legacy ledger is
 `workspace_resources.json`. Report measured free-space changes separately from
 logical sizes.
 
-## Run the optional autonomous dispatcher
+## External execution helpers
 
-Prefer the host agent's native autonomous workflow. If the user explicitly chooses a non-interactive client, the optional dispatcher can invoke any command that reads a prompt from standard input:
-
-```bash
-python scripts/auto_fix.py --workspace <path> --max 3 --agent-command <client> <args...>
-```
-
-Place `--agent-command` last. Add `--loop` before it for up to three consecutive dry rounds. RepoStew does not add permission-bypass flags. Review the chosen client's sandbox and approval configuration independently.
+All external agent execution follows [worker-scheduling.md](worker-scheduling.md)
+and [worker-contract.md](worker-contract.md), including clients invoked through
+a script. The root must supply the complete packet, track process completion
+and accept the result. There is no separate autonomous dispatcher or discovery
+loop: the root owns source expansion, admission and completion under the
+campaign contract.
 
 ## Maintain RepoStew itself
 

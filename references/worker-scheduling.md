@@ -1,70 +1,148 @@
-# Bounded worker scheduling
+# Worker scheduling across backends
 
-This policy applies to every parent model, including a Luna root. Keep the
-current root as the sole scheduler; Luna and Claude CLI workers may run in one
-heterogeneous pool without creating another scheduler conversation. Workers are
-leaves: they must not spawn agents, create tasks, fork conversations, or
-delegate again. A worker that discovers more work returns it to the root's
-queue.
+Use one current root as the admission, queue and acceptance owner for
+[discovery campaigns](discovery-campaign.md). Workers are bounded leaves:
+they never spawn workers, create/fork visible tasks, run another agent CLI or
+delegate again. Newly discovered out-of-packet work returns to the root.
+The parent model does not select a different workflow or restrict workers to
+read-only research; the authorized packet determines their actions.
 
-## Admission and queue
+## Select the execution backend
 
-- Default to one root and at most three direct workers. This is a conservative
-  RepoStew default, not a claim about an account or model hard limit. If the
-  user explicitly asks to use available local resources or to run Luna and
-  Claude CLI workers in parallel, switch to **dynamic heterogeneous mode** for
-  that campaign; do not silently apply the three-worker default as a hard cap.
-- In dynamic heterogeneous mode, measure and record logical processors,
-  total/free memory, current worker and system load, host/account/thread limits,
-  and a root-reserved margin before each admission or expansion. Count Luna
-  subagents and Claude CLI processes in one shared admission ledger, with the
-  backend, worker ID, PID/session, workspace, and packet recorded separately.
-  Choose a bounded target from measured capacity, admit only independent
-  packets, and re-measure before adding workers. Large parallelism is allowed
-  only within those live limits; it never authorizes extra roots, secret use,
-  unsafe repository mutation, or bypassing provider/rate limits.
-- Keep overflow in a durable campaign manifest, with repository, packet,
-  backend, dependencies, status, worker ID, evidence, admission measurement,
-  and retry reason. The ten-repository batch size is intake size, never a
-  concurrency setting. If reliable capacity telemetry or a shared limit is
-  unavailable, use the lower safe target and record why.
-- Dispatch only ready, independent packets whose dependencies have validated
-  results. Keep writes isolated by repository/worktree and explicit file scope.
-  The root alone integrates results and writes shared trackers/checkpoints.
-- Do not create additional roots to bypass limits. If separately authorized
-  roots share capacity, they need one admission owner or shared reservations;
-  independent local counters do not enforce an account-wide limit. Without
-  reliable shared admission, serialize the campaign.
-- On a thread-limit error, repeated pending admission, or rate limit, stop new
-  dispatches, retain queued work, and reduce the worker target (halve, floor one).
-  Honor retry guidance and wait for progress before a bounded retry. Do not
-  repeatedly spawn replacements or assume every delay is a concurrency failure.
+| User selection | Execution |
+| --- | --- |
+| Subagents | Native leaf agents, each assigned one independent repository packet |
+| External CLI | Root-launched non-interactive leaf processes, such as Claude Code or another installed agent CLI |
+| Mixed | Both backends consume one queue with shared resource accounting and exclusive ownership |
+| No available/authorized delegation | Root executes the same packets serially; retain explicit backend constraints and report limitations |
 
-## Packet and lifecycle
+Honor the latest user choice, including a CLI-only instruction or an explicit
+exception to let already-running subagents finish. Do not silently fall back to
+a forbidden backend, change models, or launch a new visible task. Separate
+client, configured provider and actual model in the execution record. For
+example, this session used native Luna with extra-high reasoning and Claude
+CLI configured for `deepseek-flash`; those are examples of explicit selections,
+not global defaults or proof that every Claude process uses Anthropic models.
 
-Use [worker-contract.md](worker-contract.md). Each packet has one bounded output,
-relevant instructions/files, dependency results, validation, and a completion
-condition. Prefer minimal explicit context (`fork_turns="none"` when supported)
-over copying the full conversation. Select the host's available Luna model ID;
-never infer an ID from the marketing name or silently change models.
+## Admission and ownership
 
-Persist and validate the return before unlocking dependent work. Close/release
-completed workers only when the host provides that operation, then verify
-capacity before replacement. A final answer, interrupt, or sidebar archive
-does not prove a slot was released. If release is unavailable, reuse an idle
-worker with a fresh bounded packet only when the host supports it and context
-is safe; otherwise finish serially in the root and retain overflow. Do not grow
-an idle pool or invent a termination API.
+- Inspect current native slots, external worker processes, free memory, CPU
+  load, disk headroom, provider/account limits and root-reserved capacity.
+  Respect the user's concurrency target and remeasure before expansion.
+  No hardcoded three-worker total applies: native slot limits do not by
+  themselves cap independently authorized CLI processes. CLI work is still
+  bounded by shared resources, provider limits and permissions.
+- Count all running workers in one root-owned admission record, with backend,
+  provider/model, agent ID or process/session ID, packet ID, job/workspace,
+  admission measurement and lifecycle state. Separate native slot occupancy
+  from process/resource capacity. Do not multiply an account budget by counting
+  each backend separately. If other roots share resources, use reliable shared
+  reservations or a conservative target instead of assuming exclusive capacity.
+- Dispatch ready independent packets only. Keep overflow durable, replenish
+  vacancies after accepted results, and do not create extra scheduler roots to
+  evade tool limits. One repository mutation owner at a time; independent
+  read-only help needs an explicit bounded packet and cannot submit changes.
+- Reduce admission on memory pressure, repeated admission failures or rate
+  limits; retain queued work and honor retry guidance. Do not spawn replacement
+  storms or retry unchanged failures repeatedly. Unknown capacity is a reason
+  for conservative admission, not an invented capacity number.
 
-## Explicit visible tasks and launch-only requests
+## Common packet and workspace
 
-Create user-visible tasks only when the user explicitly requests new tasks or
-handover. Keep their admission bounded and tell each dispatched task to execute
-as a leaf. Respect host model-selection rules; a skill default does not override
-a requirement for explicit user model selection.
+Use [worker-contract.md](worker-contract.md) and require
+[worker-context.md](worker-context.md) on every backend, including resumed or
+forked CLI sessions. Pass absolute canonical skill/reference paths, validated
+roots, repository/issue window, allowed actions, prohibitions, validation,
+durable evidence paths and exact completion conditions. Do not assume a leaf
+inherits instructions, environment or tools from the root.
 
-For launch-only execution, persist the complete queue and mapping, dispatch only
-the admitted work, and report launched versus still queued. Do not claim the
-queue will drain after this root stops unless an authorized scheduler actually
-owns it. Follow the host's required dispatch acknowledgement; omit ongoing
-monitoring when the user did not request it.
+The root creates/records the disposable job; workers edit only its returned
+workspace and branch. The root owns shared state writes, acceptance and
+submission-time release. Worker evidence must survive release: persist it to
+the packet's evidence location outside disposable storage before deletion.
+Never share credentials in a packet or put secrets into logs or reusable
+context. A failed root check stops repository action, not just submission.
+
+At each submission boundary, send a supported event/handshake and suspend local
+mutation until the root accepts and releases the job. If the CLI cannot yield
+safely, end that invocation with a structured partial return and remaining
+phases; the root resumes the same repository packet/session after restoration.
+One repository owner may span several invocations. Do not require log polling
+or keep writing in a workspace that the root is releasing.
+
+## Native subagent lifecycle
+
+Use supported host dispatch APIs and available model IDs. Follow explicit model
+choices and host inheritance rules. Send minimal self-contained context when
+safe; do not fork the entire campaign history merely to supply the skill.
+Acknowledge dispatch and record the returned agent ID.
+
+Prefer completion notifications or a bounded event wait while the root does
+other useful work. After validating a return, reuse an idle leaf with a fresh
+packet only if the host supports reuse and prior workspace/ownership is closed.
+A final answer, interrupt or archive does not prove a native slot was released.
+Use a real release operation if available; otherwise respect actual occupancy.
+Do not accumulate idle agents, invent termination APIs or silently replace
+unavailable native capacity with another backend.
+
+## External CLI lifecycle
+
+1. Verify the installed executable and its local help for non-interactive
+   input, output, model selection, resume/fork behavior, sandbox and approvals.
+   Do not guess flags or modify global client/provider configuration as a
+   normal dispatch step. Validate the selected provider/model without printing
+   credentials. A CLI name alone does not establish the model that served it.
+2. Build a complete packet and launch with an explicit working directory,
+   validated process environment and durable output/result locations. Use the
+   client's supported prompt transport and configured approval controls.
+   Do not add permission-bypass flags. Background Windows helpers use hidden
+   windows unless the user requests an interactive window.
+3. Record the returned PID/process session immediately and keep its ownership
+   attached to the packet. Prefer structured final output when supported.
+   Save exit status and the result; a successful launch only means running.
+   Use process completion notification/wait support, not repeated log-tail or
+   status polling. If an output limit truncates a return, read the saved result
+   at completion instead of rerunning the repository job.
+4. A reusable seed session may contain the canonical skill paths and stable
+   worker rules to reduce repeated context. Fork/resume only when the client
+   supports it and each leaf gets an independent session plus a fresh packet.
+   Never run multiple workers in one mutable CLI session, reuse stale repository
+   authority, or let the seed become another scheduler. Forking a CLI context
+   is not creating a user-visible Codex task.
+5. On completion, inspect exit code, final result and promised artifacts, then
+   perform root acceptance. A zero exit is not proof of a submitted PR or full
+   audit; a nonzero exit may still have pushed work. Check the exact branch/PR
+   before retrying. On timeout/cancellation, stop only proven task-owned
+   processes, preserve partial work and verify the previous writer has stopped
+   before transferring ownership. Repair the cause before a bounded retry;
+   never infer success from the last progress message.
+
+## Mixed execution and switching
+
+Use the same packet, phase ordering, result format and acceptance gates for
+both backends. Different execution cost or capacity is not different authority.
+The root can add CLI workers while native slots are occupied when the user has
+authorized that route and live capacity permits it; do not add a second queue
+whose duplicates are invisible to the first.
+
+When switching backend/model, retain packet identity, stop or finish the old
+owner, validate its partial results, then issue the remaining phase to the new
+owner. Record the change and never run both as speculative competing writers.
+A forbidden backend remains forbidden even if the preferred provider is down.
+
+## Acceptance, waits and launch-only work
+
+Accept evidence before unlocking dependencies or dispatching follow-up work.
+Record completed, blocked, failed and queued items distinctly; integrate all
+partitions before advancing shared checkpoints. Release registered storage after
+submission/follow-up validation and inspect remote CI without retaining a clone.
+
+Prefer natural completion events and one final live check over repeated
+unchanged polling. Host wait calls must remain bounded so the root can respond
+to the user. Remote CI/review monitoring is a separate authorized task, not an
+excuse to keep a finished CLI process or reopen its workspace.
+
+Create visible tasks only on explicit user request. For launch-only work,
+persist the full queue, dispatch admitted work, honor host acknowledgement
+requirements and report what remains queued. Do not promise automatic queue
+draining after the root exits without a real authorized scheduler.

@@ -5,7 +5,6 @@ import contextlib
 import io
 import json
 import os
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -15,10 +14,8 @@ from unittest import mock
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-import auto_fix
 import contribution_tracker
 import discover
-import loop
 import pr_tracker
 import repostew_state
 import scan_known_repos
@@ -788,60 +785,6 @@ class ContributionTrackerTests(unittest.TestCase):
                 scan_known_repos.scan_repository("owner/repo", args, audit=audit)
         self.assertEqual(audit[0]["decision"], "filtered")
         self.assertEqual(audit[0]["reason"], "invalid_body")
-
-
-class LoopTests(unittest.TestCase):
-    def test_discovery_command_broadens_for_later_rounds(self):
-        first = loop.discovery_command(1, 5)
-        third = loop.discovery_command(3, 5)
-        self.assertEqual(first[first.index("--kw-min-stars") + 1], "5")
-        self.assertEqual(third[third.index("--kw-min-stars") + 1], "1")
-        self.assertEqual(third[third.index("--max-days") + 1], "365")
-
-    def test_discovery_command_repeats_focus_terms(self):
-        command = loop.discovery_command(1, 5, ["agent", "harness"])
-        self.assertEqual(command[-4:], ["--focus", "agent", "--focus", "harness"])
-        self.assertEqual(command[command.index("--min-stars") + 1], "5")
-        self.assertNotIn("--direct", command)
-
-    def test_candidate_json_is_safe_for_restricted_stdout_encoding(self):
-        raw_stdout = io.BytesIO()
-        restricted_stdout = io.TextIOWrapper(raw_stdout, encoding="cp1252")
-        with (
-            mock.patch.object(loop, "discover_round", return_value=[{"title": "a→b"}]),
-            mock.patch.object(sys, "argv", ["loop.py", "--dry-rounds", "1"]),
-            mock.patch.object(sys, "stdout", restricted_stdout),
-        ):
-            result = loop.main()
-            restricted_stdout.flush()
-
-        self.assertEqual(result, 0)
-        self.assertEqual(
-            json.loads(raw_stdout.getvalue().decode("ascii")),
-            {"round": 1, "candidates": [{"title": "a→b"}]},
-        )
-
-
-class DispatcherTests(unittest.TestCase):
-    def test_dispatcher_prompt_preserves_invitation_only_policy(self):
-        self.assertIn("do not open an upstream PR", auto_fix.FIX_PROMPT)
-        self.assertIn("fork-only Draft PR", auto_fix.FIX_PROMPT)
-        self.assertIn("Solution uncertainty alone is not such a gate", auto_fix.FIX_PROMPT)
-        self.assertIn("open a regular upstream PR", auto_fix.FIX_PROMPT)
-        self.assertIn("Do not post a redundant question or default to Draft", auto_fix.FIX_PROMPT)
-
-    def test_pr_url_protocol_is_strict(self):
-        output = "done\nPR_URL=https://github.com/owner/repo/pull/9\n"
-        self.assertEqual(auto_fix.PR_URL_PATTERN.search(output).group(1), "https://github.com/owner/repo/pull/9")
-        self.assertIsNone(auto_fix.PR_URL_PATTERN.search("PR_URL=https://example.com/not-github"))
-
-    def test_dispatcher_broadens_later_discovery_rounds(self):
-        completed = subprocess.CompletedProcess([], 0, '{"candidates": []}', "")
-        with mock.patch.object(auto_fix, "run", return_value=completed) as run:
-            auto_fix.discover(2, 3)
-        command = run.call_args.args[0]
-        self.assertEqual(command[command.index("--kw-min-stars") + 1], "1")
-        self.assertEqual(command[command.index("--max-days") + 1], "365")
 
 
 if __name__ == "__main__":

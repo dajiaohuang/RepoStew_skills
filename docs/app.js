@@ -16,7 +16,7 @@ const translations = {
     protocolCopy5: "PR 提交后立即释放本地工作区；以通知驱动 review、CI 与冲突处理。",
     manifestoTitle: "大多数自动化止于 <em>PR 已创建</em>。<br />RepoStew 从那里继续。",
     manifestoCopy: "真正的开源贡献还包括确认问题没有被修复、尊重仓库规则、回应 review、修复 CI 和处理冲突。提交后释放本地工作区，后续按需恢复。",
-    capabilitiesTitle: "不是一个脚本，而是一套守则。", capabilitiesIntro: "单一、模型无关的 SKILL.md 内含模型分叉：Astra/Fable 父代编排并把有界只读/并行工作委派给小模型，其余父代走完整详细流程；确定性脚本负责发现、持久状态与安全清理。",
+    capabilitiesTitle: "不是一个脚本，而是一套守则。", capabilitiesIntro: "统一根任务管理发现队列；原生 subagent、外部 CLI 和混合执行共用贡献、验证与清理门槛，不按父模型分叉。",
     cap1Title: "发现与筛选", cap1Copy: "从具体 issue、单仓库或技术方向出发；机械检查分配、重复项、活跃度与仓库适配度。",
     cap2Title: "完整审计", cap2Copy: "以 tracked-file 台账覆盖代码、测试、依赖、交付、文档与线上站点，并明确不可验证边界。",
     cap3Title: "权限分层", cap3Copy: "把关注范围与 owner/admin/maintain 权限分开记录；从不把历史贡献误当作管理权。",
@@ -47,13 +47,13 @@ const translations = {
     protocolCopy5: "Release local jobs after PR submission; drive reviews, CI, and conflicts from notifications.",
     manifestoTitle: "Most automation stops at <em>PR opened</em>.<br />RepoStew keeps going.",
     manifestoCopy: "Real contribution also means checking prior fixes, respecting repository rules, responding to reviews, repairing CI, and resolving conflicts. Release local jobs after submission and restore only when needed.",
-    capabilitiesTitle: "Not one script. A working doctrine.", capabilitiesIntro: "A single, model-agnostic SKILL.md holds an in-file model fork — Astra/Fable parents orchestrate and delegate bounded read-only or parallel work to small models, while every other parent follows the full detailed workflow — and deterministic scripts handle discovery, durable state, and guarded cleanup.",
+    capabilitiesTitle: "Not one script. A working doctrine.", capabilitiesIntro: "One root owns the discovery queue. Native subagents, external CLIs and mixed execution share contribution, validation and cleanup gates, regardless of parent model.",
     cap1Title: "Discovery and intake", cap1Copy: "Start from an issue, one repository, or a technical direction; mechanically check assignment, duplicates, activity, and fit.",
     cap2Title: "Complete audits", cap2Copy: "Account for code, tests, dependencies, delivery, docs, and live sites from a tracked-file ledger—and name what cannot be verified.",
     cap3Title: "Authority layers", cap3Copy: "Keep follow scope separate from owner/admin/maintain authority; never mistake prior contribution for permission.",
     cap4Title: "PR maintenance", cap4Copy: "Use GitHub Notifications as the primary trigger and retain reviews, comments, CI, and conflict state until explicitly handled.",
     cap5Title: "Recoverable state and cleanup", cap5Copy: "Release disposable clones after submission. SQLite retains recovery proof; GitHub rebuilds metadata. Restore locally only for the next edit.",
-    cap6Title: "Ranked campaigns", cap6Copy: "Deduplicate and rank daily, weekly, or monthly activity reports, cap each batch at 10 repositories, and queue full repository audits under one root with bounded leaf workers.",
+    cap6Title: "Discovery campaigns", cap6Copy: "Queue complete authorized report and search results; finish recent issues before requested full audits, schedule workers within measured capacity, and verify returns.",
     modesTitle: "You choose the pace. Boundaries stay on.", modesIntro: "Autonomous mode removes intermediate confirmation inside granted scope. It adds no authority and never overrides repository policy.",
     confirmTitle: "Confirm mode", confirmCopy: "Investigate and present the plan first; edits and external submission each wait for approval. Best for step-by-step control.", confirm1: "Read-only research", confirm2: "Present the plan", confirm3: "Approve edits", confirm4: "Approve submission",
     autoTitle: "Autonomous mode", autoCopy: "Within explicit scope, continue through discovery, implementation, tests, submission, and tracking; stop at real approval boundaries.", auto1: "Discover and assess", auto2: "Fix and validate", auto3: "Submit and track", auto4: "Maintain",
@@ -64,8 +64,8 @@ const translations = {
   }
 };
 
-translations.zh.cap6Title = "报告排名批次";
-translations.zh.cap6Copy = "从日、周、月活跃报告中去重并排名，每批最多 10 个仓库；当前根任务统一排队，以有限叶子 worker 完成各仓库完整审计。";
+translations.zh.cap6Title = "统一发现队列";
+translations.zh.cap6Copy = "收齐授权榜单与搜索结果并持久排队；每库先处理近期 issue，再做获授权的完整审计，以实测资源调度 worker 并验收结果。";
 
 const root = document.documentElement;
 const metaDescription = document.querySelector('meta[name="description"]');

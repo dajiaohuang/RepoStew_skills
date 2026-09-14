@@ -16,7 +16,7 @@ RepoStew 是一个可移植的 [Agent Skill](https://agentskills.io/)，用于�
   └──────────── 持久状态与反馈 ──────┘
 ```
 
-核心规则位于 [`SKILL.md`](SKILL.md)（单一、模型无关，内含模型分叉：GPT-6 Astra 或 Fable 父代理作编排者，把边界清晰的只读/并行工作委派给小模型 —— OpenAI 主机上是 Luna、Anthropic 主机上是 Haiku；其他任何父代理则按 [`references/generic-full-workflow.md`](references/generic-full-workflow.md) 走完整详细流程）。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本只使用标准库与外部 `git` / `gh` 命令，负责确定性发现、状态跟踪、通知接收和安全清理。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
+核心规则位于 [`SKILL.md`](SKILL.md)：统一根任务管理队列，支持原生 subagent、外部 agent CLI、混合执行和根任务直接执行；所有方式共用 [`references/full-workflow.md`](references/full-workflow.md) 的贡献门槛，不按父模型分叉。可变状态为 `$REPOSTEW_HOME/repostew.sqlite`，见 [`references/state.md`](references/state.md)。可选 Python 脚本使用标准库与外部 `git` / `gh` 命令。RepoStew 不绑定模型供应商、GitHub 用户名、工作区路径、操作系统或 shell。
 
 ## 为什么需要 RepoStew
 
@@ -46,7 +46,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 | 脚本依赖 | Python 标准库；不安装运行时包 |
 | 许可证 | MIT |
 
-对于按日、周、月活跃报告进行广泛发现，RepoStew 推荐使用排名批次：保留报告来源与批次开始时间，与持久状态和活跃任务去重，每批最多选 10 个仓库，由当前根任务统一排队，最多运行 3 个直接 Luna worker，并服从运行时可用槽位限制；worker 不得继续派生代理或对话。只有用户明确要求时才创建可见任务。每个任务都要完成最近 issue/PR 门槛与完整审计，然后才能提交符合条件的 issue 或 PR。OpenAI 主机默认使用 Luna，Spark 只在用户明确要求时使用。只要求启动时，持久保存队列并区分已启动与待处理项，不承诺退出后队列会自动执行。详见 [`references/ranked-repository-campaign.md`](references/ranked-repository-campaign.md)。
+发现任务统一使用[完整队列流程](references/discovery-campaign.md)：收齐授权范围内的榜单与搜索结果，去重后持久排队；每个仓库由一个执行者负责，先处理完整近期 issue 窗口，再完成获授权的全面审计，最后提交符合条件且经过验证的发现。没有固定仓库数量配额。[统一调度](references/worker-scheduling.md)支持纯 subagent、纯外部 CLI 和混用，按实测资源及供应商限制控制并发；CLI 客户端与实际模型分别记录。遵守用户最新执行方式，等待完成信号而非反复轮询，验收后释放已提交的临时工作区。仅启动任务时，明确区分已启动与待执行队列。
 
 ## 能力地图
 
@@ -178,7 +178,8 @@ git -C <selected-skill-home> pull --ff-only
 使用 RepoStew 检查并维护我跟踪的 Pull Request
 使用 RepoStew 维护我已验证拥有或管理的仓库
 使用 RepoStew 为我受维护的仓库运行一个有边界的迭代批次
-使用 RepoStew 自主运行，连续 3 轮没有候选后停止
+使用 RepoStew 自动完成全部已排队仓库
+使用 RepoStew 持续发现，混用 subagent 与外部 CLI 并行处理
 ```
 
 ### 确认模式（默认）
@@ -226,7 +227,6 @@ RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue�
 |---|---|
 | `configure_paths.py` | 校验并记录三个明确选择的存储根 |
 | `discover.py` | 排列近期活跃仓库、执行方向性搜索并发现 issue 候选 |
-| `loop.py` | 运行有界、逐步扩大的发现轮次 |
 | `scan_known_repos.py` | 扫描持久贡献集合或指定仓库的新 issue |
 | `contribution_tracker.py` | 保存参与过的仓库、issue 与 PR |
 | `pr_tracker.py` | 保存 PR、通知、review、评论、CI 与未处理活动 |
@@ -234,8 +234,6 @@ RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue�
 | `rebuild_github_state.py` | 完整分页读取 GitHub，在明确授权后事务性重建 state |
 | `workspace_job.py` | 创建一次性克隆、提交后释放、按需恢复 |
 | `workspace_cleanup.py` | 已有共享工作树与集成 worker 的兼容清理 |
-| `auto_fix.py` | 可选的供应商无关非交互调度器 |
-| `auto_fix.sh` | `auto_fix.py` 的 POSIX 包装脚本 |
 
 常用命令：
 

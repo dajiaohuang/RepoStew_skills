@@ -4,16 +4,13 @@ Use this tree in order. A later reference must not invent a second gate that
 contradicts this file. If two documents disagree, this file plus the root
 `SKILL.md` win, then `taste-and-permissions.md` for candidate labels.
 
-## 0. Profile
+## 0. Shared workflow
 
-- Any parent → root `SKILL.md`, which holds the model fork inline: a GPT-6
-  Astra or Fable parent is the orchestrator and follows the "Astra / Fable
-  parent" section plus `astra-fable.md`, delegating bounded work to small models
-  (Luna on OpenAI hosts, Haiku on Anthropic hosts); every other parent follows
-  the full detailed workflow in `generic-full-workflow.md`. One skill, one
-  source of truth — do not mix separate skill copies in one run.
-
-Ranked campaigns follow `ranked-repository-campaign.md`: ten repositories is an intake cap. All delegation follows `worker-scheduling.md`: one root, bounded leaf workers, durable overflow, and explicit user requests for visible tasks.
+Any parent/backend reads root `SKILL.md` and `full-workflow.md`.
+Discovery uses `discovery-campaign.md`: one complete root-owned queue,
+recent issues before authorized audits, no fixed repository quota.
+Execution uses `worker-scheduling.md`: native subagents, external CLIs or
+mixed workers under the same authority and result-acceptance gates.
 
 ## 1. Roots and state
 
@@ -42,8 +39,10 @@ Ranked campaigns follow `ranked-repository-campaign.md`: ten repositories is an 
   verified `ASK_MAINTAINER` on an existing public thread, plus the
   policy-compliant draft route. That does not open a new issue/discussion.
 
-Stop autonomous work when three consecutive broadened discovery rounds find
-nothing, the user interrupts, or access/policy/approval blocks safe progress.
+Use the campaign's requested stop condition; do not abandon runnable queued
+work after an empty search or a batch. Retain blocked items and continue safe
+independent work. Stop on user interruption or when no further safe progress
+is possible without new authority.
 
 ## 3. Intake
 
@@ -52,9 +51,7 @@ Pick exactly one:
 | User gave | Workflow |
 | --- | --- |
 | Issue URL or `owner/repo#N` | Verify that issue |
-| `owner/repo` without a number | Scan that repository |
-| A technical direction | Discover across GitHub |
-| Daily/weekly/monthly activity reports or a ranked popular-repository batch | Ranked repository campaign |
+| Named repository, technical direction, activity reports or continuous discovery | Discovery campaign |
 | Inspect / propose / file issues | Audit |
 | Check or respond to PRs | PR maintenance |
 | Maintain repos they own or administer | Maintained-repo path |
