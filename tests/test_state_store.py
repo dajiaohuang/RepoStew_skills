@@ -32,7 +32,7 @@ class SqliteStateTests(unittest.TestCase):
                 loaded = repostew_state.load_json(path, [])
                 self.assertEqual(loaded, payload)
 
-    def test_file_fallback_until_a_name_is_imported(self):
+    def test_database_never_resurrects_legacy_file(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             tracker = home / "pr_tracker.json"
@@ -43,7 +43,7 @@ class SqliteStateTests(unittest.TestCase):
                     {"version": 2, "resources": [], "history": []},
                 )
                 loaded = repostew_state.load_json(tracker, [])
-            self.assertEqual(loaded[0]["repo"], "a/r")
+            self.assertEqual(loaded, [])
 
     def test_migrate_archives_json_and_preserves_records(self):
         with tempfile.TemporaryDirectory() as directory:

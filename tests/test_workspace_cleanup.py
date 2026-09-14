@@ -132,7 +132,7 @@ class WorkspaceCleanupTests(unittest.TestCase):
 
     def _write_tracker(self, state_home: Path, entries: list[dict]) -> Path:
         tracker = state_home / "pr_tracker.json"
-        tracker.write_text(json.dumps(entries), encoding="utf-8")
+        repostew_state.state_store.save_document(state_home, tracker.name, entries)
         return tracker
 
     def test_dry_run_then_apply_removes_only_registered_local_resources(self):

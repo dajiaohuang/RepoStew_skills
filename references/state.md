@@ -1,5 +1,13 @@
 # RepoStew state store
 
+The default lifecycle is now [GitHub-rebuildable compact state and disposable
+jobs](ephemeral-storage.md). `rebuild_github_state.py --apply-reset` replaces
+live records transactionally after complete GitHub pagination, with one offline
+SQLite recovery backup. No old local paths, handled-event claims, follow policy,
+or checkpoints are imported. Once SQLite exists, missing records return defaults
+and never fall back to loose JSON. Explicit migration remains available for a
+deliberate import, not as part of a clean rebuild.
+
 Runtime mutable state lives in `REPOSTEW_HOME/repostew.sqlite` (SQLite WAL).
 `paths.json` remains a bootstrap file in the same directory and is never stored
 in the database. It records the three storage roots (schema_version 2) as POSIX

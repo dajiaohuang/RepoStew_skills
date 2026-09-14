@@ -217,6 +217,16 @@ before creating, verifying, changing, or relying on the authority registry.
 
 ## Release task storage after every submitted PR
 
+**Default for new work: disposable standalone jobs, not permanent clones.**
+Read [references/ephemeral-storage.md](references/ephemeral-storage.md) before
+creating a workspace or rebuilding state. Use `workspace_job.py create`, then
+`workspace_job.py release --pr ... --apply` immediately after every submitted
+PR/follow-up push and local validation. Waiting for remote CI/review requires no
+checkout. The registered job includes disposable ignored dependencies/build
+outputs; never place credentials or irreplaceable data in it. Restore only for
+the next actual edit. The linked-worktree procedure below is a compatibility
+path for already registered shared clones, not the default for new work.
+
 After pushing, tracking the PR, and completing the current action/validation,
 register the exact contribution worktree, review its dry run, and apply guarded
 cleanup immediately, including while the PR is `OPEN`. Do not keep dependency

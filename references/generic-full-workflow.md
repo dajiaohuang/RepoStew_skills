@@ -8,6 +8,11 @@ specialist reference only when the gate that names it is active.
 
 ## Verify a specific issue
 
+For new local work, use [ephemeral-storage.md](ephemeral-storage.md): a registered
+disposable clone, removed immediately after PR submission/follow-up validation.
+Linked-worktree examples later in this document apply only to existing shared
+repositories. Do not create a permanent clone just to follow those examples.
+
 Before cloning or editing:
 
 1. Read the issue body and full discussion.

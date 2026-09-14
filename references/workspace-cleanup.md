@@ -8,12 +8,11 @@ notification. Repeat this release step after each follow-up push. The agent
 reviews the exact dry run and applies it under the standing maintenance scope;
 no extra user confirmation is needed for this default lifecycle.
 
-Prefer a linked worktree for every contribution so task files can be removed
-without deleting the shared canonical clone. Keep at most the selected shared
-clone and durable state between turns, and install dependencies in the task
-worktree. A canonical clone or an unregistered standalone clone is not made
-disposable by its name; migrate future work to registered worktrees, and assess
-existing clones under the separately authorized workspace sweep.
+New contributions use registered disposable standalone clones; see
+[ephemeral-storage.md](ephemeral-storage.md). They retain no canonical clone
+after submission. The linked-worktree commands below remain for already shared
+repositories only. An unregistered existing clone does not become disposable
+by its name; assess it under a separately authorized sweep.
 
 Stop task-owned test servers/watchers first. If another task or process still
 needs the worktree, lock it with `git worktree lock --reason <reason> <path>` and

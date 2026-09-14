@@ -137,9 +137,8 @@ _MISSING = object()
 def load_json(path: Path, default: Any) -> Any:
     home = _sqlite_home_for(path)
     if home is not None and state_store.uses_database(home):
-        loaded = state_store.load_document(home, path.name, _MISSING)
-        if loaded is not _MISSING:
-            return loaded
+        # Once SQLite exists, legacy files cannot resurrect discarded state.
+        return state_store.load_document(home, path.name, default)
     try:
         with path.open("r", encoding="utf-8") as handle:
             return json.load(handle)

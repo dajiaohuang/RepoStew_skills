@@ -25,6 +25,9 @@ LIST_COLLECTIONS = {
     "pr_tracker.json": "pull_requests",
     "seen_issues.json": "seen_issues",
     "maintenance_batches.json": "maintenance_batches",
+    "workspace_jobs.json": "workspace_jobs",
+    "github_repositories.json": "github_repositories",
+    "github_issues.json": "github_issues",
 }
 
 DOCUMENT_NAMES = {
@@ -153,6 +156,19 @@ def save_document(state_home: Path, name: str, data: Any) -> None:
     with connect(state_home, create=True) as connection:
         connection.execute("BEGIN IMMEDIATE")
         _save_to_connection(connection, name, data)
+
+
+def put_record(state_home: Path, name: str, key: str, data: dict) -> None:
+    """Atomic single-record write; independent jobs do not replace each other."""
+    collection = LIST_COLLECTIONS[name]
+    with connect(state_home, create=True) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute(
+            "INSERT INTO records(collection,key,sort_index,payload,updated_at) "
+            "VALUES (?,?,0,?,?) ON CONFLICT(collection,key) DO UPDATE SET "
+            "payload=excluded.payload,updated_at=excluded.updated_at",
+            (collection, key, compact(data), now_iso()),
+        )
 
 
 def _load_from_connection(connection: sqlite3.Connection, name: str, default: Any) -> Any:
