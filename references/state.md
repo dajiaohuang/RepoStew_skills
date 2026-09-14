@@ -22,8 +22,8 @@ Canonical collections:
 | --- | --- |
 | `pr_tracker.json` | Tracked pull requests |
 | `contributions.json` | Contributed repos, issues, PRs |
-| `notification_inbox.json` | Notification threads |
-| `notification_checkpoints.json` | Source cursors |
+| `notification_inbox.json` | GitHub and namespaced email delivery metadata; shared pending inbox |
+| `notification_checkpoints.json` | Independent source/account/folder cursors, never read flags |
 | `seen_issues.json` | Discovery/scan memory |
 | `workspace_resources.json` | Registered worktrees and cleanup history |
 | `issue_checkpoints.json` | New-issue intake cursors |
@@ -35,6 +35,13 @@ Canonical collections:
 
 Scripts still use those names through `load_json` / `save_json`. They no longer
 rewrite pretty-printed JSON on every update.
+
+Follow [pr-maintenance.md](pr-maintenance.md) for the dual-track contract.
+Intake merges run inside SQLite write transactions so independent rails do not
+overwrite each other's deliveries. PR activity uses GitHub IDs plus revisions;
+receipt/reporting is not action completion. Store only compact routing/outcome
+evidence, not raw mail, attachments or source exports. Rebuild drops both rails'
+cursors and local handling claims; bounded replay needs live GitHub verification.
 
 ```bash
 python scripts/repostew_state.py status

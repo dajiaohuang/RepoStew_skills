@@ -151,7 +151,11 @@ for registration, rebind and release; never hand-edit ownership records.
 
 ## Maintain pull requests
 
-Treat maintenance as a durable, notification-first inbox. Use GitHub Notifications as the default trigger and refresh only the tracked PRs named by those notifications. A notification is a wake-up signal, not the complete review record: after a hit, read the full PR state, CI, mergeability, review decision, general comments, reviews, and inline comments. External activity remains pending until it is explicitly resolved after action.
+Read [pr-maintenance.md](pr-maintenance.md) for the single authoritative
+GitHub Notifications + Email dual-track contract: independent source cursors,
+one SQLite inbox, GitHub event-revision deduplication, complete action-time
+verification, report-only monitor boundaries and reconstruction behavior.
+Both configured rails run independently, not only on failure of the other.
 
 When both workspace registries exist, intersect active/self follow scope with
 enabled maintained authority to select the owner/maintainer quick path. Do not
@@ -168,18 +172,10 @@ python scripts/pr_tracker.py list
 python scripts/pr_tracker.py notifications --repo owner/repo
 ```
 
-The notification command requests all notifications updated after the stored GitHub checkpoint where the contributor is participating or mentioned, persists every thread in `notification_inbox.json`, and performs targeted refreshes for known PRs without changing notification read state. Never use unread state as a cursor because the user may read notifications independently. On the first pass, use a bounded lookback; use `--include-watching` only when broader watched-repository traffic is intentional. List the durable queue with `python scripts/pr_tracker.py notification-inbox`; resolve a notification entry only after its full GitHub state has been handled.
-
-When GitHub Notifications are unavailable, use a user-configured Outlook folder as a secondary trigger if the host can read Outlook. Query that folder for GitHub notification mail with `receivedDateTime` later than the stored Outlook checkpoint, deduplicate by immutable message ID, and then perform the same targeted GitHub refresh. Never infer or hard-code a folder name. Email is not authoritative: delivery settings, rules, and delays can omit events.
-
-Capture the batch-start timestamp before fetching. Advance a source checkpoint to that timestamp only after the entire batch is handled or durably retained; this prevents events arriving during processing from falling into a gap:
-
-```bash
-python scripts/pr_tracker.py checkpoint github <batch-start-ISO-8601>
-python scripts/pr_tracker.py checkpoint outlook <batch-start-ISO-8601>
-```
-
-Run a low-frequency reconciliation with `python scripts/pr_tracker.py check` for open tracked PRs to catch missed, prematurely read, or undelivered notifications. This is a safety net, not the normal comment-follow-up loop.
+Use `email-intake` for connector-normalized metadata and `notification-inbox`
+for either rail. Neither command sends replies or changes source read state.
+Low-frequency open-PR `check` remains a missed-event safety net, not the normal
+loop. Missing email access is reported as missing coverage, not success.
 
 For each red item, read all feedback and current code, reproduce valid concerns, update the existing branch, test, commit, push, and post one evidence-backed response. Then mark the observed activity handled and immediately refresh once more:
 

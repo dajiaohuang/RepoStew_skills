@@ -90,11 +90,12 @@ secrets, modify protected-branch settings, expand services/dependencies, or
 speak for other maintainers. Those actions still require the user's explicit
 scope and any repository or platform approval.
 
-## Notification-first maintenance
+## Dual-track maintenance
 
 Intersect the active/self follow set with the enabled maintained set to choose
-the quick path. Process GitHub Notifications first, then due missed-event
-reconciliation. A notification is only a routing signal; always refresh the
+the quick path. Follow [pr-maintenance.md](pr-maintenance.md) for independent
+GitHub Notifications and Email intake, then due missed-event reconciliation.
+A delivery is only a routing signal; always refresh the
 complete current state once before changing code or replying. Avoid repeated
 refreshes when neither notification/state nor the reconciliation cadence has
 changed.

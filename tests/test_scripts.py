@@ -378,6 +378,7 @@ class TrackerTests(unittest.TestCase):
         }
         notifications = [{
             "id": "99",
+            "updated_at": "2026-08-15T00:00:00Z",
             "reason": "author",
             "unread": True,
             "repository": {"full_name": "owner/repo"},
@@ -411,9 +412,10 @@ class TrackerTests(unittest.TestCase):
         self.assertNotIn("last_checked", entries[0])
         self.assertEqual(entries[1]["triggered_by_notifications"][0]["thread_id"], "99")
 
-    def test_notifications_ignore_already_terminal_tracked_prs(self):
+    def test_notifications_refresh_previously_terminal_tracked_prs(self):
         notification = {
             "id": "100",
+            "updated_at": "2026-08-15T00:00:00Z",
             "repository": {"full_name": "owner/repo"},
             "subject": {
                 "type": "PullRequest",
@@ -428,7 +430,8 @@ class TrackerTests(unittest.TestCase):
             with (
                 mock.patch.dict(os.environ, {"REPOSTEW_HOME": directory}),
                 mock.patch.object(pr_tracker, "fetch_github_notifications", return_value=[notification]),
-                mock.patch.object(pr_tracker, "fetch_pr") as fetch_pr,
+                mock.patch.object(pr_tracker, "fetch_pr", return_value={"state": "OPEN"}) as fetch_pr,
+                mock.patch.object(pr_tracker, "fetch_activities", return_value=[]),
                 mock.patch.object(pr_tracker, "run", return_value="contributor"),
                 contextlib.redirect_stdout(io.StringIO()) as stdout,
             ):
@@ -440,10 +443,10 @@ class TrackerTests(unittest.TestCase):
                 }])
                 result = pr_tracker.cmd_notifications(args)
         self.assertEqual(result, 0)
-        fetch_pr.assert_not_called()
+        fetch_pr.assert_called_once_with("owner/repo", 3)
         self.assertEqual(
-            json.loads(stdout.getvalue())["ignored_terminal_notifications"][0]["thread_id"],
-            "100",
+            json.loads(stdout.getvalue())["pull_requests_refreshed"][0]["state"],
+            "OPEN",
         )
 
     def test_notification_checkpoint_is_timestamp_based_and_monotonic(self):

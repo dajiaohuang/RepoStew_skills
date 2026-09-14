@@ -129,11 +129,13 @@ suite for a reversible typo fix.
 
 ## 10. Track and maintain
 
-Record PRs and issues with the scripts. Notifications are the wake-up;
-unread is not a cursor. Capture batch-start before fetch. Partition work if
-needed; advance a shared checkpoint only after every partition is complete or
-durably retained. After a hit, read the full current GitHub state before
-acting.
+Record PRs and issues with the scripts. Follow [pr-maintenance.md](pr-maintenance.md):
+GitHub Notifications and configured Email are independent intake rails into
+one SQLite inbox. Deduplicate actions by live GitHub event revision, not delivery
+ID. Each source owns its bounded window, coverage and checkpoint; unread is not
+a cursor. Report-only monitors do not trigger maintenance or gain write authority.
+Read the complete current GitHub state before acting and release submitted jobs
+immediately after local validation, without waiting for review or CI.
 
 ## 11. Cleanup
 

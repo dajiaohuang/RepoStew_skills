@@ -28,7 +28,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 - 检查 issue 是否仍开放、未被认领、未被提交或竞争 PR 修复；
 - 区分外部贡献者、仓库 owner/admin/maintain 与用户临时授权；
 - 优先实现最小、完整、可逆、可测试的改动；
-- 以 GitHub Notifications 驱动 review、CI 与冲突跟进；
+- GitHub Notifications 与 Email 双轨独立采集，统一跟进 PR、评论、review 与 CI；
 - 用持久 checkpoint 保存未处理活动，不依赖 unread 状态；
 - PR 提交后立即释放显式登记、已推送且重新核验过的一次性工作区。
 
@@ -77,7 +77,7 @@ RepoStew 把这些容易被省略的工作变成显式门槛：
 ### 4. PR 持续维护
 
 - 使用 SQLite 中的 PR 记录；明确要求重建时从 GitHub 完整分页同步；
-- 使用通知作为主要触发源，并为每个命中读取完整当前状态；
+- 按[双轨维护规范](references/pr-maintenance.md)独立保存两源检查点，按 GitHub 事件版本去重，行动前读取完整当前状态；Email Monitor 的只报告权限不变；
 - 持久保存 review、普通评论、inline 评论、CI、冲突与待处理活动；
 - 完成修改、测试、推送和回复后，才把活动标记为已处理；
 - 以低频开放 PR 对账作为防漏机制，而不是轮询主流程。
@@ -244,6 +244,7 @@ python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
 
 # 查看当前 PR 状态
 python scripts/pr_tracker.py notifications
+python scripts/pr_tracker.py email-intake --source email:outlook:work:github --input -
 python scripts/pr_tracker.py list
 
 # 扫描明确选择的历史贡献仓库

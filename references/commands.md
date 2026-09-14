@@ -33,13 +33,17 @@ standalone discovery/dispatch loop defines a second policy.
 python scripts/pr_tracker.py add "https://github.com/owner/repo/pull/N" "https://github.com/owner/repo/issues/M"
 python scripts/pr_tracker.py notifications
 python scripts/pr_tracker.py notifications --repo owner/repo
+python scripts/pr_tracker.py email-intake --source email:outlook:work:github --input -
 python scripts/pr_tracker.py notification-inbox
 python scripts/pr_tracker.py list
 python scripts/pr_tracker.py check
 python scripts/pr_tracker.py resolve https://github.com/owner/repo/pull/N
 python scripts/pr_tracker.py checkpoint github <batch-start-ISO-8601>
-python scripts/pr_tracker.py checkpoint outlook <batch-start-ISO-8601>
+python scripts/pr_tracker.py checkpoint email:outlook:work:github <batch-start-ISO-8601>
 ```
+
+Use the input schema and coverage gates in [pr-maintenance.md](pr-maintenance.md).
+Email intake stores routing metadata only; it does not access a mailbox or act.
 
 ## Contribution / known repos
 

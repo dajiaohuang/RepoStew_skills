@@ -75,7 +75,11 @@ Follow this order. Do not skip a gate because the work looks familiar.
    an enabled verified maintained row.
 9. **Direct regular-PR judgment gate** before asking or opening Draft.
 10. **Implement and validate** in proportion to risk.
-11. **Submit and track**, then maintain from notifications.
+11. **Submit and track**, then follow the GitHub Notifications + Email dual-track
+    contract in [pr-maintenance.md](references/pr-maintenance.md): independent
+    source cursors, one SQLite inbox, live GitHub event-revision deduplication.
+    Keep report-only monitors report-only; release local jobs after each push
+    and validation, without waiting for CI/review.
 
 Read [references/workflow.md](references/workflow.md) for the yes/no tree.
 Read a specialist reference only when that gate is active:

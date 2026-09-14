@@ -8,14 +8,17 @@ contributor explicitly marks them resolved after responding or acting.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlencode, urlparse
 
 from contribution_tracker import record_contribution
 from repostew_state import load_json, save_json, state_file
+import state_store
 
 PR_FIELDS = (
     "title,state,url,author,createdAt,updatedAt,mergedAt,closedAt,isDraft,"
@@ -31,6 +34,8 @@ def now_iso() -> str:
 
 
 def _parse_timestamp(value: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError("timestamp must be an ISO-8601 string")
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         raise ValueError("timestamp must include a timezone")
@@ -49,14 +54,16 @@ def notification_since(source: str, explicit: str | None = None,
 
 def save_notification_checkpoint(source: str, timestamp: str) -> str:
     normalized = _parse_timestamp(timestamp).isoformat()
-    checkpoints = load_json(state_file(NOTIFICATION_CHECKPOINTS), {})
-    if not isinstance(checkpoints, dict):
-        checkpoints = {}
-    previous = checkpoints.get(source)
-    if previous and _parse_timestamp(normalized) < _parse_timestamp(previous):
-        raise ValueError("checkpoint cannot move backwards")
-    checkpoints[source] = normalized
-    save_json(state_file(NOTIFICATION_CHECKPOINTS), checkpoints)
+    if _parse_timestamp(normalized) > datetime.now(timezone.utc):
+        raise ValueError("checkpoint cannot be in the future")
+    with state_store.connect(state_file(NOTIFICATION_CHECKPOINTS).parent, create=True) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        checkpoints = state_store._load_from_connection(connection, NOTIFICATION_CHECKPOINTS, {})
+        previous = checkpoints.get(source)
+        if previous and _parse_timestamp(normalized) < _parse_timestamp(previous):
+            raise ValueError("checkpoint cannot move backwards")
+        checkpoints[source] = normalized
+        state_store._save_to_connection(connection, NOTIFICATION_CHECKPOINTS, checkpoints)
     return normalized
 
 
@@ -152,10 +159,12 @@ def _format_ci(ci):
 def _api_list(endpoint: str) -> list[dict]:
     data = run_json(["gh", "api", "--paginate", "--slurp", endpoint], timeout=30)
     if not isinstance(data, list):
-        return []
+        raise RuntimeError(f"incomplete GitHub activity fetch: {endpoint}")
     if data and all(isinstance(page, list) for page in data):
-        return [item for page in data for item in page if isinstance(item, dict)]
-    return [item for item in data if isinstance(item, dict)]
+        data = [item for page in data for item in page]
+    if not all(isinstance(item, dict) and item.get("id") is not None for item in data):
+        raise RuntimeError(f"malformed GitHub activity page: {endpoint}")
+    return data
 
 
 def _activity(kind: str, raw: dict) -> dict:
@@ -170,6 +179,12 @@ def _activity(kind: str, raw: dict) -> dict:
         "created_at": created,
         "url": raw.get("html_url") or raw.get("url") or "",
     }
+    # A delivery ID is not an action identity. Re-edited comments must reopen,
+    # even when only the part beyond the persisted body excerpt changed.
+    activity["revision"] = hashlib.sha256(json.dumps({
+        "body": raw.get("body"), "updated_at": raw.get("updated_at"),
+        "state": raw.get("state"), "commit_id": raw.get("commit_id"),
+    }, sort_keys=True).encode("utf-8")).hexdigest()
     if kind == "review":
         activity["state"] = raw.get("state")
         activity["commit_id"] = raw.get("commit_id")
@@ -200,9 +215,12 @@ def reconcile_pending(entry: dict, activities: list[dict], viewer_login: str | N
         if isinstance(item, dict) and item.get("key")
     }
     handled = set(entry.get("handled_activity_ids", []))
+    revisions = entry.get("handled_activity_revisions", {})
     viewer = (viewer_login or "").lower()
     for activity in activities:
-        if activity["key"] in handled:
+        if activity.get("revision") and revisions.get(activity["key"]) == activity["revision"]:
+            continue
+        if not activity.get("revision") and activity["key"] in handled:
             continue
         author = (activity.get("author") or "").lower()
         if viewer and author == viewer:
@@ -296,8 +314,10 @@ def fetch_github_notifications(*, since: str,
     if not isinstance(data, list):
         return None
     if data and all(isinstance(page, list) for page in data):
-        return [item for page in data for item in page if isinstance(item, dict)]
-    return [item for item in data if isinstance(item, dict)]
+        data = [item for page in data for item in page]
+    if not all(isinstance(item, dict) and item.get("id") and item.get("updated_at") for item in data):
+        return None
+    return data
 
 
 def _notification_summary(notification: dict) -> dict:
@@ -318,7 +338,26 @@ def _notification_summary(notification: dict) -> dict:
 
 def persist_notification_batch(source: str, notifications: list[dict], seen_at: str) -> int:
     """Durably merge notification routing metadata without clearing pending items."""
-    data = load_json(state_file(NOTIFICATION_INBOX), [])
+    # Serialize read/merge/write across both rails; never replace a snapshot
+    # read before another source committed its deliveries.
+    with state_store.connect(state_file(NOTIFICATION_INBOX).parent, create=True) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        for notification in notifications:
+            key = f"{source}:{notification.get('id')}"
+            row = connection.execute(
+                "SELECT payload FROM records WHERE collection='notifications' AND key=?", (key,)
+            ).fetchone()
+            merged = merge_notification_batch([json.loads(row[0])] if row else [], source, [notification], seen_at)
+            connection.execute(
+                "INSERT INTO records(collection,key,sort_index,payload,updated_at) "
+                "VALUES ('notifications',?,0,?,?) ON CONFLICT(collection,key) DO UPDATE SET "
+                "payload=excluded.payload,updated_at=excluded.updated_at",
+                (key, state_store.compact(merged[0]), seen_at),
+            )
+    return len(notifications)
+
+
+def merge_notification_batch(data, source, notifications, seen_at):
     if not isinstance(data, list):
         data = []
     existing = {
@@ -328,10 +367,17 @@ def persist_notification_batch(source: str, notifications: list[dict], seen_at: 
     }
     for notification in notifications:
         summary = _notification_summary(notification)
+        if not summary.get("thread_id") or not summary.get("updated_at"):
+            raise ValueError("notification requires a stable ID and update timestamp")
+        _parse_timestamp(summary["updated_at"])
         key = f"{source}:{summary.get('thread_id')}"
         item = existing.get(key, {})
         previous_update = item.get("updated_at")
-        if item.get("status") == "resolved" and previous_update != summary.get("updated_at"):
+        if previous_update and _parse_timestamp(previous_update) > _parse_timestamp(summary["updated_at"]):
+            continue
+        if item.get("status") == "resolved" and (
+            not previous_update or _parse_timestamp(previous_update) != _parse_timestamp(summary["updated_at"])
+        ):
             item["status"] = "pending"
             item.pop("resolved_at", None)
         item.update(summary)
@@ -346,8 +392,60 @@ def persist_notification_batch(source: str, notifications: list[dict], seen_at: 
         key=lambda item: (item.get("updated_at") or "", item.get("key") or ""),
         reverse=True,
     )
-    save_json(state_file(NOTIFICATION_INBOX), merged)
-    return len(notifications)
+    return merged
+
+
+def cmd_email_intake(args) -> int:
+    """Import connector-normalized routing metadata, never raw mail or actions."""
+    try:
+        if not args.source.startswith("email:") or len(args.source.split(":")) != 4 or any(
+            not part.strip() for part in args.source.split(":")
+        ):
+            raise ValueError("source must be email:provider:account-alias:folder-alias")
+        payload = json.loads(sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("email batch must be an object")
+        started = _parse_timestamp(payload["batch_started_at"])
+        since = _parse_timestamp(payload["since"])
+        if since > started or started > datetime.now(timezone.utc):
+            raise ValueError("invalid email batch time window")
+        if payload.get("complete") is not True or not isinstance(payload.get("messages"), list):
+            raise ValueError("email intake requires a complete paginated metadata batch")
+        notifications = []
+        for message in payload["messages"]:
+            if not isinstance(message, dict):
+                raise ValueError("message metadata must be an object")
+            received = _parse_timestamp(message["received_at"])
+            if not since <= received <= started:
+                raise ValueError("message is outside the declared batch window")
+            url = message["github_url"]
+            if not isinstance(url, str):
+                raise ValueError("github_url must be a string")
+            parsed = urlparse(url)
+            canonical = parsed._replace(query="", fragment="").geturl().rstrip("/")
+            try:
+                repo, number = parse_pr_url(canonical)
+                kind, resource = "PullRequest", "pulls"
+            except ValueError:
+                canonical = normalize_issue_url(canonical)
+                parts = urlparse(canonical).path.split("/")
+                repo, number = f"{parts[1]}/{parts[2]}", int(parts[4])
+                kind, resource = "Issue", "issues"
+            if not isinstance(message["id"], str) or not message["id"].strip():
+                raise ValueError("email message requires a stable provider ID")
+            notifications.append({
+                "id": message["id"], "updated_at": received.isoformat(),
+                "repository": {"full_name": repo}, "reason": "email",
+                "subject": {"type": kind, "url": f"https://api.github.com/repos/{repo}/{resource}/{number}"},
+            })
+        count = persist_notification_batch(args.source, notifications, started.isoformat())
+        print(json.dumps({"source": args.source, "persisted": count,
+                          "suggested_checkpoint": started.isoformat(),
+                          "checkpoint_advanced": False, "external_actions": False}))
+        return 0
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        print(f"ERROR: email intake rejected: {error}", file=sys.stderr)
+        return 1
 
 
 def cmd_notification_inbox(args) -> int:
@@ -359,6 +457,7 @@ def cmd_notification_inbox(args) -> int:
         if (args.include_resolved or item.get("status") != "resolved")
         and (not args.repo or (item.get("repo") or "").lower() == args.repo.lower())
     ]
+    entries.sort(key=lambda item: (item.get("updated_at") or "", item.get("key") or ""), reverse=True)
     if args.json:
         print(json.dumps({"notifications": entries}, indent=2, ensure_ascii=False))
         return 0
@@ -379,16 +478,21 @@ def cmd_notification_inbox(args) -> int:
 
 def cmd_notification_resolve(args) -> int:
     key = f"{args.source}:{args.thread_id}"
-    entries = load_json(state_file(NOTIFICATION_INBOX), [])
-    if not isinstance(entries, list):
-        entries = []
-    entry = next((item for item in entries if item.get("key") == key), None)
-    if not entry:
-        print(f"ERROR: notification {key} is not persisted", file=sys.stderr)
-        return 1
-    entry["status"] = "resolved"
-    entry["resolved_at"] = now_iso()
-    save_json(state_file(NOTIFICATION_INBOX), entries)
+    with state_store.connect(state_file(NOTIFICATION_INBOX).parent, create=True) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT payload FROM records WHERE collection='notifications' AND key=?", (key,)
+        ).fetchone()
+        if not row:
+            print(f"ERROR: notification {key} is not persisted", file=sys.stderr)
+            return 1
+        entry = json.loads(row[0])
+        entry["status"] = "resolved"
+        entry["resolved_at"] = now_iso()
+        connection.execute(
+            "UPDATE records SET payload=?,updated_at=? WHERE collection='notifications' AND key=?",
+            (state_store.compact(entry), now_iso(), key),
+        )
     print(f"Resolved persisted notification {key}; GitHub read state was unchanged.")
     return 0
 
@@ -409,12 +513,12 @@ def cmd_notifications(args) -> int:
         print("ERROR: could not fetch GitHub notifications", file=sys.stderr)
         return 1
 
+    persisted = persist_notification_batch("github", notifications, batch_started_at)
     if args.repo:
         notifications = [
             item for item in notifications
             if ((item.get("repository") or {}).get("full_name") or "").lower() == args.repo.lower()
         ]
-    persisted = persist_notification_batch("github", notifications, batch_started_at)
 
     data = load()
     entries = {
@@ -423,14 +527,11 @@ def cmd_notifications(args) -> int:
     }
     targets: dict[tuple[str, int], list[dict]] = {}
     unmatched = []
-    ignored_terminal = []
     for notification in notifications:
         target = notification_pr_target(notification)
         key = (target[0].lower(), target[1]) if target else None
         entry = entries.get(key) if key else None
-        if entry and entry.get("state") in {"MERGED", "CLOSED"}:
-            ignored_terminal.append(_notification_summary(notification))
-        elif entry:
+        if entry:
             targets.setdefault(key, []).append(notification)
         else:
             unmatched.append(_notification_summary(notification))
@@ -450,7 +551,12 @@ def cmd_notifications(args) -> int:
                 "thread_ids": [item.get("id") for item in target_notifications],
             })
             continue
-        apply_pr_state(entry, pr, fetch_activities(repo, number), viewer or entry.get("author_login"))
+        try:
+            activities = fetch_activities(repo, number)
+        except RuntimeError as error:
+            failed.append({"repo": repo, "pr_number": number, "error": str(error)})
+            continue
+        apply_pr_state(entry, pr, activities, viewer or entry.get("author_login"))
         entry["triggered_by_notifications"] = [
             _notification_summary(item) for item in target_notifications
         ]
@@ -464,7 +570,6 @@ def cmd_notifications(args) -> int:
         "notifications_persisted": persisted,
         "pull_requests_refreshed": refreshed,
         "unmatched_notifications": unmatched,
-        "ignored_terminal_notifications": ignored_terminal,
         "refresh_failures": failed,
         "notifications_marked_read": False,
     }
@@ -486,8 +591,6 @@ def cmd_notifications(args) -> int:
         print(f"  Next: {entry.get('next_action')}")
     if unmatched:
         print(f"Unmatched notifications retained for triage: {len(unmatched)}")
-    if ignored_terminal:
-        print(f"Ignored notifications for already terminal tracked PRs: {len(ignored_terminal)}")
     if failed:
         print(f"Failed targeted refreshes: {len(failed)}", file=sys.stderr)
     print(f"Suggested checkpoint after the entire batch is handled: {batch_started_at}")
@@ -661,7 +764,7 @@ def cmd_check(args) -> int:
         number = entry["pr_number"]
         pr = fetch_pr(repo, number)
         if not pr:
-            entry["last_checked"] = now_iso()
+            entry["last_attempted_at"] = now_iso()
             entry["fetch_error"] = True
             checked.append(entry)
             continue
@@ -671,9 +774,10 @@ def cmd_check(args) -> int:
     save(data)
 
     checked.sort(key=lambda item: {"red": 0, "yellow": 1, "green": 2, "gray": 3}.get(item.get("priority"), 4))
+    failed = any(entry.get("fetch_error") for entry in checked)
     if args.json:
         print(json.dumps({"pull_requests": checked}, indent=2, ensure_ascii=False))
-        return 0
+        return 1 if failed else 0
     for entry in checked:
         print(f"\n[{entry.get('priority', '?').upper()}] {entry['repo']}#{entry['pr_number']} {entry['pr_url']}")
         print(f"  State: {entry.get('state')}  CI: {_format_ci(entry.get('ci_status'))}")
@@ -684,7 +788,7 @@ def cmd_check(args) -> int:
             print(f"  Pending {activity['key']} by {activity.get('author')}{location}: {body or activity.get('state', '')}")
         print(f"  Next: {entry.get('next_action')}")
     print(f"\nChecked {len(checked)} PRs; pending activity remains until `resolve`.")
-    return 0
+    return 1 if failed else 0
 
 
 def cmd_resolve(args) -> int:
@@ -704,6 +808,8 @@ def cmd_resolve(args) -> int:
     pending = entry.get("pending_activity", [])
     handled = set(entry.get("handled_activity_ids", []))
     handled.update(item["key"] for item in pending if item.get("key"))
+    revisions = entry.setdefault("handled_activity_revisions", {})
+    revisions.update({item["key"]: item["revision"] for item in pending if item.get("revision")})
     entry["handled_activity_ids"] = sorted(handled)[-2000:]
     entry["pending_activity"] = []
     entry["last_resolved_at"] = now_iso()
@@ -779,12 +885,16 @@ def main() -> int:
         "notification-resolve", help="resolve one persisted notification after handling it"
     )
     notification_resolve_parser.add_argument("thread_id")
-    notification_resolve_parser.add_argument("--source", choices=("github", "outlook"), default="github")
+    notification_resolve_parser.add_argument("--source", default="github")
+
+    email_parser = subparsers.add_parser("email-intake", help="persist normalized email metadata; no mailbox access or actions")
+    email_parser.add_argument("--source", required=True, help="email:provider:account-alias:folder-alias")
+    email_parser.add_argument("--input", required=True, help="metadata JSON file, or - for stdin")
 
     checkpoint_parser = subparsers.add_parser(
         "checkpoint", help="advance a notification-source checkpoint after handling a full batch"
     )
-    checkpoint_parser.add_argument("source", choices=("github", "outlook"))
+    checkpoint_parser.add_argument("source", help="github or the exact configured email source namespace")
     checkpoint_parser.add_argument("timestamp", help="batch-start ISO-8601 timestamp")
 
     list_parser = subparsers.add_parser("list")
@@ -811,6 +921,8 @@ def main() -> int:
         return cmd_notifications(args)
     if args.command == "notification-inbox":
         return cmd_notification_inbox(args)
+    if args.command == "email-intake":
+        return cmd_email_intake(args)
     if args.command == "notification-resolve":
         return cmd_notification_resolve(args)
     if args.command == "checkpoint":
@@ -828,4 +940,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except (RuntimeError, ValueError) as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        raise SystemExit(1)

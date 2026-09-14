@@ -35,7 +35,7 @@ RepoStew turns those often-skipped responsibilities into explicit gates:
 - prove the issue is open, available, and not already fixed by commits or a competing PR;
 - distinguish outside-contributor access, verified owner/admin/maintain authority, and temporary user delegation;
 - prefer the smallest complete, reversible, testable change;
-- drive review, CI, and conflict work from GitHub Notifications;
+- independently collect GitHub Notifications and Email for unified PR, comment, review and CI follow-up;
 - retain unresolved activity with durable checkpoints instead of unread state; and
 - release explicitly registered, pushed and reverified disposable jobs after PR submission.
 
@@ -95,7 +95,7 @@ Launch-only work distinguishes admitted jobs from pending queue entries.
 ### 4. Continuous PR maintenance
 
 - Use the SQLite PR tracker; paginate GitHub completely when an explicit rebuild is requested.
-- Use notifications as the primary trigger and fetch a complete current snapshot for each hit.
+- Follow the [dual-track contract](references/pr-maintenance.md): independent source cursors, GitHub event-revision deduplication, and complete live checks before action. Report-only Email Monitors remain report-only.
 - Persist reviews, general and inline comments, CI, conflicts, and pending activity.
 - Mark activity handled only after the change, tests, push, and reply are complete.
 - Use low-frequency open-PR reconciliation only as a missed-event safety net.
@@ -266,6 +266,7 @@ python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
 
 # Inspect current PR state
 python scripts/pr_tracker.py notifications
+python scripts/pr_tracker.py email-intake --source email:outlook:work:github --input -
 python scripts/pr_tracker.py list
 
 # Scan an explicit historical contribution set

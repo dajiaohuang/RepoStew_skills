@@ -22,6 +22,12 @@ For authority-aware maintenance, apply
 prompt below delegates owner/admin/maintain semantics to that reference rather
 than redefining them.
 
+For both source rails, read [pr-maintenance.md](pr-maintenance.md), the canonical
+intake, deduplication, cursor, report-only and disposable-storage contract.
+These templates do not authorize changing an existing automation's status,
+cadence, model or permissions. Keep an existing report-only Email Monitor
+independent; do not make it a dispatcher or a feeder for this task.
+
 Codex desktop supports scheduled tasks in local projects or isolated
 worktrees; advanced schedules use RFC 5545 recurrence rules. A GitHub PR
 activity trigger cannot be combined with a time schedule in one task. See the
@@ -55,10 +61,14 @@ run from the matching verified value before invoking RepoStew helpers. If the
 record is missing or unreadable, a placeholder remains unfilled, a variable is
 already set to a different value, the workspace disagrees, or a root is
 missing, stop without writing. Do not stop merely because the scheduler did
-not inherit an otherwise verified variable. Capture the batch-start UTC
-timestamp before fetching. Use GitHub
-Notifications first and select events later than the last successful source
-checkpoint; never use unread state as a cursor. Scope routine work to the
+not inherit an otherwise verified variable. Follow pr-maintenance.md for
+GitHub Notifications + Email dual-track intake. Capture a batch-start UTC cutoff
+for each configured source, fetch all pages using its own checkpoint and overlap,
+and retain compact routing metadata in the same SQLite inbox. Collect both
+rails independently; never wait for a GitHub outage to read configured mail.
+Use the exact authorized provider/account/folder, report missing access as a
+coverage gap, and never use unread state as a cursor. Do not consume reports
+from or trigger an independent report-only Email Monitor. Scope routine work to the
 workspace's active/self follow registry. Verify repository metadata before
 intake and exclude archived repositories and forks; do not exclude an
 organization by name, so eligible ByteDance repositories remain in scope. Read
@@ -75,7 +85,9 @@ to account for the complete result window, and do not advance a failed or
 truncated partition.
 
 For every selected new issue, PR comment, review, inline comment, commit, or CI
-event, verify the complete current GitHub state: issue/PR status, full thread,
+event, coalesce duplicate deliveries by canonical GitHub target and deduplicate
+actions by event ID/revision or head/check status. Verify the complete current
+GitHub state: issue/PR status, full thread,
 reviews, inline comments, commits, mergeability, and checks. Handle valid
 in-scope review feedback and patch-caused CI failures on the existing branch,
 with focused validation and one evidence-backed reply. For a verified
@@ -88,16 +100,29 @@ direct-PR gates; use a registered disposable job and the smallest tested PR only
 when the standing autonomous scope authorizes it. Do not merge or close.
 
 Also run the configured low-frequency reconciliation when due so missed
-comments, reviews, and CI are retained, but keep notification-first intake as
-the normal path. Capture and inspect a tail pass after all actions. Advance a
-source checkpoint to the batch-start timestamp only after every partition and
-tail event is handled or durably retained. Persist the batch record in the
-selected SQLite state home.
+comments, reviews, and CI are retained, but keep dual-track intake as the normal
+path. Advance each source checkpoint to its own batch-start cutoff only after
+its complete window and every partition is handled or durably retained. A failed
+source cannot advance; an independently complete source can. Tail events stay
+pending for the next window. Persist compact batch coverage and outcome evidence
+in the selected SQLite state home. After a reset, use bounded replay and current
+GitHub replies; never reconstruct handling claims from old reports or local paths.
+
+Inspect and reply remotely when no local edit/test is required. Restore a
+registered disposable job only for an actual edit; if its record is absent,
+create a new registered job from the verified live PR head repo/branch. After
+each submission/follow-up push and local validation, preview and apply
+workspace_job.py release immediately. Do not retain clones while waiting for
+CI/review; preserve only explicit safety blockers with owner/reason. Never
+reset state or run a broad disk sweep as an intake prerequisite. Stay quiet
+while state is unchanged or non-actionable; report meaningful results, failure
+or required user action only.
 
 When the host supports subagents or child tasks, independent repository
 partitions may run in parallel. The parent task remains responsible for result
 collection, durable retention, and the shared checkpoint; a failed, missing,
-or unfinished child must prevent that checkpoint from advancing.
+or unfinished child must prevent the affected source checkpoint from advancing
+unless all its deliveries were independently durably retained by the parent.
 
 Do not perform a comprehensive repository audit, proactively hunt for defects,
 or create audit-driven issues. Those actions require a separate explicit human
