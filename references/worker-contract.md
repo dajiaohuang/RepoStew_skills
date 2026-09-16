@@ -58,6 +58,17 @@ speech, or security disclosure authority. Repository policy, duplicate checks,
 validation, maintainer/assignment rules and the no-attribution contract still
 apply after the capability gate passes.
 
+## Sequential multi-packet reuse
+
+An executor may receive multiple repository packets during a continuous
+campaign, but only sequentially. The root must accept or durably retain the
+previous result, release or explicitly retain its job, verify the previous
+writer has stopped, and then issue a fresh packet, workspace/branch and live
+permission snapshot. The executor must not overlap repositories, reuse a stale
+branch or authority snapshot, or write shared state. Return the current
+`packet_id`, repository and job on every completion so the root can advance the
+executor sequence without confusing packets.
+
 ## Required return
 
 Return structured data or equivalently labeled text:

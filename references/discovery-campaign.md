@@ -71,7 +71,10 @@ including authorized edits, tests and submission. It does not return after
 finding the first candidate. Reuse its packet identity across phases; if a
 handoff is necessary, validate the previous result and transfer exclusive
 ownership before continuing. Never let two workers mutate the same branch or
-workspace. A root-only run follows the identical lifecycle.
+workspace. After root acceptance closes or retains the packet, the same leaf
+or CLI executor may receive a fresh packet for another repository, but only
+sequentially with a new job, branch and permission snapshot. A root-only run
+follows the identical lifecycle.
 
 ### Phase A: finish recent issues before audit
 

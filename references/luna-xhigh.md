@@ -75,6 +75,12 @@ reproducible problem cannot be safely completed, return the doubtful assumption,
 strongest evidence and exact next requirement; the root can seek new authority
 or explicitly authorized model assistance without silently changing models.
 
+Each native or CLI executor may consume multiple repository packets
+sequentially in a continuous campaign. The root must accept or retain the
+previous result, close/release its job, and send a fresh packet and permission
+snapshot before reuse; never overlap repositories in one mutable workspace or
+session.
+
 ## Subagent goal and dispatch template
 
 Use the same leaf goal for all backends, specializing only the role and packet:
@@ -87,6 +93,11 @@ Revalidate live state; implement and validate every safe accepted in-scope item.
 Return compact, verifiable outcomes and durable evidence, with unfinished work
 explicit. Never schedule children or mutate shared state.
 ```
+
+After natural completion or a durably retained blocker, the same leaf may be
+reused for the next independent packet only after root acceptance closes the
+prior ownership and supplies a fresh workspace, authority and permission
+snapshot.
 
 Dispatch consists of a stable bootstrap followed by a task-specific packet:
 

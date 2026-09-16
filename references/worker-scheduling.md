@@ -11,8 +11,8 @@ read-only research; the authorized packet determines their actions.
 
 | User selection | Execution |
 | --- | --- |
-| Subagents | Native leaf agents, each assigned one independent repository packet |
-| External CLI | Root-launched non-interactive leaf processes, such as Claude Code or another installed agent CLI |
+| Subagents | Native leaf agents, each assigned one independent repository packet at a time; an idle leaf may receive sequential fresh packets |
+| External CLI | Root-launched non-interactive leaf processes, such as Claude Code or another installed agent CLI; a completed leaf may consume sequential fresh packets |
 | Mixed | Both backends consume one queue with shared resource accounting and exclusive ownership |
 | No available/authorized delegation | Root executes the same packets serially; retain explicit backend constraints and report limitations |
 
@@ -42,6 +42,12 @@ not global defaults or proof that every Claude process uses Anthropic models.
   vacancies after accepted results, and do not create extra scheduler roots to
   evade tool limits. One repository mutation owner at a time; independent
   read-only help needs an explicit bounded packet and cannot submit changes.
+- A single native leaf or CLI slot may process multiple repositories
+  sequentially during the campaign. The root must accept or durably retain the
+  prior packet, close/release or explicitly retain its job, and confirm the
+  prior writer is stopped before assigning the next packet. Never overlap two
+  repositories in one mutable workspace/session, reuse stale authority or
+  permission evidence, or skip a fresh packet, job and permission snapshot.
 - Reduce admission on memory pressure, repeated admission failures or rate
   limits; retain queued work and honor retry guidance. Do not spawn replacement
   storms or retry unchanged failures repeatedly. Unknown capacity is a reason
@@ -82,8 +88,9 @@ safe; do not fork the entire campaign history merely to supply the skill.
 Acknowledge dispatch and record the returned agent ID.
 
 Prefer completion notifications or a bounded event wait while the root does
-other useful work. After validating a return, reuse an idle leaf with a fresh
-packet only if the host supports reuse and prior workspace/ownership is closed.
+other useful work. After validating a return, reuse the same idle leaf with a
+fresh packet whenever the host supports reuse and prior workspace/ownership is
+closed; this sequential reuse is expected for continuous campaigns.
 A final answer, interrupt or archive does not prove a native slot was released.
 Use a real release operation if available; otherwise respect actual occupancy.
 Do not accumulate idle agents, invent termination APIs or silently replace
@@ -107,12 +114,15 @@ unavailable native capacity with another backend.
    Use process completion notification/wait support, not repeated log-tail or
    status polling. If an output limit truncates a return, read the saved result
    at completion instead of rerunning the repository job.
-4. A reusable seed session may contain the canonical skill paths and stable
-   worker rules to reduce repeated context. Fork/resume only when the client
-   supports it and each leaf gets an independent session plus a fresh packet.
-   Never run multiple workers in one mutable CLI session, reuse stale repository
-   authority, or let the seed become another scheduler. Forking a CLI context
-   is not creating a user-visible Codex task.
+ 4. A reusable seed session may contain the canonical skill paths and stable
+    worker rules to reduce repeated context. After a packet reaches natural
+    completion or a durable blocker and root acceptance closes its job, the
+    same CLI process/session may receive the next independent packet
+    sequentially. Reset or isolate its mutable workspace, authority and
+    permission snapshot between packets. Never run multiple workers
+    concurrently in one mutable CLI session, reuse stale repository authority,
+    or let the seed become another scheduler. Forking a CLI context is not
+    creating a user-visible Codex task.
 5. On completion, inspect exit code, final result and promised artifacts, then
    perform root acceptance. A zero exit is not proof of a submitted PR or full
    audit; a nonzero exit may still have pushed work. Check the exact branch/PR

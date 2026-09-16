@@ -236,6 +236,10 @@ for subagent-only, CLI-only and mixed admission. Concurrency follows the user's
 target and measured host/provider capacity, not a fixed repository batch size.
 Await completion signals, verify results, update shared state and release
 submitted disposable jobs. Launch-only dispatch is not automatic future work.
+In a continuous campaign, one native leaf or CLI executor may process multiple
+repositories sequentially: accept/retain and close the prior packet, release or
+retain its job, then issue a fresh packet and permission snapshot. Never overlap
+repositories in one mutable workspace/session or reuse stale authority.
 
 ## Use verified owner or maintainer authority
 
