@@ -83,6 +83,36 @@ Follow this order. Do not skip a gate because the work looks familiar.
     Keep report-only monitors report-only; release local jobs after each push
     and validation, without waiting for CI/review.
 
+### Universal issue and pull-request capability gate
+
+This gate applies to every repository and every backend, including discovery
+campaigns and Awesome-list seeds. Before any public issue or pull-request
+action, capture a live, repository-specific permission snapshot and record the
+timestamp, source, authenticated identity (never the credential), and the
+intended action.
+
+- **Issue write permission:** a verified repository role `WRITE`, `MAINTAIN`,
+  or `ADMIN`, or an explicit token/app capability `issues:write`.
+- **Pull-request write permission:** a verified repository role `WRITE`,
+  `MAINTAIN`, or `ADMIN`, or explicit `pull_requests:write` together with
+  `contents:write` (or an equivalent ability to push the contributor branch).
+- Issue permission and pull-request permission are separate. Having one does
+  not imply the other. Recheck the exact capability before each public write;
+  expired, missing, invalid, or contradictory evidence fails closed.
+- `READ`, `TRIAGE`, pull-only access, unknown/invalid authentication, or merely
+  being able to view a public repository is read-only for RepoStew. Do not file
+  or modify issues, PRs, comments, commits, branches, releases, or emails.
+  For an Awesome repository, continue audit/list parsing and route discovered
+  repositories to the durable queue as `queue_source_only`.
+- A write-capable role permits the repository action only after the normal
+  RepoStew safety, duplicate, repository-policy, validation, security, and
+  attribution gates. It does not grant merge, close, delete, governance, or
+  maintainer-speech authority.
+
+Use live evidence such as `gh repo view OWNER/REPO --json viewerPermission,owner`
+and the configured app/token capability report. Never infer write permission
+from a clone, a follow row, a prior contribution, or a public repository.
+
 Read [references/workflow.md](references/workflow.md) for the yes/no tree.
 Read a specialist reference only when that gate is active:
 

@@ -21,7 +21,7 @@ Do not substitute a backend, model or authority based on a template default.
 | `prohibited_actions` | Further delegation/agent CLIs; visible task creation/forking; shared-state writes; merge/close/remote deletion; secrets; fabricated authorship; coauthor trailers or agent/bot emails |
 | `dependencies`, `partition` | Validated prerequisites, exclusive owner and independent completion boundary |
 | `workspace`, `job_id`, `branch` | Root-created registered disposable job or remote-only; exact writable scope |
-| `state`, `root_checks` | Validated absolute state anchor and paths.json; root/auth/tool checks, no inferred roots |
+| `state`, `root_checks`, `permission_snapshot` | Validated absolute state anchor and paths.json; root/auth/tool checks, no inferred roots; live repository permission, capability source, timestamp and intended issue/PR actions |
 | `worker_context`, `skill_context` | Absolute canonical context, SKILL.md and required reference paths |
 | `validation`, `evidence_path` | Required commands/checks and durable output outside disposable storage |
 | `stop`, `retry` | Specific blockers, cancellation/timeout handling and root-owned retry conditions |
@@ -35,6 +35,28 @@ secret values or credential-bearing command lines.
 Optional fields include explicit follow/maintained status, existing clarification
 thread, source batch-start timestamp and user-requested human submission route.
 The worker never changes parent-owned fields or shared checkpoints.
+
+## Universal issue/PR permission gate
+
+Every packet must carry the live permission snapshot for its repository and
+the exact public actions it may perform. A worker may create or update an issue
+only when the snapshot proves repository role `WRITE`, `MAINTAIN`, or `ADMIN`,
+or explicit `issues:write`. A pull request additionally requires
+`pull_requests:write` plus `contents:write`/equivalent branch-push capability,
+unless the repository role itself grants both.
+
+`READ`, `TRIAGE`, pull-only access, unknown/invalid authentication, public
+visibility, a clone, or a historical contribution is not write permission.
+Issue and pull-request capability are independent. Recheck the exact gate
+immediately before each public write and return the observed evidence if it
+changes. When the gate fails, perform only the packet's read-only audit and
+evidence work; an Awesome packet uses `queue_source_only` to preserve list
+provenance and return new candidates to the root queue.
+
+Write capability does not grant merge, close, delete, governance, maintainer
+speech, or security disclosure authority. Repository policy, duplicate checks,
+validation, maintainer/assignment rules and the no-attribution contract still
+apply after the capability gate passes.
 
 ## Required return
 

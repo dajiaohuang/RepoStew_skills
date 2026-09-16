@@ -8,6 +8,31 @@
 - Filing issues
 - Technical taste
 
+## Universal issue/PR capability gate
+
+Apply this gate to every repository before any public issue or pull-request
+action, regardless of whether the work came from Trending, an Awesome list,
+an explicit repository request, or a maintenance follow-up. Capture a live
+repository-specific permission snapshot, its source and timestamp, and the
+exact action it authorizes. Recheck it immediately before each public write.
+
+| Action | Sufficient capability evidence | Read-only fallback |
+|---|---|---|
+| Create or update an issue | Repository role `WRITE`, `MAINTAIN`, or `ADMIN`; or explicit `issues:write` token/app capability | Audit, retain evidence, and do not file/update an issue |
+| Create or update a pull request | Repository role `WRITE`, `MAINTAIN`, or `ADMIN`; or explicit `pull_requests:write` plus `contents:write`/equivalent branch-push capability | Audit, retain a tested local result if any, and do not open/update a PR |
+
+`READ`, `TRIAGE`, pull-only access, an unknown/invalid token, public
+visibility, a clone, a follow row, or a historical contribution is not write
+permission. Issue and pull-request permission are independent. If a repository
+is an Awesome source and the gate fails, its route is `queue_source_only`:
+parse its lists, preserve provenance, and append new repositories to the root
+queue without public mutation.
+
+Write capability is not maintainer authority. Even after this gate passes,
+apply the repository's contribution policy, duplicate/assignment checks,
+validation, security-private route, and no-attribution rules. It never grants
+merge, close, delete, governance, or maintainer-speech authority.
+
 ## Candidate decisions
 
 Classify each candidate before implementation.
@@ -101,7 +126,8 @@ May:
 - analyze code and issues;
 - explain evidence, risks, and tradeoffs;
 - propose fixes and ask maintainers for direction;
-- open scoped issues and pull requests after required user confirmation;
+- open scoped issues and pull requests after required user confirmation **only
+  when the universal capability gate above passes for that exact action**;
 - respond to feedback on the contributor's own PRs.
 
 Must not:
@@ -120,6 +146,7 @@ Use only when repository permissions or explicit delegation establish authority.
 
 File an issue only after:
 
+0. verifying the universal issue capability gate above for this repository;
 1. reproducing the defect or collecting strong evidence;
 2. checking supported versions and the default branch;
 3. searching open and closed issues, discussions, PRs, and commits;
