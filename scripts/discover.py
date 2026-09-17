@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 from repostew_state import load_json, save_json, state_file
 
 QUIET = False
+DEFAULT_MIN_STARS = 1000
 
 
 def log(message: str) -> None:
@@ -322,7 +323,7 @@ REPO_FIELDS_JQ = (
 )
 
 
-def get_trending_repos(min_stars=100, max_days=7, count=10):
+def get_trending_repos(min_stars=DEFAULT_MIN_STARS, max_days=7, count=10):
     since = (datetime.now(timezone.utc) - timedelta(days=max_days)).strftime("%Y-%m-%d")
     query = f"pushed:>{since} stars:>={min_stars} archived:false fork:false"
     result = run_json(
@@ -339,7 +340,7 @@ def get_trending_repos(min_stars=100, max_days=7, count=10):
 # Strategy B: Domain keyword → repos
 # ═══════════════════════════════════════════════════════════════════════
 
-def get_keyword_repos(min_stars=10, max_days=14, count=10, keyword=None):
+def get_keyword_repos(min_stars=DEFAULT_MIN_STARS, max_days=14, count=10, keyword=None):
     keyword = (keyword or random.choice(DOMAIN_KEYWORDS)).strip()
     since = (datetime.now(timezone.utc) - timedelta(days=max_days)).strftime("%Y-%m-%d")
     query = (
@@ -396,8 +397,8 @@ def merge_repositories(*groups, count=10):
     )
 
 
-def discover_repositories(min_stars=100, max_days=7, repo_count=10,
-                          use_keyword=False, use_direct=False, kw_min_stars=10,
+def discover_repositories(min_stars=DEFAULT_MIN_STARS, max_days=7, repo_count=10,
+                          use_keyword=False, use_direct=False, kw_min_stars=DEFAULT_MIN_STARS,
                           focus_terms=()):
     """Find active repositories, optionally constrained to user-selected directions."""
     focus_terms = tuple(term.strip() for term in focus_terms if term.strip())
@@ -564,9 +565,9 @@ def evaluate_issue(repo_full_name, repo_stars, repo_license_str, issue,
 # Main orchestration
 # ═══════════════════════════════════════════════════════════════════════
 
-def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
+def discover_candidates(min_stars=DEFAULT_MIN_STARS, max_days=7, repo_count=10, issue_limit=8,
                         max_candidates=5, use_keyword=False, use_direct=False,
-                        kw_min_stars=10, focus_terms=()):
+                        kw_min_stars=DEFAULT_MIN_STARS, focus_terms=()):
     candidates = []
 
     # ── Collect repos ──
@@ -607,8 +608,8 @@ def discover_candidates(min_stars=100, max_days=7, repo_count=10, issue_limit=8,
             license_key = repo_info.get("license", "unknown") or "unknown"
             stars = repo_info.get("stars", 0)
 
-            if stars < 5:
-                continue  # skip tiny repos (likely personal/sandbox projects)
+            if stars < min_stars:
+                continue  # enforce the campaign's configured repository threshold
 
             result = evaluate_issue(
                 rn, stars, license_key, iss, clone_dir=None,
@@ -674,14 +675,14 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     p = argparse.ArgumentParser(description="Discover fixable GitHub issues")
-    p.add_argument("--min-stars", type=int, default=100)
+    p.add_argument("--min-stars", type=int, default=DEFAULT_MIN_STARS)
     p.add_argument("--max-days", type=int, default=7)
     p.add_argument("--repo-count", type=int, default=10)
     p.add_argument("--issue-limit", type=int, default=8)
     p.add_argument("--max-candidates", type=int, default=5)
     p.add_argument("--keyword", action="store_true")
     p.add_argument("--direct", action="store_true", help="Use Strategy C: direct issue search")
-    p.add_argument("--kw-min-stars", type=int, default=10)
+    p.add_argument("--kw-min-stars", type=int, default=DEFAULT_MIN_STARS)
     p.add_argument(
         "--focus",
         action="append",

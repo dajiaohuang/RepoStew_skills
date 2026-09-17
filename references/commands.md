@@ -16,8 +16,8 @@ gh pr list --repo <owner/repo> --state all --search "#<N>" --json number,title,s
 ## Mechanical discovery queries
 
 ```bash
-python scripts/discover.py --repos-only --min-stars 100 --max-days 30 --focus TERM
-python scripts/discover.py --direct --keyword --kw-min-stars 5 --max-days 120 --max-candidates 5
+python scripts/discover.py --repos-only --min-stars 1000 --max-days 30 --focus TERM
+python scripts/discover.py --direct --keyword --kw-min-stars 1000 --max-days 120 --max-candidates 5
 ```
 
 These are bounded lead queries, not campaign-completion checks. Their limits
