@@ -261,7 +261,7 @@ Common commands:
 
 ```bash
 # Find recently active repositories in a direction
-python scripts/discover.py --repos-only --min-stars 1000 --max-days 30 \
+python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
   --focus agentic --focus "agent framework" --focus "agent harness"
 
 # Inspect current PR state

@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 from repostew_state import load_json, save_json, state_file
 
 QUIET = False
-DEFAULT_MIN_STARS = 1000
+DEFAULT_MIN_STARS = 100
 
 
 def log(message: str) -> None:

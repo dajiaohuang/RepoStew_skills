@@ -239,7 +239,7 @@ RepoStew 写给任何人阅读的每一条文本——PR 正文、所提 issue�
 
 ```bash
 # 按方向寻找近期活跃仓库
-python scripts/discover.py --repos-only --min-stars 1000 --max-days 30 \
+python scripts/discover.py --repos-only --min-stars 100 --max-days 30 \
   --focus agentic --focus "agent framework" --focus "agent harness"
 
 # 查看当前 PR 状态
