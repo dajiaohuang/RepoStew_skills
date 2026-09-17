@@ -51,15 +51,6 @@ on them. This reduces duplication, not the mandatory policy or evidence gates.
 
 - Follow the target repository's `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`,
   templates, formatter/test rules, disclosure policy, and security process.
-- Before any public issue or pull-request action, capture and recheck a live
-  repository-specific permission snapshot. Issue actions require repository
-  role `WRITE`, `MAINTAIN`, or `ADMIN`, or explicit `issues:write`; PR actions
-  require the same role or `pull_requests:write` plus `contents:write` (or an
-  equivalent branch-push capability). `READ`, `TRIAGE`, pull-only,
-  unknown/invalid authentication, public visibility, a clone, or a prior
-  contribution is read-only. Issue and PR capability are independent. A
-  read-only Awesome packet is `queue_source_only`: parse lists and return
-  provenance/candidates to the root without public mutation.
 - Classify the work as `ACCEPT`, `ASK_MAINTAINER`, or `SKIP` with evidence.
   Never open a duplicate PR, bypass an invitation/approval requirement, or
   turn an unresolved architecture, dependency, service, permission, public-API,
@@ -77,11 +68,6 @@ on them. This reduces duplication, not the mandatory policy or evidence gates.
 
 ## PR and issue writing contract
 
-- The permission gate above is a prerequisite, not a substitute for repository
-  policy or technical approval. Recheck it immediately before each issue/PR
-  write and stop if it is missing, expired, or contradictory. A write-capable
-  role does not grant merge, close, delete, governance, maintainer-speech, or
-  public security-disclosure authority.
 - The target repository's template and conventions come first. Mirror a recent
   accepted PR only when the template is unclear.
 - Keep PR title and body minimal and reviewable: state what changed, why, and

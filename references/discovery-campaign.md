@@ -39,13 +39,7 @@ accounting/checkpoint boundary, not a fixed repository quota or concurrency cap.
 3. Verify canonical owner/repository identity, archived/fork status, activity,
    licensing and contribution policy. Exclude archived repositories and forks,
    but never exclude an organization by name. Explicitly named targets remain
-   subject to the same safety and policy gates. Capture a live permission
-   snapshot for every selected repository. Record issue capability separately
-   from pull-request capability: `WRITE`, `MAINTAIN`, or `ADMIN` role (or
-   explicit `issues:write`) permits issue actions; the same roles or
-   `pull_requests:write` plus `contents:write`/equivalent push capability
-   permits PR actions. `READ`, `TRIAGE`, pull-only, unknown, or invalid
-   authentication is read-only for all repositories.
+   subject to the same safety and policy gates.
 4. Deduplicate across sources, the current durable campaign queue, active
    worker ownership and existing GitHub contribution evidence. A historical
    visit is not permanent exclusion: revisit only for a new authorized window,
@@ -114,12 +108,8 @@ not authorize adding a repository-wide audit or public findings.
 ### Phase C: contribute and release
 
 For each confirmed, useful, permitted finding, file the focused issue and
-implement its corresponding tested fix only when the live per-action
-permission gate passes. Issue and PR capability are independent: a repository
-with only issue write permission must not receive a PR, and vice versa. When a
-repository is read-only, retain the evidence and continue any authorized
-queue/source discovery, but perform no public issue, PR, comment, commit,
-branch, release, or email mutation. There is no issue/PR quota. Use the direct regular-PR gate, repository templates,
+implement its corresponding tested fix when those actions are authorized.
+There is no issue/PR quota. Use the direct regular-PR gate, repository templates,
 concise truthful descriptions and the worker authorship rules. Do not use a
 Draft or manual-submit page to bypass a repository prohibition. If only a
 human submission step remains and the user requests it, provide/open the
