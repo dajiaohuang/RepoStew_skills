@@ -77,6 +77,10 @@ starting if the user omitted one). Enumerate all issues in it, newest first,
 following all pages. Keep a decision/evidence row for every issue, including
 filtered issues, duplicates, unavailable work and failed detail fetches.
 A helper's result limit or first useful candidate does not establish coverage.
+This pass is not limited to `good first issue` or any other label: include all
+ordinary issues created or updated inside the frozen window, then triage
+duplicates, security-sensitive items and actionable maintenance findings under
+the normal issue/PR gates.
 
 Read applicable contribution instructions and live issue discussion, ownership,
 linked closing PRs, all-state PR searches and relevant commits. Apply
