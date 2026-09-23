@@ -58,6 +58,15 @@ def save_notification_checkpoint(source: str, timestamp: str) -> str:
         raise ValueError("checkpoint cannot be in the future")
     with state_store.connect(state_file(NOTIFICATION_CHECKPOINTS).parent, create=True) as connection:
         connection.execute("BEGIN IMMEDIATE")
+        # V2 collection persists evidence and its intake cursor atomically. A bare
+        # legacy command must not manufacture handled coverage after cutover.
+        if connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='event_cursors'"
+        ).fetchone():
+            raise ValueError(
+                "event queue v2 is installed: bare handled checkpoints are disabled; "
+                "use event_queue intake and per-target coverage finalization"
+            )
         checkpoints = state_store._load_from_connection(connection, NOTIFICATION_CHECKPOINTS, {})
         previous = checkpoints.get(source)
         if previous and _parse_timestamp(normalized) < _parse_timestamp(previous):

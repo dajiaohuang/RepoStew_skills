@@ -53,7 +53,7 @@ const translations = {
     cap3Title: "Authority layers", cap3Copy: "Keep follow scope separate from owner/admin/maintain authority; never mistake prior contribution for permission.",
     cap4Title: "PR maintenance", cap4Copy: "Collect GitHub Notifications and Email independently into one SQLite inbox; deduplicate GitHub event revisions. Report-only monitors do not act.",
     cap5Title: "Recoverable state and cleanup", cap5Copy: "Release disposable clones after submission. SQLite retains recovery proof; GitHub rebuilds metadata. Restore locally only for the next edit.",
-    cap6Title: "Discovery campaigns", cap6Copy: "Queue complete authorized report and search results; finish recent issues before requested full audits, schedule workers within measured capacity, and verify returns.",
+    cap6Title: "Discovery campaigns", cap6Copy: "Queue all authorized sources; start a fresh leaf for each repository with full common policy inline and repository variables last. Finish recent issues before authorized full audits; the root accepts results.",
     modesTitle: "You choose the pace. Boundaries stay on.", modesIntro: "Autonomous mode removes intermediate confirmation inside granted scope. It adds no authority and never overrides repository policy.",
     confirmTitle: "Confirm mode", confirmCopy: "Investigate and present the plan first; edits and external submission each wait for approval. Best for step-by-step control.", confirm1: "Read-only research", confirm2: "Present the plan", confirm3: "Approve edits", confirm4: "Approve submission",
     autoTitle: "Autonomous mode", autoCopy: "Within explicit scope, continue through discovery, implementation, tests, submission, and tracking; stop at real approval boundaries.", auto1: "Discover and assess", auto2: "Fix and validate", auto3: "Submit and track", auto4: "Maintain",
@@ -65,7 +65,7 @@ const translations = {
 };
 
 translations.zh.cap6Title = "统一发现队列";
-translations.zh.cap6Copy = "收齐授权榜单与搜索结果并持久排队；每库先处理近期 issue，再做获授权的完整审计，以实测资源调度 worker 并验收结果。";
+translations.zh.cap6Copy = "收齐授权来源并持久排队；每个新仓库创建全新叶子，完整公共规则内联、仓库变量置后；先处理近期 issue，再做获授权的完整审计，由根验收。";
 
 const root = document.documentElement;
 const metaDescription = document.querySelector('meta[name="description"]');

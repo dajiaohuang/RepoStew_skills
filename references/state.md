@@ -1,70 +1,59 @@
-# RepoStew state store
+# State
 
-The default lifecycle is now [GitHub-rebuildable compact state and disposable
-jobs](ephemeral-storage.md). `rebuild_github_state.py --apply-reset` replaces
-live records transactionally after complete GitHub pagination, with one offline
-SQLite recovery backup. No old local paths, handled-event claims, follow policy,
-or checkpoints are imported. Once SQLite exists, missing records return defaults
-and never fall back to loose JSON. Explicit migration remains available for a
-deliberate import, not as part of a clean rebuild.
+One live REPOSTEW_HOME/repostew.sqlite (WAL), accessed through helpers.
+paths.json remains a schema_version 2 file: POSIX roots relative to the selected
+state anchor. resolved_roots() derives absolute skill/state/repos roots; never infer
+the anchor from cwd/profile. Missing SQLite records use defaults, never loose JSON.
 
-Runtime mutable state lives in `REPOSTEW_HOME/repostew.sqlite` (SQLite WAL).
-`paths.json` remains a bootstrap file in the same directory and is never stored
-in the database. It records the three storage roots (schema_version 2) as POSIX
-paths **relative to the state home** (`.`, `../skill`, `../..`), so the record is
-portable across macOS, Windows, and Linux. `repostew_state.resolved_roots()`
-resolves them to absolute paths from the one `REPOSTEW_HOME` anchor; print them
-with `python scripts/repostew_state.py roots`.
+| Logical collection | Contents |
+|---|---|
+| pr_tracker.json / contributions.json | PRs and contribution history |
+| notification_inbox.json / notification_checkpoints.json | Shared deliveries; independent source/account/folder cursors |
+| seen_issues.json / issue_checkpoints.json | Discovery memory and issue windows |
+| workspace_resources.json / workspace_jobs.json | Legacy worktrees; disposable ownership/recovery |
+| maintenance_batches.json | Scope, coverage, outcomes |
+| github_repositories.json / github_issues.json | Rebuilt metadata, not follow/handled authority |
+| rebuild_manifest.json | Snapshot coverage and limits |
 
-Canonical collections:
+Event-driven v2 adds event_cursors, event_batches, event_targets and event delivery
+tables in this same SQLite database through event_queue.py. Intake cursors mean
+durably queued-unread; handled coverage remains separate. No reset or import of old
+completion verdicts. Claims are durable and generation checked; no automatic stale
+owner stealing. New revisions arriving during work cannot be finalized by an old
+claim. Dispatcher results use compact maintenance_batches records. See
+[event maintenance](event-maintenance.md) for the supported lifecycle.
 
-| Name | Role |
-| --- | --- |
-| `pr_tracker.json` | Tracked pull requests |
-| `contributions.json` | Contributed repos, issues, PRs |
-| `notification_inbox.json` | GitHub and namespaced email delivery metadata; shared pending inbox |
-| `notification_checkpoints.json` | Independent source/account/folder cursors, never read flags |
-| `seen_issues.json` | Discovery/scan memory |
-| `workspace_resources.json` | Registered worktrees and cleanup history |
-| `issue_checkpoints.json` | New-issue intake cursors |
-| `maintenance_batches.json` | Bounded iteration batch records |
-| `workspace_jobs.json` | Disposable-job ownership and remote recovery proof |
-| `github_repositories.json` | Accessible repository metadata, not active-follow policy |
-| `github_issues.json` | Authored issue metadata, not processed-issue decisions |
-| `rebuild_manifest.json` | Source coverage, snapshot time and reconstruction limits |
+Continuous-maintenance installation bindings and verification receipts are compact
+maintenance_batches records owned by maintenance_setup.py, not loose JSON files.
+Legacy-artifact quarantine records retain exact source/destination/hash/size and
+per-file result; quarantined payloads never become live state or replay inputs.
 
-Scripts still use those names through `load_json` / `save_json`. They no longer
-rewrite pretty-printed JSON on every update.
-
-Follow [pr-maintenance.md](pr-maintenance.md) for the dual-track contract.
-Intake merges run inside SQLite write transactions so independent rails do not
-overwrite each other's deliveries. PR activity uses GitHub IDs plus revisions;
-receipt/reporting is not action completion. Store only compact routing/outcome
-evidence, not raw mail, attachments or source exports. Rebuild drops both rails'
-cursors and local handling claims; bounded replay needs live GitHub verification.
+load_json/save_json use SQLite; intake merges transactionally and jobs update
+atomically. Only root writes shared state. Keep compact routing/outcome evidence,
+not mail/attachments/source/build exports. Durable leaf evidence must survive jobs;
+bulk temporary inputs/build logs stay disposable. Never hand-edit ownership.
 
 ```bash
+python scripts/repostew_state.py roots
 python scripts/repostew_state.py status
+python scripts/repostew_state.py export-json --destination /absolute/export
 python scripts/rebuild_github_state.py
 python scripts/rebuild_github_state.py --apply-reset
-python scripts/repostew_state.py export-json --destination /absolute/export-dir
 ```
 
-Rebuild without `--apply-reset` is a live coverage preview. Reset requires the
-user's explicit authority and no concurrent state-writing tasks; follow
-[ephemeral-storage.md](ephemeral-storage.md). It is not a routine startup step.
+Preview is read-only. Reset needs explicit authority and stopped state writers:
+fully paginate accessible authored issues/PRs, viewer repos and retained notifications;
+verify counts/IDs/cursors, no capped Search. Failed/partial collection leaves live
+state unchanged. Make one offline backup, atomically replace records/jobs/cursors,
+vacuum, preserve paths.json. Remove loose artifacts only under reset scope after
+validation. Backups never become an automatic second live state.
 
-Never hand-edit job ownership; use `workspace_job.py`. Existing shared-worktree
-records use `workspace_cleanup.py` only.
-Never infer `REPOSTEW_HOME` from the user profile or current directory.
-Keep one live state home: SQLite and `paths.json`. Keep build logs, downloads,
-dependencies and temporary artifacts in disposable jobs, not state. Persist
-short evidence summaries and URLs, and keep session handover in the conversation.
+Rebuild cannot recover local policy/unsubmitted work/ownership/handled decisions/
+mail or expired notifications. Comments/reviews/CI stay unknown until fresh checks;
+cursors stay empty. Replay bounded overlaps, inspect prior replies, never reconstruct
+handling/follow authority from historical reports/paths.
 
-## Explicit legacy import only
-
-`repostew_state.py migrate` and `merge_state.py` remain compatibility tools for
-users explicitly choosing to preserve an older installation. They are not part
-of a clean GitHub rebuild or normal startup. Migration archives imported JSON
-under `legacy-json`; merge is dry-run by default and needs an empty backup
-directory for `--apply`. Never use either to undo an intentional reset.
+Explicit legacy preservation only: repostew_state.py migrate archives to legacy-json;
+merge_state.py defaults to dry run and requires empty backup destination for apply.
+Neither is normal startup nor permission to undo a reset.
+See [maintenance](pr-maintenance.md) and [jobs](ephemeral-storage.md).

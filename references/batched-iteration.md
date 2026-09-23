@@ -1,124 +1,33 @@
-# Batched continuous iteration for owned and maintained repositories
+# Batched maintained-repository iteration
 
-Use this workflow only when the user explicitly asks to run continuous or
-batched maintenance for a repository they own or have a currently verified
-`owner`, `admin`, or `maintain` row for. It turns continuous work into a series
-of small, reviewable batches; it is not a scheduler, heartbeat, or permission to
-keep working without the stated scope.
+Only for explicit continuous/batched scope with [verified authority](maintaining-owned-repositories.md).
+Keep one repository leaf, root-registered standalone job, branch and PR per batch.
+Root persists batch ID, repo/base, included/excluded scope, leaf/job/path/branch,
+head, tests, PR, merge authority and cleanup in SQLite.
 
-Read [maintaining-owned-repositories.md](maintaining-owned-repositories.md)
-before relying on authority and
-[workspace-cleanup.md](workspace-cleanup.md) before registering or cleaning a
-worktree.
+1. Verify live policy/authority/base/issues/PRs; create parent disposable job.
+2. The repository leaf implements accepted changes sequentially in that job.
+   Do not spawn sibling roles, children or parallel integration worktrees.
+3. Root reviews the leaf's diffs/commits/risks and actual validation evidence.
+   Run focused validation per change, then repository-required validation on the
+   full result; inspect diff/untracked/commit range/secrets.
+4. Submit/track one PR and exact head. The leaf saves evidence and suspends workspace
+   access; root previews/applies [job release](ephemeral-storage.md) immediately
+   after submission/validation, without waiting for review/CI.
 
-## Batch contract
+## Legacy worker recovery only
 
-Start each batch with a bounded issue, approved work list, or durable scope
-record under `REPOSTEW_HOME`. Record at least the batch identifier, repository
-and starting ref, included and excluded work, parent/integration owner, exact
-integration worktree and branch, worker status, validation results, PR URL,
-merge authority, and cleanup result. Persist this record with the normal
-RepoStew SQLite state store; do not put it in a target-repository commit.
+The following is only for already-existing registered linked-worker resources,
+not a second dispatch scheme. New batches use the standalone job above.
 
-The batch is complete only after its integration PR is terminal and cleanup has
-been evaluated. A blocked or unauthorised cleanup does not permit the next
-batch: retain the record and ask for the missing authority or resolve the
-blocker first.
+Use [cleanup](workspace-cleanup.md) for registration, inclusion proof, stopped
+writers and live recovery checks. Do not infer ownership from names or bypass
+blocked parent/worker release. Preserve dirty, unpushed, unknown and unrecoverable
+resources with reasons. Keep skill and target commits separate.
 
-## Isolate work, then integrate once
+## Next batch gate
 
-1. Revalidate the maintained authority, repository instructions, default
-   branch and current issue/PR state, then create a disposable parent job with
-   `workspace_job.py create`. An enabled authority row avoids repeated contributor-eligibility
-   checks; it does not replace current-state, policy, or engineering checks.
-2. Give each independent worker a narrow task and an isolated linked worktree.
-   Workers must not mutate the parent-owned integration worktree, default
-   branch, another worker's worktree, shared durable state, or remote branches.
-   The parent collects each result with its diff, commit(s), validation, and
-   unresolved risks.
-3. Use the parent job checkout as the single integration workspace and branch
-   for the batch. Review and integrate worker output there, resolving conflicts
-   deliberately. Worker branches and worktrees are not substitutes for the
-   integration branch or its PR.
-4. Run focused validation after each integrated change, then the repository's
-   required validation on the complete integration result. Review the complete
-   diff, untracked files, commit range, and secret exposure before pushing.
-5. Open, track, and keep one reviewable integration PR for the batch. After the
-   PR tracker contains its current head, associate its URL with the parent job
-   in the batch record. Do not use linked-worktree `register` for the standalone
-   parent clone. Retain each
-   worker's exact path, branch, head, and the batch starting commit in the batch
-   record so it can be proven after the integration PR is submitted. Release
-   fully represented completed workers first, then the parent job immediately
-   after the current action/validation; keep their recovery records while the
-   PR proceeds through review and CI.
-
-## Terminal gate and cleanup
-
-Do not begin the next batch while the integration PR is open, draft, blocked,
-or otherwise non-terminal. Before a merge, refresh the full PR state and
-required checks. Merge only into the repository's current default branch when
-the user explicitly authorizes that exact merge and repository policy permits
-it; verified owner/admin/maintain authority alone is insufficient.
-
-The terminal gate controls starting the next batch, not retaining local disk
-usage. After submission and every follow-up push, refresh the tracker and run
-the cleanup inventory. Before that inventory, a completed worker may be
-explicitly registered only through the worker-specific proof path:
-
-```bash
-python scripts/workspace_cleanup.py register-worker \
-  --workspace "$REPOSTEW_REPOS_HOME" \
-  --worktree "$REPOSTEW_REPOS_HOME/<exact-worker-worktree>" \
-  --pr-url https://github.com/owner/repo/pull/123 \
-  --base-oid <exact-40-character-batch-start-commit>
-```
-
-`register-worker` requires the tracked integration PR to be submitted, the base
-to be an ancestor of both heads, a non-empty worker range, and every worker
-change to be represented by the frozen PR head. Direct ancestry is accepted.
-Cherry-picked work is accepted only when the worker range has no merge commits,
-`git cherry` proves every patch equivalent, and the exact worker tip is also
-preserved by a remote-tracking ref at registration and a live remote branch at
-cleanup. Both worker paths require live integration PR/ref verification and a
-durable recovery record before deletion. Dirty workers, unknown ignored data,
-credentials, changed heads, missing patches, ambiguous merge history, and
-unregistered workers remain protected.
-
-For each exact completed worker, preview then apply:
-
-```bash
-python scripts/workspace_cleanup.py cleanup --workspace "$REPOSTEW_REPOS_HOME" --worktree <exact-worker-path> --json
-```
-
-Review the dry-run result. Apply it only with cleanup authority, using the same
-command plus `--apply --json`, and persist both estimated and actual reclaimed
-logical bytes in the batch record. The existing guard must remain fail-closed:
-never clean a canonical clone, locked/in-use resource, dirty worktree, unpushed
-tip, unregistered path, repository-mismatched worktree, credential/key, or
-unknown ignored data. Re-evaluate immediately before any apply. Never delete a
-remote branch, fork, or workspace root as part of this cycle.
-
-When a dry run identifies project-specific ignored output, approve it only if
-the target repository documents the exact path as wholly generated and
-reproducible. Use `workspace_cleanup.py approve-output` for each exact path;
-never turn a project convention into a global disposable-name rule or use a
-recursive deletion command as a shortcut.
-
-Never infer a worker from its directory or branch name. Leave any active,
-dirty, unpushed, unregistered, mismatched, incompletely integrated, or
-unknown-data worker worktree untouched. Worker registration does not weaken the
-normal submitted-PR, repository, exact-head, clean-state, ignored-data, non-force
-removal, or no-remote-deletion gates.
-
-Once all dependent worker worktrees are released, preview and apply
-`workspace_job.py release JOB_ID --pr URL --apply` for the parent clone.
-If worker refs remain, verify they are represented by the submitted head before
-removing those task-owned local refs; do not force past the job's unmerged-branch
-guard. A blocked worker keeps the parent job with an explicit reason. Do not
-retain a canonical clone after the batch. Existing shared installations instead
-use their original integration-worktree compatibility procedure.
-
-Only after the terminal state and cleanup outcome are durably recorded may the
-parent select the next bounded batch. Keep target-repository implementation
-and RepoStew self-maintenance in separate commits and PRs throughout the cycle.
+Do not begin the next batch until integration PR is terminal and cleanup outcome
+is durably resolved. Blocked/unauthorized cleanup blocks the next batch.
+This gate does not retain submitted disk. Merge only into current default branch
+when the user explicitly authorizes that exact merge and live policy/checks permit.

@@ -1,124 +1,36 @@
-# Cold Start Initialization
+# Cold start
 
-Cold start is incomplete until the user has selected and RepoStew has validated
-three storage roots. Do not silently fall back to a home-directory path, the
-current directory, a platform example, or a previous machine's layout.
-
-## 1. Select the storage roots
-
-Ask the user to choose three distinct absolute paths:
-
-1. **Skill home** (`REPOSTEW_SKILL_HOME`): the canonical RepoStew skill
-   checkout. The workspace AGENTS.md may route directly to its SKILL.md, or a
-   user-approved workspace discovery link may point to it. A user-home skill
-   installation is not required.
-2. **State home** (`REPOSTEW_HOME`): SQLite `repostew.sqlite` for trackers,
-   notification checkpoints, registries, batch records, and resource ledgers,
-   plus `paths.json` as the bootstrap record. See `references/state.md`.
-3. **Managed-repository home** (`REPOSTEW_REPOS_HOME`): registered disposable
-   jobs, allocated only for actual local editing/testing and released after PR
-   submission. No permanent target clone is required.
-
-Explain the role of each path, show any existing candidate directories, and
-wait for the user's selection before creating or migrating anything. Platform
-discovery paths are compatibility constraints and suggestions, not RepoStew
-defaults. The selected roots may share a parent, but none may be the same path.
-
-After confirmation, validate that all paths are absolute and writable. Record
-the selection deterministically. `configure_paths.py` stores the three roots in
-`paths.json` as POSIX paths **relative to the state home** (`.`, `../skill`,
-`../..`), so the committed record is portable across macOS, Windows, and Linux —
-no machine-absolute `environment` block is written:
+Existing selected roots take precedence. Only missing selection requires the user
+to choose three distinct absolute writable paths: canonical skill, SQLite state
+(REPOSTEW_HOME), managed repos. No profile/cwd/example defaults or implicit migration.
 
 ```text
-python <selected-skill-home>/scripts/configure_paths.py \
-  --skill-home <selected-skill-home> \
-  --state-home <selected-state-home> \
-  --repos-home <selected-managed-repository-home>
+python <skill-home>/scripts/configure_paths.py --skill-home <skill-home> --state-home <state-home> --repos-home <repos-home>
 ```
 
-For workspace-local operation, record the selected roots in the workspace
-AGENTS.md and initialize process-only environment values after checking
-paths.json. Keep role/model configuration in that workspace too; do not write
-RepoStew-specific user-home profiles, rules or automations. Persist
-`REPOSTEW_HOME` through host settings only if the user separately requests it.
-Make sure any explicitly requested scheduled task receives the selected roots.
-The skill and managed-repository homes are derived from `paths.json` once that
-anchor is known; set their env vars only if a tool needs them, and keep them
-consistent with the record. `paths.json` in the selected state home is the
-bootstrap record; it does not replace the environment configuration needed to
-locate that directory. The recommended layout keeps skill and state as sibling
-directories so their relative paths resolve on any machine:
+Helper writes relative POSIX roots to state/paths.json. Record verified selections
+in workspace AGENTS.md; initialize missing process variables only after agreement.
+Keep skill/config/roles/packets/evidence/state workspace-local; no user-home copies,
+profiles/rules or duplicate operational state. Host-managed scheduler metadata may
+use its required host location; it only references the selected workspace. Manage
+it through the supported scheduler, never by installing skill copies there.
+Global environment persistence requires explicit request.
+Schedules carry the selected anchor and record path. Once roots exist, use
+[maintenance initialization](maintenance-initialization.md) for setup and migration;
+ordinary execution uses [scheduled lanes](scheduled-maintenance.md).
 
-```text
-<wrapper>/                    managed-repository home (repos)
-<wrapper>/RepoStew_skills     skill home
-<wrapper>/repostew-state/.repostew   state home (paths.json, sqlite)
-```
+If relocating the skill, verify the new clone/link and activation after reload.
+Never delete the loaded checkout in the same run; old-copy removal needs authority.
+Keep one live state; do not merge discovered installations automatically.
+[Reset/import](state.md) is explicit, not startup.
 
-If the current checkout is not the selected skill home, prepare a verified
-clone or move and update the agent's discovery link. Do not delete the loaded
-checkout during the same run. Verify activation from the selected location
-after the agent reloads, then archive or remove the old copy only with explicit
-approval.
+Check gh auth status, git --version, python --version. If gh is unavailable, use
+an authorized connector/API or install/authenticate via the normal host flow.
 
-## 2. Select existing state or an explicit clean rebuild
+Create missing workspace registries, preserving history:
+- FOLLOWED_REPOSITORIES.md: active/self owner/repo entries and paused entries.
+- MAINTAINED_REPOSITORIES.md: Repository | Role | Maintenance status | Verified at | Source | Notes.
 
-Identify any existing installations before writing. Use the selected live
-SQLite home without automatically combining old trackers or checkpoints.
-If the user requests a clean reconstruction, authenticate first, then follow
-[state.md](state.md): collect complete GitHub pages, preserve an offline backup,
-and reset transactionally. Failed collection must leave live state unchanged.
-Do not import old local paths, handled-event decisions or follow policy.
-
-If the user instead explicitly chooses to preserve legacy state, use the
-compatibility import/merge section in [state.md](state.md). Do not delete or
-merge other installations merely because they were found.
-
-## 3. Check authentication and tools
-
-```text
-gh auth status
-git --version
-python --version
-```
-
-If GitHub CLI is unavailable, direct the user to
-<https://github.com/cli/cli/releases> or their package manager, then authenticate
-with `gh auth login`.
-
-Keep one live SQLite state home. Offline backups are recovery artifacts, never
-a second editable source or an automatic fallback after a reset.
-
-## 4. Set up workspace registries
-
-Create `FOLLOWED_REPOSITORIES.md` in the selected managed-repository workspace
-when absent, preserving paused entries as history:
-
-```markdown
-# Followed Repositories
-
-## active
-- owner/repo
-
-## paused
-- owner/paused-repo
-```
-
-Keep authority separate in `MAINTAINED_REPOSITORIES.md`, even when initially
-empty:
-
-```markdown
-# Maintained Repositories
-
-| Repository | Role | Maintenance status | Verified at | Source | Notes |
-|---|---|---|---|---|---|
-```
-
-Consider only active/self followed repositories and repositories the user
-explicitly names. Verify each authority candidate with `gh repo view` and
-validate the registry with `scripts/maintained_repositories.py`. Historical
-contributions, organization membership, forks, and local clones do not prove
-authority. Read
-[maintaining-owned-repositories.md](maintaining-owned-repositories.md) before
-relying on the registry.
+Follow scope is not capability. Verify only selected/named repos through
+[authority rules](maintaining-owned-repositories.md); validate with
+scripts/maintained_repositories.py. Historical contributions do not activate scope.

@@ -42,63 +42,68 @@ class StateTests(unittest.TestCase):
 
 
 class PolicyTests(unittest.TestCase):
-    def test_batched_iteration_releases_jobs_before_next_batch_gate(self):
+    @staticmethod
+    def policy(path):
         root = Path(__file__).resolve().parents[1]
-        skill = (root / "SKILL.md").read_text(encoding="utf-8")
-        batched = (root / "references" / "batched-iteration.md").read_text(encoding="utf-8")
-        readme_en = (root / "README.en.md").read_text(encoding="utf-8")
-        readme_zh = (root / "README.md").read_text(encoding="utf-8")
+        return " ".join((root / path).read_text(encoding="utf-8").split())
 
+    def test_batched_iteration_releases_jobs_before_next_batch_gate(self):
+        skill = self.policy("SKILL.md")
+        batched = self.policy("references/batched-iteration.md")
         self.assertIn("references/batched-iteration.md", skill)
-        self.assertIn("one parent-owned integration\nworktree, branch, and reviewable PR per batch", skill)
-        self.assertIn("single integration workspace and branch", batched)
-        self.assertIn("workspace_job.py release JOB_ID", batched)
-        self.assertIn("focused validation", batched)
-        self.assertIn("repository's\n   required validation", batched)
-        self.assertIn("user explicitly authorizes that exact merge", batched)
-        self.assertIn("actual reclaimed\nlogical bytes", batched)
-        self.assertIn("Never delete a\nremote branch", batched)
-        self.assertIn("Do not begin the next batch", batched)
-        self.assertIn("register-worker", batched)
-        self.assertIn("git cherry", batched)
-        self.assertIn("Batched continuous iteration", readme_en)
-        self.assertIn("分批持续迭代", readme_zh)
+        for requirement in (
+            "one repository leaf, root-registered standalone job, branch and PR per batch",
+            "Do not spawn sibling roles", "Legacy worker recovery only",
+            "focused validation", "repository-required validation",
+            "workspace-cleanup.md", "ephemeral-storage.md",
+            "immediately after submission/validation",
+            "Do not begin the next batch until integration PR is terminal",
+            "Blocked/unauthorized cleanup blocks the next batch",
+            "user explicitly authorizes that exact merge",
+            "Preserve dirty, unpushed, unknown and unrecoverable",
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, batched)
+        self.assertIn("Batched continuous iteration", self.policy("README.en.md"))
+        self.assertIn("分批持续迭代", self.policy("README.md"))
 
     def test_scheduled_tasks_bootstrap_only_from_verified_path_record(self):
-        root = Path(__file__).resolve().parents[1]
-        skill = (root / "SKILL.md").read_text(encoding="utf-8")
-        scheduled = (root / "references" / "scheduled-maintenance.md").read_text(
-            encoding="utf-8"
-        )
+        skill = self.policy("SKILL.md")
+        scheduled = self.policy("references/scheduled-maintenance.md")
+        for requirement in (
+            "absolute path to the already-selected paths.json",
+            "missing inherited variables alone are not failure",
+            "Stop on mismatch", "Never change global environment",
+        ):
+            self.assertIn(requirement, skill)
+        for requirement in (
+            "<selected-state-home>/paths.json",
+            "Initialize missing process environment from that verified record",
+            "Missing inherited variables alone are not failure",
+            "mismatch, unreadable record, missing root or placeholder stops writes",
+        ):
+            self.assertIn(requirement, scheduled)
 
-        self.assertIn("absolute path to the already-selected", skill)
-        self.assertIn("missing inherited variables alone", skill)
-        self.assertIn("<selected-state-home>/paths.json", scheduled)
-        self.assertIn(
-            "initialize it for this\nrun from the matching verified value", scheduled
-        )
-        self.assertIn("Do not stop merely because the scheduler did", scheduled)
-        self.assertNotIn("stop without writing if\nthey are absent or disagree", scheduled)
-
-    def test_complexity_routes_work_instead_of_skipping_it(self):
-        root = Path(__file__).resolve().parents[1]
-        skill = (root / "SKILL.md").read_text(encoding="utf-8")
-        taste = (root / "references" / "taste-and-permissions.md").read_text(encoding="utf-8")
-        self.assertIn("Complexity is never, by itself, a reason to reject, skip, or stop work", skill)
-        self.assertIn("standing authority for one focused clarification comment", skill)
-        self.assertIn("Never use `SKIP` merely because an issue is large", taste)
-        self.assertIn("standing authority to post one focused clarification comment", taste)
-        self.assertIn("Route permission-gated pull requests", skill)
-        self.assertIn("do **not** open an upstream PR, including a Draft PR", skill)
-        self.assertIn("An unresolved implementation choice is not, by itself, a reason to stay design-only", skill)
-        self.assertIn("I did not open an upstream PR because", taste)
-        self.assertIn("A Draft PR is evidence for review, not approval", taste)
-        self.assertIn("Solution uncertainty alone is not a technical approval gate", taste)
-        self.assertIn("Direct regular-PR judgment gate", skill)
-        self.assertIn("open a regular upstream PR without first asking", skill)
-        self.assertIn("A prior unanswered question", skill)
-        self.assertIn("do not post a redundant question or default to Draft", taste)
-        self.assertNotIn("issues too large for a focused contribution", taste)
+    def test_complexity_and_submission_gates_survive_policy_routing(self):
+        skill = self.policy("SKILL.md")
+        taste = self.policy("references/taste-and-permissions.md")
+        self.assertIn("references/taste-and-permissions.md", skill)
+        self.assertIn("Complexity changes execution planning, never eligibility", skill)
+        for requirement in (
+            "Size, difficulty and duration are never SKIP reasons",
+            "Standing authority permits one focused clarification comment",
+            "In autonomous scope, submit directly when all hold",
+            "Repository permits unsolicited PRs",
+            "no competing claim/PR",
+            "crosses no approval gate",
+            "relevant validation passes",
+            "No upstream PR, including Draft",
+            "Solution uncertainty alone does not require design-only work",
+            "Draft is review evidence, not approval",
+            "Mandatory disclosure must be truthful",
+        ):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, taste)
 
 
 class DiscoveryTests(unittest.TestCase):
