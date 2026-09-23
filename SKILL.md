@@ -17,7 +17,7 @@ One canonical workflow; the root owns scope, queue, shared state, jobs and accep
 - Read applicable AGENTS/CLAUDE/GEMINI/copilot instructions, contribution/build/security/disclosure rules, templates and validation configuration before acting.
 - Require maintainer approval for new dependencies, services, APIs, CI actions, permissions or architecture. Do not use paid/privileged resources without authority.
 - Preserve unrelated, dirty and unknown data. Keep skill and target-repository changes separate.
-- Public contributions must not advertise providers, tools, agents or models by default. If the target repository's contribution rules or template explicitly require a model/agent attribution (for example an `Assisted-by` trailer), include only that mandatory, truthful attribution; do not add optional provider/tool branding.
+- Public contributions must not advertise providers, tools, agents or models. If the target repository's contribution rules or template explicitly require such attribution (for example an `Assisted-by` trailer), retain the item as blocked unless the active packet explicitly authorizes that disclosure; never add it merely to satisfy a repository template.
 - Exclude archived repositories and forks from discovery; never exclude an organization by name.
 - Complexity changes execution planning, never eligibility. Create visible tasks only on explicit request; do not substitute hidden delegation for requested handover.
 - If a skill rule blocks authorized work, quote the rule, distinguish requirement from interpretation, retain the blocker and continue safe independent work.

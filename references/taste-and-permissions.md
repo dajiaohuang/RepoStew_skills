@@ -62,10 +62,10 @@ Follow repository templates and voice; otherwise state change, reason and actual
 validation briefly. Preserve material caveats. No provenance advertising,
 fabricated coauthors/sign-offs/endorsement or unsolicited attribution. If a
 repository template or contribution rule explicitly mandates a model/agent
-attribution (for example an `Assisted-by` trailer), include only that mandatory,
-truthful attribution; optional provider/tool branding remains prohibited.
-Mandatory disclosure must be truthful; a repository-mandated attribution is an
-exception to the default no-attribution rule, not permission to fabricate identity.
+attribution (for example an `Assisted-by` trailer) that conflicts with the active
+public-text prohibition, retain the item as blocked; do not add the attribution
+without explicit packet authorization. Mandatory disclosure must be truthful,
+but repository requirements do not override the active public-text prohibition.
 Use closing keywords only for fully resolved issues when conventions permit.
 Do not comment merely to advertise a PR.
 
