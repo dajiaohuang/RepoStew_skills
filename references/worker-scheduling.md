@@ -16,13 +16,38 @@ capacity does not permit switching provider, effort or backend.
    then restore for further edits. Same-repo delta may use the same leaf.
 4. Prefer natural completion/needs-attention events and bounded waits; refill an
    empty slot immediately after the event is reconciled. When an event channel is
-   unavailable, use a change-only slot snapshot at most every 15 seconds while a
-   slot is empty (back off to 120 seconds when all slots are occupied); never use
-   unchanged log/status/CI polling or executor reruns. Reduce admission on
-   pressure/rate limits; no storms.
+   unavailable and actionable queued work remains, use change-only slot occupancy
+   snapshots no slower than every 5 seconds, even while all slots are occupied.
+   Never poll logs/CI, repeat unchanged snapshots as work, or rerun unchanged tasks.
+   Reduce admission on pressure/rate limits; no storms.
 5. Verify [returns](worker-contract.md), retain blockers and release submitted storage.
    Reconcile partial local/remote actions and prove the old writer stopped before
    replacement/backend switch. Silence, timeout or a last progress line is not proof.
+
+## Shared durable campaign queue
+
+All native and external executors use `scripts/maintenance_queue.py` over the
+existing SQLite `maintenance_batches` collection. Do not create a backend-specific
+queue or migrate/rewrite old batch records. The queue selects the latest row for
+each `work_item_id` across all backends, then admits rows whose `worker_status` is
+`queued`; paused and non-queued history stays intact. An optional eligible-backend
+filter expresses current executor capability after cross-backend deduplication.
+
+`list --direction head` reads oldest append order first; `tail` reads newest first.
+Both use SQLite `sort_index` with record key as a stable tie-break. Root rechecks
+the selected record inside `BEGIN IMMEDIATE` when claiming, verifies that the repo
+has no active mutation claim, and appends a running claim row to the same collection
+with owner, generation, direction and actual execution provenance. The prior row
+is unchanged. Native and CLI callers therefore contend on one durable claim path.
+
+```bash
+python scripts/maintenance_queue.py --state-home STATE list --direction tail --eligible-backend native_subagent
+python scripts/maintenance_queue.py --state-home STATE claim --work-item-id ID --record-key KEY --owner ROOT --direction tail
+```
+
+Only root claims and updates shared state. Append executor returns through `update`.
+Use `requeue` only after recording stopped-writer proof and remote-effect
+reconciliation. A stale claim is never stolen automatically.
 
 ## Native
 

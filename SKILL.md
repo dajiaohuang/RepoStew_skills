@@ -71,9 +71,9 @@ Leaves return durable evidence and suspend workspace access after submission.
 A missing leaf cannot be replaced until its writer is stopped and partial effects
 reconciled. Natural completion is not acceptance or proof of a free native slot.
 Use completion events as the fast path: reconcile and refill an empty slot
-immediately; when events are unavailable, use change-only slot snapshots at most
-every 15 seconds while capacity is empty and back off when all slots are occupied.
-Never rerun unchanged work just to keep a slot busy.
+immediately; while actionable queued work remains and events are unavailable, use
+change-only slot occupancy snapshots at most every 5 seconds regardless of current
+occupancy. Never poll logs/CI or rerun unchanged work just to keep a slot busy.
 
 ## Completion
 

@@ -57,9 +57,9 @@ and evidence outside disposal. Save actual executor identity after dispatch.
 
 Use the complete contract return. Root accepts natural completion/needs-attention
 events and refills a newly empty slot immediately after reconciliation. If the host
-cannot signal completion, use a change-only slot snapshot no slower than 15 seconds
-while a slot is empty, then back off to 120 seconds when all slots are occupied; this
-is never a reason to rerun unchanged work. Sensitive details stay private.
+cannot signal completion and actionable queued work remains, use a change-only slot
+occupancy snapshot no slower than every 5 seconds regardless of whether slots are
+currently full. Never poll logs/CI or rerun unchanged work. Sensitive details stay private.
 Submission handoff remains partial when work remains.
 
 Maximize necessary shared content, not length. Matching text does not prove cache
