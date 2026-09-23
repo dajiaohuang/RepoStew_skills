@@ -1,158 +1,73 @@
-# Taste, permissions, and issue policy
+# Contribution and submission gates
 
-## Contents
+## Classify each candidate
 
-- Candidate decisions
-- Dependency and architecture gate
-- Contributor and maintainer authority
-- Filing issues
-- Technical taste
+- ACCEPT: evidenced, useful, testable, compatible and permitted. Record expected behavior, affected scope and validation.
+- ASK_MAINTAINER: unresolved product, requirements, architecture, dependency, compatibility, security or authority decision after testing the direct-PR gate.
+- SKIP: duplicate, unavailable ownership/access, existing fix, out-of-scope, prohibited or unsupported claim. Record evidence, not an invented maintainer rejection.
 
-## Candidate decisions
+Size, difficulty and duration are never SKIP reasons. Keep simple work local;
+partition complex work within authorized execution. Solution uncertainty alone
+does not require design-only work.
 
-Classify each candidate before implementation.
+## Direct regular PR
 
-### ACCEPT
+In autonomous scope, submit directly when all hold:
+1. Repository permits unsolicited PRs without prior invitation/assignment/design approval.
+2. Issue is available; no competing claim/PR, default-branch fix or rejected direction.
+3. Outcome and compatibility are clear from discussion, code, tests and conventions.
+4. Smallest complete reversible patch preserves defaults/interfaces and crosses no approval gate.
+5. Reproduction or strong source proof exists, relevant validation passes, and diff is reviewable.
+6. Repository template/style is followed with honest caveats and no claimed endorsement.
 
-Accept work that is clear, testable, compatible, valuable, and aligned with the repository. Size and complexity do not affect this decision; they determine whether execution stays in the current conversation or is handed over:
+Revalidate previous unanswered questions or Drafts under this gate; make an existing
+eligible Draft ready rather than asking again or creating a duplicate.
 
-- reproducible bugs with bounded impact;
-- regression tests for confirmed behavior;
-- documentation errors, dead links, and example corrections;
-- small accessibility, error-handling, configuration, or reliability improvements;
-- small enhancements that use existing architecture and preserve defaults.
-- approved multi-module features, migrations, refactors, and sustained maintenance work with bounded acceptance criteria and a credible validation plan.
+## Clarification and Draft exceptions
 
-Record evidence: reproduction or source proof, expected behavior, likely affected files, validation path, contributor authority, and whether execution should stay here or move to a user-visible task.
+Standing authority permits one focused clarification comment on an existing issue,
+discussion or own PR for a verified ASK_MAINTAINER: check prior answers/questions,
+state evidence and options, record URL, then wait without bumps. Do not claim work,
+request assignment, promise delivery, create a new thread or disclose security detail.
 
-### ASK_MAINTAINER
-
-First test whether a regular PR can safely carry the decision. A missing maintainer confirmation is not itself a reason to ask. Open a regular upstream PR directly when unsolicited contributions are allowed, the issue is available and unambiguous enough to infer expected behavior, repository evidence strongly supports one small reversible solution, the patch preserves defaults and interfaces, focused validation passes, and no separately gated dependency, service, credential, permission, CI, security, public-API, or architecture boundary is crossed.
-
-Seek maintainer direction before implementing only when a hard gate remains:
-
-- unclear requirements or missing acceptance criteria;
-- public API, CLI, configuration, schema, or behavior changes;
-- new dependencies, services, tools, actions, permissions, or infrastructure;
-- architecture changes, broad refactors, migrations, or performance work whose direction or success criteria have not been approved;
-- security-sensitive behavior or compatibility tradeoffs;
-- features that add ongoing maintenance obligations.
-
-In contributor mode, frame this as a question or tradeoff, not a project decision. The user grants standing authority to post one focused clarification comment on an existing public thread for each verified `ASK_MAINTAINER` decision and to use the policy-compliant draft route below. Check for an existing answer or duplicate question, post the evidence and concrete options once, record the comment URL, and wait without bumping. This authority does not cover opening a new issue/discussion or publicly disclosing security-sensitive concerns. Once the missing decision is supplied, reclassify the work; do not leave it blocked merely because implementation is complex.
-
-### Direct PR and permission-gated draft route
-
-Treat submission permission and technical approval as separate gates. Do not leave an item design-only merely because maintainers have not selected among reasonable implementations. When the direct regular-PR standard above is met, classify it `ACCEPT` and open a regular upstream PR; do not post a redundant question or default to Draft. Recheck previously unanswered questions and upstream Drafts under this standard, and mark an existing Draft ready for review instead of opening a duplicate.
-
-If a material implementation uncertainty remains, choose the smallest reversible option supported by repository evidence, validate it, and state the unresolved choice and the option chosen briefly in the Draft.
-
-| Repository policy | Allowed draft action |
+| Remaining gate | Route |
 |---|---|
-| Unsolicited PRs or early Draft PRs are allowed, but the direct regular-PR standard is not met | Open one upstream Draft PR, clearly identify the unresolved decision, and avoid closing keywords or ownership claims. |
-| External PRs are invitation-only, require approval before submission, or ask contributors to agree on a solution before upstream submission | Do not open an upstream PR. Push a fork branch and open a Draft PR only inside the fork; if unsupported, persist the tested branch and complete draft title/body. Link the draft from one existing public thread and request the invitation. |
-| Policy explicitly prohibits implementation or public prototypes in the current state, or the implementation crosses a separately gated security/dependency/service/credential/privileged-permission/public-API boundary | Keep the draft design-only or local and report the exact prohibition. |
+| Non-prohibited implementation uncertainty; early/unsolicited PRs allowed | Choose smallest evidence-backed option, test, open one upstream Draft; briefly state unresolved choice; no closing keywords/ownership claims |
+| Invitation/approval/agreement required before upstream submission | No upstream PR, including Draft. Use fork-only Draft; if unavailable, retain tested branch and proposed title/body. Link it once on an existing thread requesting invitation |
+| Implementation/public prototype forbidden, or gated security/dependency/service/credential/permission/API/architecture change | Design-only/local as permitted; retain exact prohibition |
 
-A Draft PR is evidence for review, not approval. It must still be focused, validated to the extent possible, non-competitive, and compliant with disclosure rules. Solution uncertainty alone is not a technical approval gate. Never use Draft status to bypass an assignment rule, invitation requirement, dependency gate, security channel, or explicit prohibition on implementation or public prototypes.
+Draft is review evidence, not approval. Never bypass separate gates. Recheck
+invitation, issue ownership, duplicates, current base and policy before upstream
+submission. No safe existing thread/private channel means retain the blocker.
 
-For an invitation-only repository, use language like:
+## Dependencies and authority
 
-> I did not open an upstream PR because the contribution policy says external PRs are invitation-only. I prepared a tested draft at `<draft URL or fork branch>`. If this direction fits the team's architecture, an invitation would let me submit it through the project's normal review process.
+Before requesting a dependency/service/tool/action/resource, establish core value,
+existing alternatives, maintenance/license/pinning, cost/credentials/privilege,
+install/CI/portability impact, fallback and upgrade owner. Obtain documented approval.
 
-Post once, record both URLs, and wait without bumping. Revalidate policy, ownership, duplicates, and the default branch before any upstream submission.
+Default to outside contributor. Follow status/history/forks/clones do not prove
+maintainer authority; use [verified authority](maintaining-owned-repositories.md).
+Do not label, assign, prioritize, issue blocking reviews, release or speak for
+maintainers without delegated authority.
 
-### SKIP
+## Issue and writing standard
 
-Skip as a contributor:
+File only authorized, supported-version/default-branch defects with reproduction
+or strong proof and all-state issue/PR/discussion/commit duplicate checks.
+Use one actionable problem, affected version/environment, expected/actual behavior,
+minimal reproduction and honest impact. Redact secrets; suggestions stay labeled.
 
-- duplicates, assigned work, existing fixes, or competing PRs;
-- requests outside repository scope;
-- speculative rewrites or promotional integrations;
-- tasks requiring unavailable secrets, paid accounts, or privileged access;
-- changes prohibited by repository policy or licensing;
-- unverifiable claims;
-- maintenance requests with no authorized scope, stopping condition, or safe way to persist state.
+Follow repository templates and voice; otherwise state change, reason and actual
+validation briefly. Preserve material caveats. No provenance advertising,
+fabricated coauthors/sign-offs/endorsement or unsolicited attribution. If a
+repository template or contribution rule explicitly mandates a model/agent
+attribution (for example an `Assisted-by` trailer), include only that mandatory,
+truthful attribution; optional provider/tool branding remains prohibited.
+Mandatory disclosure must be truthful; a repository-mandated attribution is an
+exception to the default no-attribution rule, not permission to fabricate identity.
+Use closing keywords only for fully resolved issues when conventions permit.
+Do not comment merely to advertise a PR.
 
-Never use `SKIP` merely because an issue is large, difficult, cross-module, long-running, or likely to require many commits. Route such work to a user-visible task. If it needs maintainer direction, use `ASK_MAINTAINER`, then continue after approval.
-
-Do not announce that maintainers have rejected a skipped issue.
-
-## Dependency and architecture gate
-
-Before proposing a new dependency, service, CLI, GitHub Action, hosted API, database, browser driver, model provider, or cloud resource, answer:
-
-1. Does it solve the repository's core problem rather than agent convenience?
-2. Can the standard library or an existing dependency solve it?
-3. Is it maintained, trustworthy, license-compatible, and appropriately pinned?
-4. Does it require accounts, tokens, network access, money, or privileged permissions?
-5. What are the effects on install time, CI, build size, portability, and onboarding?
-6. Is there an optional or fallback path?
-7. Who owns upgrades and compatibility?
-
-Require documented maintainer approval before implementation.
-
-## Contributor and maintainer authority
-
-Default to contributor mode when authority is unclear.
-
-### Contributor mode
-
-May:
-
-- analyze code and issues;
-- explain evidence, risks, and tradeoffs;
-- propose fixes and ask maintainers for direction;
-- open scoped issues and pull requests after required user confirmation;
-- respond to feedback on the contributor's own PRs.
-
-Must not:
-
-- close, reject, label, assign, or prioritize issues as a maintainer;
-- request changes as a blocking reviewer without delegated review authority;
-- claim undocumented project policy;
-- merge PRs or approve releases;
-- speak for repository owners.
-
-### Maintainer mode
-
-Use only when repository permissions or explicit delegation establish authority. Exercise repository capabilities only within the delegated task and documented policy. A write-capable token alone does not prove permission to make product or governance decisions.
-
-## Filing issues
-
-File an issue only after:
-
-1. reproducing the defect or collecting strong evidence;
-2. checking supported versions and the default branch;
-3. searching open and closed issues, discussions, PRs, and commits;
-4. reducing the report to one actionable problem;
-5. following the repository's issue template, voice, and contribution policy.
-
-Write each issue in the repository's own template and voice first; do not layer
-RepoStew structure on top. Where the template leaves the content open, keep the
-body minimal and include only:
-
-- concise problem-focused title;
-- affected version/commit and environment;
-- minimal reproduction;
-- expected and actual behavior;
-- impact and frequency without exaggeration;
-- relevant logs or screenshots with secrets removed;
-- optional implementation notes clearly labeled as suggestions.
-
-Do not file speculative security reports publicly. Follow `SECURITY.md` or the repository's private reporting channel.
-
-## Technical taste
-
-Prefer, in order:
-
-`confirmed value and correctness > validation quality > repository fit > reviewer clarity`
-
-Prefer smaller complete increments within any accepted issue, but do not confuse incremental delivery with refusing the larger objective. Complex work may use milestones or multiple reviewable commits inside its handed-over task.
-
-For every patch:
-
-- preserve existing interfaces and defaults unless the issue requires change;
-- make behavior testable and reversible;
-- match local naming, structure, formatting, and error-handling patterns;
-- introduce abstractions only when they isolate real complexity or remove demonstrated duplication;
-- explain why the solution is correct, not merely what changed;
-- optimize for correctness, simplicity, maintainability, and reviewer effort.
+Security findings stay private under SECURITY.md. No safe authorized private
+channel means return a disclosure blocker, never public exploit/fix details.
