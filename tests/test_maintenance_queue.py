@@ -66,6 +66,20 @@ class MaintenanceQueueTests(unittest.TestCase):
     def records(self):
         return state_store.load_document(self.home, "maintenance_batches.json", [])
 
+    @classmethod
+    def candidate(cls, work_item_id, repo):
+        row = cls.task("fresh-batch", work_item_id, repo)
+        row.update({
+            "packet_id": work_item_id,
+            "role": "repostew-repository",
+            "mode": "autonomous_continuous",
+            "status": "queued",
+            "source": {"kind": "github-trending", "captured_at": "2026-09-24T00:00:00Z"},
+            "contract_path": "D:/skill/references/worker-contract.md",
+            "evidence_path": "D:/state/campaigns/fresh-batch/source.json",
+        })
+        return row
+
     def test_head_and_tail_share_one_deduplicated_backend_neutral_queue(self):
         records = [
             self.task("old-native", "work-a", "owner/a"),
@@ -141,6 +155,51 @@ class MaintenanceQueueTests(unittest.TestCase):
         self.assertEqual(len(successes), 1)
         self.assertEqual(len(failures), 1)
         self.assertEqual(len(self.records()), 2)
+
+    def test_atomic_candidate_append_deduplicates_by_repository_across_parallel_roots(self):
+        candidates = [
+            self.candidate("candidate-a", "Owner/Repo"),
+            self.candidate("candidate-b", "owner/repo"),
+        ]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(
+                lambda row: maintenance_queue.append_candidates(self.home, [row]), candidates,
+            ))
+
+        self.assertEqual(sum(result["added_count"] for result in results), 1)
+        self.assertEqual(sum(result["skipped_count"] for result in results), 1)
+        saved = self.records()
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]["role"], "repostew-repository")
+        self.assertEqual([row["owner_repo"].casefold() for row in maintenance_queue.list_items(self.home)],
+                         [saved[0]["owner_repo"].casefold()])
+
+    def test_candidate_append_suppresses_any_repository_already_in_history(self):
+        completed = self.with_window(self.task(
+            "old-batch", "old-work", "owner/repo", worker_status="completed", status="completed",
+        ))
+        self.save([completed])
+
+        result = maintenance_queue.append_candidates(
+            self.home, [self.candidate("fresh-work", "OWNER/REPO")],
+        )
+
+        self.assertEqual(result["added_count"], 0)
+        self.assertEqual(result["skipped"][0]["reason"], "repository_already_in_shared_queue")
+        self.assertEqual(len(self.records()), 1)
+
+    def test_candidate_append_rejects_incomplete_or_wrong_role_rows_without_writes(self):
+        invalid = self.candidate("bad-work", "owner/repo")
+        invalid["role"] = "repository lifecycle"
+        with self.assertRaisesRegex(ValueError, "role must be repostew-repository"):
+            maintenance_queue.append_candidates(self.home, [invalid])
+        self.assertEqual(self.records(), [])
+
+        invalid = self.candidate("bad-work", "owner/repo")
+        invalid["source"] = {"kind": "github-trending"}
+        with self.assertRaisesRegex(ValueError, "source.captured_at"):
+            maintenance_queue.append_candidates(self.home, [invalid])
+        self.assertEqual(self.records(), [])
 
     def test_one_active_repository_claim_blocks_other_work_items_for_that_repo(self):
         self.save([self.task("batch-a", "work-a", "owner/repo"),

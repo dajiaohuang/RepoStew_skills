@@ -284,6 +284,76 @@ def _append(connection, record: dict[str, Any], *, prefix: str) -> tuple[str, in
     return key, sort_index
 
 
+def append_candidates(state_home: Path, candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    """Atomically append new repository candidates, deduplicating across the shared queue.
+
+    This is a root-only intake operation. The immediate transaction makes two
+    independent queue managers contend on the same repository identity rather
+    than racing through a read-then-write check.
+    """
+    if not isinstance(candidates, list):
+        raise ValueError("candidate input must be a JSON array")
+    home = _validate_home(Path(state_home))
+
+    for index, candidate in enumerate(candidates):
+        if not isinstance(candidate, dict):
+            raise ValueError(f"candidate {index} must be an object")
+        required = ("batch_id", "work_item_id", "packet_id", "owner_repo", "backend",
+                    "client", "provider", "model", "mode", "phase", "source",
+                    "contract_path", "evidence_path")
+        missing = [field for field in required if not _text(candidate.get(field))]
+        if missing:
+            raise ValueError(f"candidate {index} missing fields: {', '.join(missing)}")
+        if candidate.get("role") != "repostew-repository":
+            raise ValueError(f"candidate {index} role must be repostew-repository")
+        if candidate.get("worker_status") != "queued" or not _is_queued(candidate):
+            raise ValueError(f"candidate {index} must be an unpaused queued row")
+        owner_repo = _text(candidate.get("owner_repo"))
+        owner, separator, repo = owner_repo.partition("/")
+        if not separator or not owner or not repo or "/" in repo or any(c.isspace() for c in owner_repo):
+            raise ValueError(f"candidate {index} owner_repo must be canonical owner/repository")
+        source = candidate.get("source")
+        if not isinstance(source, dict) or not _text(source.get("kind")):
+            raise ValueError(f"candidate {index} requires source.kind")
+        if _parse_time(source.get("captured_at")) is None:
+            raise ValueError(f"candidate {index} requires an ISO-8601 source.captured_at")
+
+    added: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    with state_store.connect(home) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        rows = _rows(connection)
+        existing_repos = {
+            _text(record.get("owner_repo")).casefold()
+            for _, _, record in rows if _text(record.get("owner_repo"))
+        }
+        existing_work_items = {
+            _text(record.get("work_item_id"))
+            for _, _, record in rows if _text(record.get("work_item_id"))
+        }
+        for candidate in candidates:
+            owner_repo = _text(candidate["owner_repo"])
+            work_item_id = _text(candidate["work_item_id"])
+            folded_repo = owner_repo.casefold()
+            if folded_repo in existing_repos:
+                skipped.append({"owner_repo": owner_repo, "work_item_id": work_item_id,
+                                "reason": "repository_already_in_shared_queue"})
+                continue
+            if work_item_id in existing_work_items:
+                skipped.append({"owner_repo": owner_repo, "work_item_id": work_item_id,
+                                "reason": "work_item_id_already_in_shared_queue"})
+                continue
+            record = deepcopy(candidate)
+            key, sort_index = _append(connection, record, prefix="maintenance-queue-enqueue")
+            existing_repos.add(folded_repo)
+            existing_work_items.add(work_item_id)
+            added.append({"owner_repo": owner_repo, "work_item_id": work_item_id,
+                          "record_key": key, "sort_index": sort_index})
+
+    return {"added": added, "skipped": skipped,
+            "added_count": len(added), "skipped_count": len(skipped)}
+
+
 def claim_item(
     state_home: Path,
     work_item_id: str,
@@ -462,6 +532,10 @@ def main(argv: list[str] | None = None) -> int:
     list_parser.add_argument("--eligible-repo", action="append")
     list_parser.add_argument("--eligible-batch")
 
+    append_parser = sub.add_parser("append", help="root-only atomic append of new repository candidates")
+    append_parser.add_argument("--records-file", required=True, type=Path,
+                               help="JSON array of fully verified candidate rows")
+
     claim_parser = sub.add_parser("claim", help="atomically claim one selected work item")
     claim_parser.add_argument("--work-item-id", required=True)
     claim_parser.add_argument("--record-key", required=True)
@@ -495,6 +569,9 @@ def main(argv: list[str] | None = None) -> int:
                                 eligible_backends=args.eligible_backend,
                                 eligible_repos=args.eligible_repo,
                                 eligible_batch_id=args.eligible_batch)
+        elif args.command == "append":
+            candidates = json.loads(args.records_file.read_text(encoding="utf-8"))
+            result = append_candidates(home, candidates)
         elif args.command == "claim":
             provenance = json.loads(args.execution_provenance) if args.execution_provenance else None
             result = claim_item(
