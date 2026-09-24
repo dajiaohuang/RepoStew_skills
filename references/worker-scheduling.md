@@ -49,6 +49,28 @@ Only root claims and updates shared state. Append executor returns through `upda
 Use `requeue` only after recording stopped-writer proof and remote-effect
 reconciliation. A stale claim is never stolen automatically.
 
+For a terminal historical item with a user-authorized retry trigger, ordinary
+`append` remains deduplicating and `requeue` is not applicable. Root may use the
+atomic `rework` operation only when the referenced item is the repository's latest
+terminal item, its prior evidence is preserved, and no active or queued item owns
+that repository. Supply a fresh batch/work-item/packet candidate plus structured
+proof files. Stopped-writer proof includes `verified_at`, `owner_repo`, an
+`executor_id` or `dispatch_token`, `completion_signal`, `evidence_path` and
+`summary`. Remote-reconciliation proof includes `verified_at`, `owner_repo`,
+`repo_head`, `evidence_path`, `summary` and a non-empty `checks` list. Root must
+independently verify both proofs; structural validation is not evidence that their
+claims are true. The helper appends a new record with explicit parent/rework
+metadata and leaves all earlier queue/evidence records unchanged.
+
+```bash
+python scripts/maintenance_queue.py --state-home STATE rework \
+  --prior-work-item-id PRIOR_WORK_ITEM \
+  --candidate-file /absolute/new-candidate.json \
+  --stopped-writer-proof-file /absolute/stopped-writer-proof.json \
+  --remote-reconciliation-proof-file /absolute/remote-reconciliation-proof.json \
+  --supersession-reason "User-authorized retry after blocker was reconciled"
+```
+
 ## Native
 
 Use supported host APIs and actual model IDs; [Luna profile](luna-xhigh.md) only when

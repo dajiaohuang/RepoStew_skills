@@ -284,6 +284,61 @@ def _append(connection, record: dict[str, Any], *, prefix: str) -> tuple[str, in
     return key, sort_index
 
 
+def _validate_candidate(candidate: Any, index: int = 0) -> None:
+    if not isinstance(candidate, dict):
+        raise ValueError(f"candidate {index} must be an object")
+    required = ("batch_id", "work_item_id", "packet_id", "owner_repo", "backend",
+                "client", "provider", "model", "mode", "phase", "source",
+                "contract_path", "evidence_path")
+    missing = [field for field in required if not _text(candidate.get(field))]
+    if missing:
+        raise ValueError(f"candidate {index} missing fields: {', '.join(missing)}")
+    if candidate.get("role") != "repostew-repository":
+        raise ValueError(f"candidate {index} role must be repostew-repository")
+    if candidate.get("worker_status") != "queued" or not _is_queued(candidate):
+        raise ValueError(f"candidate {index} must be an unpaused queued row")
+    owner_repo = _text(candidate.get("owner_repo"))
+    owner, separator, repo = owner_repo.partition("/")
+    if not separator or not owner or not repo or "/" in repo or any(c.isspace() for c in owner_repo):
+        raise ValueError(f"candidate {index} owner_repo must be canonical owner/repository")
+    source = candidate.get("source")
+    if not isinstance(source, dict) or not _text(source.get("kind")):
+        raise ValueError(f"candidate {index} requires source.kind")
+    if _parse_time(source.get("captured_at")) is None:
+        raise ValueError(f"candidate {index} requires an ISO-8601 source.captured_at")
+
+
+def _validate_rework_proof(
+    proof: Any,
+    *,
+    name: str,
+    owner_repo: str,
+    stopped_writer: bool = False,
+) -> dict[str, Any]:
+    if not isinstance(proof, dict):
+        raise QueueError(f"{name} must be a structured object")
+    if _parse_time(proof.get("verified_at")) is None:
+        raise QueueError(f"{name}.verified_at must be an ISO-8601 timestamp")
+    if _text(proof.get("owner_repo")).casefold() != owner_repo.casefold():
+        raise QueueError(f"{name}.owner_repo must match the rework repository")
+    if not _text(proof.get("evidence_path")) or not _text(proof.get("summary")):
+        raise QueueError(f"{name} requires evidence_path and summary")
+    if stopped_writer:
+        if not (_text(proof.get("executor_id")) or _text(proof.get("dispatch_token"))):
+            raise QueueError(f"{name} requires executor_id or dispatch_token")
+        if _text(proof.get("completion_signal")).casefold() not in {
+            "natural_completion", "needs_attention", "interrupted_and_stopped", "completed",
+        }:
+            raise QueueError(f"{name}.completion_signal does not prove a stopped writer")
+    else:
+        if not _text(proof.get("repo_head")):
+            raise QueueError(f"{name}.repo_head is required")
+        checks = proof.get("checks")
+        if not isinstance(checks, list) or not checks or any(not _text(item) for item in checks):
+            raise QueueError(f"{name}.checks must list the reconciled remote effects")
+    return deepcopy(proof)
+
+
 def append_candidates(state_home: Path, candidates: list[dict[str, Any]]) -> dict[str, Any]:
     """Atomically append new repository candidates, deduplicating across the shared queue.
 
@@ -296,27 +351,7 @@ def append_candidates(state_home: Path, candidates: list[dict[str, Any]]) -> dic
     home = _validate_home(Path(state_home))
 
     for index, candidate in enumerate(candidates):
-        if not isinstance(candidate, dict):
-            raise ValueError(f"candidate {index} must be an object")
-        required = ("batch_id", "work_item_id", "packet_id", "owner_repo", "backend",
-                    "client", "provider", "model", "mode", "phase", "source",
-                    "contract_path", "evidence_path")
-        missing = [field for field in required if not _text(candidate.get(field))]
-        if missing:
-            raise ValueError(f"candidate {index} missing fields: {', '.join(missing)}")
-        if candidate.get("role") != "repostew-repository":
-            raise ValueError(f"candidate {index} role must be repostew-repository")
-        if candidate.get("worker_status") != "queued" or not _is_queued(candidate):
-            raise ValueError(f"candidate {index} must be an unpaused queued row")
-        owner_repo = _text(candidate.get("owner_repo"))
-        owner, separator, repo = owner_repo.partition("/")
-        if not separator or not owner or not repo or "/" in repo or any(c.isspace() for c in owner_repo):
-            raise ValueError(f"candidate {index} owner_repo must be canonical owner/repository")
-        source = candidate.get("source")
-        if not isinstance(source, dict) or not _text(source.get("kind")):
-            raise ValueError(f"candidate {index} requires source.kind")
-        if _parse_time(source.get("captured_at")) is None:
-            raise ValueError(f"candidate {index} requires an ISO-8601 source.captured_at")
+        _validate_candidate(candidate, index)
 
     added: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
@@ -352,6 +387,96 @@ def append_candidates(state_home: Path, candidates: list[dict[str, Any]]) -> dic
 
     return {"added": added, "skipped": skipped,
             "added_count": len(added), "skipped_count": len(skipped)}
+
+
+def append_rework_candidate(
+    state_home: Path,
+    prior_work_item_id: str,
+    candidate: dict[str, Any],
+    *,
+    supersession_reason: str,
+    stopped_writer_proof: dict[str, Any],
+    remote_reconciliation_proof: dict[str, Any],
+) -> dict[str, Any]:
+    """Append one explicit rework after terminal ownership and remote reconciliation.
+
+    The prior record/evidence stay immutable. The referenced item must be the
+    latest terminal item for its repository, with no active or queued owner.
+    """
+    _validate_candidate(candidate)
+    prior_work_item_id = _text(prior_work_item_id)
+    reason = _text(supersession_reason)
+    if not prior_work_item_id or not reason:
+        raise QueueError("rework requires a prior work item and supersession reason")
+
+    owner_repo = _text(candidate["owner_repo"])
+    writer_proof = _validate_rework_proof(
+        stopped_writer_proof, name="stopped_writer_proof", owner_repo=owner_repo,
+        stopped_writer=True,
+    )
+    remote_proof = _validate_rework_proof(
+        remote_reconciliation_proof, name="remote_reconciliation_proof", owner_repo=owner_repo,
+    )
+    home = _validate_home(Path(state_home))
+
+    with state_store.connect(home) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        rows = _rows(connection)
+        latest = _latest(rows)
+        prior = latest.get(prior_work_item_id)
+        if prior is None:
+            raise QueueError("prior work item does not exist")
+        _, _, prior_record = prior
+        if _text(prior_record.get("owner_repo")).casefold() != owner_repo.casefold():
+            raise QueueError("candidate repository does not match prior work item")
+
+        if owner_repo.casefold() in _active_repositories(latest):
+            raise QueueError("repository already has an active mutation claim")
+        if any(_is_queued(record) and _text(record.get("owner_repo")).casefold() == owner_repo.casefold()
+               for _, _, record in latest.values()):
+            raise QueueError("repository already has queued work")
+        repo_rows = [row for row in latest.values()
+                     if _text(row[2].get("owner_repo")).casefold() == owner_repo.casefold()]
+        newest_repo_row = max(repo_rows, key=lambda row: (row[1], row[0]), default=None)
+        if newest_repo_row is None or _text(newest_repo_row[2].get("work_item_id")) != prior_work_item_id:
+            raise QueueError("prior work item is not the latest repository record")
+        if (not _handled(prior_record)
+                or _text(prior_record.get("worker_status")).casefold() in ACTIVE_WORKER_STATES):
+            raise QueueError("prior work item is not terminal")
+
+        work_item_id = _text(candidate["work_item_id"])
+        packet_id = _text(candidate["packet_id"])
+        batch_id = _text(candidate["batch_id"])
+        if any(_text(record.get("work_item_id")) == work_item_id for _, _, record in rows):
+            raise QueueError("rework work_item_id already exists")
+        if work_item_id == prior_work_item_id or packet_id == _text(prior_record.get("packet_id")):
+            raise QueueError("rework must use a new packet and work_item_id")
+        if batch_id == _text(prior_record.get("batch_id")):
+            raise QueueError("rework must use a new batch_id")
+        try:
+            rework_pass = int(prior_record.get("rework_pass", 0)) + 1
+        except (TypeError, ValueError):
+            rework_pass = 1
+
+        record = deepcopy(candidate)
+        record.update({
+            "rework_of_previous": True,
+            "rework_pass": rework_pass,
+            "parent_rework_batch": _text(prior_record.get("batch_id")),
+            "parent_rework_packet": _text(prior_record.get("work_item_id")),
+            "supersession_reason": reason,
+            "prior_evidence_path": _text(prior_record.get("evidence_path")),
+            "rework_proof": {
+                "stopped_writer": writer_proof,
+                "remote_reconciliation": remote_proof,
+            },
+        })
+        if not record["prior_evidence_path"]:
+            raise QueueError("prior work item has no preserved evidence path")
+        key, sort_index = _append(connection, record, prefix="maintenance-queue-rework")
+
+    return {**record, "_queue": {"record_key": key, "sort_index": sort_index,
+                                  "direction": "head"}}
 
 
 def claim_item(
@@ -536,6 +661,14 @@ def main(argv: list[str] | None = None) -> int:
     append_parser.add_argument("--records-file", required=True, type=Path,
                                help="JSON array of fully verified candidate rows")
 
+    rework_parser = sub.add_parser("rework", help="append one terminal-item rework after proof")
+    rework_parser.add_argument("--prior-work-item-id", required=True)
+    rework_parser.add_argument("--candidate-file", required=True, type=Path,
+                               help="JSON object for one new queued work item")
+    rework_parser.add_argument("--stopped-writer-proof-file", required=True, type=Path)
+    rework_parser.add_argument("--remote-reconciliation-proof-file", required=True, type=Path)
+    rework_parser.add_argument("--supersession-reason", required=True)
+
     claim_parser = sub.add_parser("claim", help="atomically claim one selected work item")
     claim_parser.add_argument("--work-item-id", required=True)
     claim_parser.add_argument("--record-key", required=True)
@@ -584,10 +717,20 @@ def main(argv: list[str] | None = None) -> int:
             updates = json.loads(args.updates) if args.updates else None
             result = update_claim(home, args.work_item_id, args.owner, args.generation,
                                   worker_status=args.worker_status, phase=args.phase, updates=updates)
-        else:
+        elif args.command == "requeue":
             result = requeue_claim(home, args.work_item_id, args.owner, args.generation,
                                    reason=args.reason, stopped_writer=args.stopped_writer,
                                    remote_reconciliation=args.remote_reconciliation)
+        else:
+            result = append_rework_candidate(
+                home, args.prior_work_item_id,
+                json.loads(args.candidate_file.read_text(encoding="utf-8")),
+                supersession_reason=args.supersession_reason,
+                stopped_writer_proof=json.loads(args.stopped_writer_proof_file.read_text(encoding="utf-8")),
+                remote_reconciliation_proof=json.loads(
+                    args.remote_reconciliation_proof_file.read_text(encoding="utf-8")
+                ),
+            )
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0
     except (QueueError, ValueError, OSError, json.JSONDecodeError) as error:

@@ -51,6 +51,27 @@ maintainer authority; use [verified authority](maintaining-owned-repositories.md
 Do not label, assign, prioritize, issue blocking reviews, release or speak for
 maintainers without delegated authority.
 
+## Independent issue and pull-request routes
+
+Treat write capability as action-specific, not as a single repository role. An
+upstream `viewerPermission=READ`, lack of upstream push/triage rights, or the
+fork setting alone does not prove that issue creation is unavailable or that a
+fork-based PR cannot be submitted.
+
+- For a concrete, supported, nonduplicate issue, if the issue tracker is enabled
+  and repository policy permits reports, attempt the actual issue submission.
+  Do not create dummy permission-probe issues. Record the resulting URL or the
+  exact rejection; do not mark issue creation unavailable solely from
+  `viewerPermission`.
+- For a code contribution, use the fork-first route: verify or create the
+  authenticated fork, verify its push capability, then attempt a PR from the
+  pushed branch after rechecking base, duplicates, policy and public text. Do
+  not require upstream push/admin rights for a fork PR. `allow_forking=true`
+  only indicates that forking is allowed; it does not prove a PR was created or
+  accepted.
+- Issue creation and PR submission are independent outcomes. A failure on one
+  route does not suppress a valid attempt on the other.
+
 ## Issue and writing standard
 
 File only authorized, supported-version/default-branch defects with reproduction
