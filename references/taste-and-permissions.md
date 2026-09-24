@@ -80,13 +80,11 @@ Use one actionable problem, affected version/environment, expected/actual behavi
 minimal reproduction and honest impact. Redact secrets; suggestions stay labeled.
 
 Follow repository templates and voice; otherwise state change, reason and actual
-validation briefly. Preserve material caveats. No provenance advertising,
-fabricated coauthors/sign-offs/endorsement or unsolicited attribution. If a
-repository template or contribution rule explicitly mandates a model/agent
-attribution (for example an `Assisted-by` trailer) that conflicts with the active
-public-text prohibition, retain the item as blocked; do not add the attribution
-without explicit packet authorization. Mandatory disclosure must be truthful,
-but repository requirements do not override the active public-text prohibition.
+validation briefly. Preserve material caveats. Never add provider, tool, model,
+agent, bot, AI or generated-by attribution to public issues, comments, commits,
+branches, trailers, PRs or email. If a repository template or contribution rule
+mandates any such attribution (for example an `Assisted-by` trailer), retain the
+item as blocked; no packet can authorize an exception.
 Use closing keywords only for fully resolved issues when conventions permit.
 Do not comment merely to advertise a PR.
 

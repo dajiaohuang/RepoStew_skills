@@ -1,8 +1,12 @@
 # Root scheduling
 
-One root owns admission, durable queue, shared state, job lifecycle and acceptance.
-Leaves never delegate. Honor latest authorized backend/model/concurrency; unavailable
-capacity does not permit switching provider, effort or backend.
+Each authorized campaign conversation has its own root and leaf pool. When roots
+share the selected state home, the existing SQLite queue is their sole coordination
+channel: never send peer-thread messages, inspect/poll the peer conversation, or
+coordinate out of band. Atomic queue claims and append-only owner/generation
+updates prevent duplicate repository ownership; each root updates only its own
+claims and jobs. Leaves never delegate. Honor authorized backend/model/concurrency;
+unavailable capacity does not permit switching provider, effort or backend.
 
 1. Measure slots/processes, CPU, memory, disk, provider/account limits and root reserve.
    Count all backends together; use shared reservations/conservative limits across roots.
@@ -14,11 +18,10 @@ capacity does not permit switching provider, effort or backend.
 3. Root creates jobs; leaves only use bound workspace/branch and external durable evidence.
    At each submission handshake, suspend workspace access, accept/track/release,
    then restore for further edits. Same-repo delta may use the same leaf.
-4. Prefer natural completion/needs-attention events and bounded waits; refill an
-   empty slot immediately after the event is reconciled. When an event channel is
-   unavailable and actionable queued work remains, use change-only slot occupancy
-   snapshots no slower than every 5 seconds, even while all slots are occupied.
-   Never poll logs/CI, repeat unchanged snapshots as work, or rerun unchanged tasks.
+4. Wait for natural completion/needs-attention events and reconcile before refill.
+   Do not poll subagents, external CLIs, peer conversations, logs or CI; do not use
+   recurring occupancy snapshots. Shared SQLite records remain the coordination
+   path, not a reason to poll executor status or rerun unchanged work.
    Reduce admission on pressure/rate limits; no storms.
 5. Verify [returns](worker-contract.md), retain blockers and release submitted storage.
    Reconcile partial local/remote actions and prove the old writer stopped before
@@ -26,9 +29,9 @@ capacity does not permit switching provider, effort or backend.
 
 ## Shared durable campaign queue
 
-All native and external executors use `scripts/maintenance_queue.py` over the
-existing SQLite `maintenance_batches` collection. Do not create a backend-specific
-queue or migrate/rewrite old batch records. The queue selects the latest row for
+All authorized roots and native/external executors use `scripts/maintenance_queue.py`
+over the existing SQLite `maintenance_batches` collection. Do not create a
+backend-specific queue or migrate/rewrite old batch records. The queue selects the latest row for
 each `work_item_id` across all backends, then admits rows whose `worker_status` is
 `queued`; paused and non-queued history stays intact. An optional eligible-backend
 filter expresses current executor capability after cross-backend deduplication.
@@ -45,7 +48,9 @@ python scripts/maintenance_queue.py --state-home STATE list --direction tail --e
 python scripts/maintenance_queue.py --state-home STATE claim --work-item-id ID --record-key KEY --owner ROOT --direction tail
 ```
 
-Only root claims and updates shared state. Append executor returns through `update`.
+Only the owning campaign root claims and updates shared state through helpers;
+leaves return through their own root. An independent root cannot update or steal
+another root's active claim. Append executor returns through `update`.
 Use `requeue` only after recording stopped-writer proof and remote-effect
 reconciliation. A stale claim is never stolen automatically.
 

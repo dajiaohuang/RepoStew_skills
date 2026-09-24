@@ -8,7 +8,9 @@ description: >-
 
 # RepoStew
 
-One canonical workflow; the root owns scope, queue, shared state, jobs and acceptance.
+One canonical workflow. Each authorized campaign root owns its assigned scope,
+claims, jobs and acceptance; independent roots may coordinate only through the
+same existing SQLite queue and its helpers.
 
 ## Rules
 
@@ -17,7 +19,8 @@ One canonical workflow; the root owns scope, queue, shared state, jobs and accep
 - Read applicable AGENTS/CLAUDE/GEMINI/copilot instructions, contribution/build/security/disclosure rules, templates and validation configuration before acting.
 - Require maintainer approval for new dependencies, services, APIs, CI actions, permissions or architecture. Do not use paid/privileged resources without authority.
 - Preserve unrelated, dirty and unknown data. Keep skill and target-repository changes separate.
-- Public contributions must not advertise providers, tools, agents or models. If the target repository's contribution rules or template explicitly require such attribution (for example an `Assisted-by` trailer), retain the item as blocked unless the active packet explicitly authorizes that disclosure; never add it merely to satisfy a repository template.
+- Never add provider, tool, model, agent, bot, AI or generated-by attribution to public issues, comments, commits, branches, trailers, PRs or email. If target rules or a template require any such attribution, retain the item as blocked; packet wording cannot authorize an exception.
+- When separate campaign conversations share this state home, do not message, poll, or inspect the peer conversation. The existing SQLite queue, updated through helpers, is the sole coordination channel; use atomic claims and update only claims owned by the current root.
 - Exclude archived repositories and forks from discovery; never exclude an organization by name.
 - Complexity changes execution planning, never eligibility. Create visible tasks only on explicit request; do not substitute hidden delegation for requested handover.
 - If a skill rule blocks authorized work, quote the rule, distinguish requirement from interpretation, retain the blocker and continue safe independent work.
@@ -25,7 +28,7 @@ One canonical workflow; the root owns scope, queue, shared state, jobs and accep
 ## Start
 
 1. Validate the selected absolute REPOSTEW_HOME against paths.json; resolve all three roots with scripts/repostew_state.py roots. Never infer roots from cwd/profile/history.
-2. Use the existing SQLite through helpers. No implicit reset/import or fallback to old JSON. See [state](references/state.md); missing installation uses [cold start](references/cold-start.md).
+2. Use the existing SQLite through helpers. No implicit reset/import or fallback to old JSON. Separate campaign roots may share it, but coordinate only through queue records. See [state](references/state.md); missing installation uses [cold start](references/cold-start.md).
 3. Check gh authentication, Git and Python; use an available connector/API if gh is absent without weakening verification.
 4. Confirm mode: investigate → approve edits → implement/test → approve submission. Explicit autonomous/continuous/no-confirmation scope permits these steps without intermediate approval.
 5. Both modes retain the standing clarification/Draft exceptions in [submission gates](references/taste-and-permissions.md). Autonomy never bypasses repository policy.
@@ -66,14 +69,14 @@ after root acceptance/job restoration; revalidate authority. Use
 [worker context](references/worker-context.md). For explicit Luna xhigh selection,
 use [profile](references/luna-xhigh.md) and its single repository role.
 
-Only the root updates queue/trackers/checkpoints and creates/restores/releases jobs.
-Leaves return durable evidence and suspend workspace access after submission.
+Only the owning conversation's root updates its queue/trackers/checkpoints and
+creates/restores/releases its jobs. Leaves return durable evidence and suspend
+workspace access after submission.
 A missing leaf cannot be replaced until its writer is stopped and partial effects
 reconciled. Natural completion is not acceptance or proof of a free native slot.
-Use completion events as the fast path: reconcile and refill an empty slot
-immediately; while actionable queued work remains and events are unavailable, use
-change-only slot occupancy snapshots at most every 5 seconds regardless of current
-occupancy. Never poll logs/CI or rerun unchanged work just to keep a slot busy.
+Reconcile a completion/needs-attention event before refilling. Do not poll leaves,
+external CLIs, logs or CI; wait for natural return and never rerun unchanged work
+just to keep a slot busy.
 
 ## Completion
 

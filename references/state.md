@@ -29,7 +29,9 @@ Legacy-artifact quarantine records retain exact source/destination/hash/size and
 per-file result; quarantined payloads never become live state or replay inputs.
 
 load_json/save_json use SQLite; intake merges transactionally and jobs update
-atomically. Only root writes shared state. Keep compact routing/outcome evidence,
+atomically. Only an authorized campaign root writes shared state, through helpers
+and only for its own claims; multiple roots sharing this database coordinate only
+through the queue. Keep compact routing/outcome evidence,
 not mail/attachments/source/build exports. Durable leaf evidence must survive jobs;
 bulk temporary inputs/build logs stay disposable. Never hand-edit ownership.
 

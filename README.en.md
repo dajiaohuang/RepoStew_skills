@@ -35,7 +35,8 @@ only when that model/effort is selected.
 ## Boundaries
 
 Read target rules and live issue/PR state. Reproduce and deduplicate before submitting.
-Keep changes small, tests honest, security private and attribution truthful.
+Keep changes small, tests honest, security private and public contributions free
+of provider, tool, model, agent, bot, AI and generated-by attribution.
 No inferred merge/close/delete/release/governance authority; dependencies/services/
 permissions/API/architecture changes need approval. Report-only monitors stay read-only.
 Preserve dirty/unknown data and credentials. Historical contribution is not active follow.

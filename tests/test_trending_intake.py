@@ -89,7 +89,9 @@ class TrendingIntakeTests(unittest.TestCase):
         self.assertEqual(row["backend"], "native_subagent")
         self.assertEqual(row["model"], "gpt-6-luna")
         self.assertEqual(row["reasoning_effort"], "xhigh")
-        self.assertEqual(row["orchestration_poll_interval_seconds"], 5)
+        self.assertIsNone(row["orchestration_poll_interval_seconds"])
+        self.assertIn("no executor or peer-conversation polling", row["completion_signal_policy"])
+        self.assertIn("model_agent_bot_ai", row["public_attribution_policy"])
         self.assertNotIn("claude", row["client"].casefold())
         self.assertEqual(row["worker_status"], "queued")
 
