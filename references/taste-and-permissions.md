@@ -82,9 +82,10 @@ minimal reproduction and honest impact. Redact secrets; suggestions stay labeled
 Follow repository templates and voice; otherwise state change, reason and actual
 validation briefly. Preserve material caveats. Never add provider, tool, model,
 agent, bot, AI or generated-by attribution to public issues, comments, commits,
-branches, trailers, PRs or email. If a repository template or contribution rule
-mandates any such attribution (for example an `Assisted-by` trailer), retain the
-item as blocked; no packet can authorize an exception.
+branches, trailers, PRs or email. Mandatory disclosure must be truthful. If a
+repository template or contribution rule mandates prohibited attribution (for
+example an `Assisted-by` trailer), retain the item as blocked; no packet can
+authorize a false or noncompliant statement.
 Use closing keywords only for fully resolved issues when conventions permit.
 Do not comment merely to advertise a PR.
 
