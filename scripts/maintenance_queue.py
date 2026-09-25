@@ -24,9 +24,10 @@ DOCUMENT = "maintenance_batches.json"
 DIRECTIONS = {"head", "tail"}
 ACTIVE_WORKER_STATES = {"running", "dispatching", "claimed"}
 HISTORY_BLOCKING_STATES = {
-    "accepted", "blocked_missing_return", "completed", "completed_submitted", "completed_with_blockers",
+    "accepted", "blocked", "blocked_missing_return", "completed", "completed_submitted", "completed_with_blockers",
     "completed_with_scope_limit", "exited_needs_outcome_verification", "needs_attention",
     "outcome_recorded", "released_awaiting_user", "awaiting_user", "skipped", "skipped_duplicate",
+    "superseded_by_new_rework_queue",
     "stopped_for_reconciliation", "superseded_duplicate",
     "timed_out_stopped", "timeout_no_save", "unfinalized_exit_requires_reconciliation",
     "verified", "waiting_maintainer",

@@ -400,6 +400,29 @@ class MaintenanceQueueTests(unittest.TestCase):
                          "dispatch-old-attempt")
         self.assertEqual([item["work_item_id"] for item in maintenance_queue.list_items(self.home)],
                          ["rework-work"])
+
+    def test_public_rework_api_accepts_a_terminal_blocked_item_with_both_proofs(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="blocked", status="blocked")
+        prior.update({"packet_id": "old-packet", "evidence_path": "D:/state/old-evidence.json"})
+        self.save([prior])
+
+        rework = self.append_rework()
+
+        self.assertEqual(rework["worker_status"], "queued")
+        self.assertEqual(rework["parent_rework_packet"], "old-work")
+
+    def test_public_rework_api_accepts_superseded_item_when_it_is_latest_for_repo(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="superseded_by_new_rework_queue",
+                          status="superseded_by_new_rework_queue")
+        prior.update({"packet_id": "old-packet", "evidence_path": "D:/state/old-evidence.json"})
+        self.save([prior])
+
+        rework = self.append_rework()
+
+        self.assertEqual(rework["worker_status"], "queued")
+        self.assertEqual(rework["parent_rework_packet"], "old-work")
         self.assertEqual(self.records()[0], prior)
 
     def test_public_rework_api_rejects_missing_proofs_and_wrong_prior_repo(self):
