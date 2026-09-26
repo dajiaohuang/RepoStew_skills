@@ -33,7 +33,7 @@ Use new absolute workspace-owned output paths outside disposable jobs. The compi
 never overwrites files or touches state. Verify the artifact and send its contents,
 not its path. Prefix-only output is not an assignment.
 
-Common sources: SKILL.md, worker-context, worker-contract, full-workflow and
+Common sources: SKILL.md, repo, legacy-workflow, worker-context, worker-contract, full-workflow and
 taste-and-permissions. Add discovery-campaign for discovery, repository-audit for
 audit, or pr-maintenance for review; implement needs only the common sources.
 Only `repostew-repository` is accepted. Full text, fixed order within each phase,
@@ -56,10 +56,11 @@ and evidence outside disposal. Save actual executor identity after dispatch.
 ## Acceptance and cost
 
 Use the complete contract return. Root accepts natural completion/needs-attention
-events and refills a newly empty slot immediately after reconciliation. If the host
-cannot signal completion and actionable queued work remains, use a change-only slot
-occupancy snapshot no slower than every 5 seconds regardless of whether slots are
-currently full. Never poll logs/CI or rerun unchanged work. Sensitive details stay private.
+events and refills a newly empty slot immediately after reconciliation. Do not
+poll subagents, external CLIs, peer conversations, logs or CI, and do not use
+recurring occupancy snapshots. Shared SQLite queue state is the only cross-root
+coordination path, not a reason to poll executor status or rerun unchanged work.
+Sensitive details stay private.
 Submission handoff remains partial when work remains.
 
 Maximize necessary shared content, not length. Matching text does not prove cache

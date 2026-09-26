@@ -15,9 +15,10 @@ Run from selected skill home after paths.json/root validation. Honor host wrappe
 | Inline prompt | python scripts/compile_leaf_prompt.py --packet /absolute/packet.json --output /absolute/new-prompt.txt |
 | Track PR/issue | python scripts/pr_tracker.py add PR_URL ISSUE_URL |
 | Track contribution | python scripts/contribution_tracker.py add URL |
+| Shared queue rework | python scripts/maintenance_queue.py --state-home STATE rework --prior-work-item-id ID --candidate-file CANDIDATE.json --stopped-writer-proof-file STOPPED.json --remote-reconciliation-proof-file REMOTE.json --supersession-reason REASON |
 | Issue scan | python scripts/scan_known_repos.py --repo owner/repo --include-decisions |
 | Inbox/replies | [PR maintenance commands/schema](pr-maintenance.md) |
-| Job create/release/restore/list | [disposable storage](ephemeral-storage.md) |
+| Job create/release/reconcile-reappeared/restore/list | [disposable storage](ephemeral-storage.md) |
 | Shared worktree operations | [cleanup](workspace-cleanup.md) |
 | State/export/reset | [state](state.md) |
 

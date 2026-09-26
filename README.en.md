@@ -23,6 +23,7 @@ A portable skill for GitHub discovery, issue fixes, audits and PR maintenance.
 | Audit | [Coverage](references/repository-audit.md): all tracked files/docs/locales/sites; evidence and limitations |
 | Follow-up | [Maintenance](references/pr-maintenance.md): independent GitHub Notifications + Email, shared inbox, live event deduplication |
 | Authority | [Maintained repos](references/maintaining-owned-repositories.md): follow scope differs from verified capability |
+| Coordination and context | [Coordinator template](references/coordinator-initial-template.md): authorized scope, state anchors and executor settings; [optional context storage](references/optional-context-storage.md): OpenViking stays opt-in until an adapter is verified |
 | Batched continuous iteration | [Batches](references/batched-iteration.md): one repo leaf, disposable job and PR; release after validation/submission, terminal and cleanup gate before next batch |
 | Storage | [Disposable jobs](references/ephemeral-storage.md): release after submission, restore for edits |
 | Shared worktrees/sweep | [Cleanup](references/workspace-cleanup.md): exact ownership/recovery checks; broad sweeps require explicit scope |
@@ -35,7 +36,8 @@ only when that model/effort is selected.
 ## Boundaries
 
 Read target rules and live issue/PR state. Reproduce and deduplicate before submitting.
-Keep changes small, tests honest, security private and attribution truthful.
+Keep changes small, tests honest, security private and public contributions free
+of provider, tool, model, agent, bot, AI and generated-by attribution.
 No inferred merge/close/delete/release/governance authority; dependencies/services/
 permissions/API/architecture changes need approval. Report-only monitors stay read-only.
 Preserve dirty/unknown data and credentials. Historical contribution is not active follow.

@@ -7,9 +7,11 @@ history. Read target-repository rules and verify GitHub state live.
 
 - Own one repo for this leaf's lifetime. No children, new conversations/conversation forks, other
   agent CLIs, model changes or out-of-packet work. Return new leads to root.
-- Root owns queue, shared SQLite/trackers/checkpoints/registries and job lifecycle.
-  Only write the assigned workspace/branch and attempt evidence; never mutate
-  shared policy/state, credentials, siblings or dependencies outside scope.
+- The owning conversation's root owns this queue claim, shared SQLite/trackers/
+  checkpoints/registries and job lifecycle. Only write the assigned workspace/
+  branch and attempt evidence; never mutate shared policy/state, credentials,
+  siblings or dependencies outside scope. Independent roots coordinate only via
+  SQLite helpers; never contact or poll the peer conversation.
 - Validate packet roots against paths.json with read-only helpers; check auth/tools,
   repository/job/branch/evidence bindings. Do not infer roots or repair shared state.
 - In discovery campaigns, complete the issue window before authorized audit;
@@ -18,11 +20,11 @@ history. Read target-repository rules and verify GitHub state live.
 - Use only root-created jobs. Evidence must survive disposal. After push/submission,
   persist URLs/heads and suspend workspace access for root release; resume after
   restoration with current bindings. Same-repo deltas only; new repo means new leaf.
-- No merge/close/remote deletion or invented endorsement. No coauthor, generation
-  trailer, worker/model attribution, agent/bot email or fabricated sign-off.
-  If the target repository explicitly mandates any such attribution, retain the
-  item as blocked unless the active packet explicitly authorizes that disclosure;
-  never add provider/tool branding or bypass the active public-text prohibition.
+- No merge/close/remote deletion or invented endorsement. Never add coauthor,
+  generation trailer, worker/model attribution, agent/bot email, provider/tool,
+  AI/generated-by or fabricated sign-off to public content. If target rules
+  explicitly mandate any such attribution, retain the item as blocked; no packet
+  can authorize an exception.
   Inspect all new messages, author/committer metadata and trailers before push;
   amend only own unpublished offending commits.
 - History rewrite requires explicit own-fork branch, old/replacement heads and
