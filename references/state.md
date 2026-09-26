@@ -1,6 +1,10 @@
 # State
 
 One live REPOSTEW_HOME/repostew.sqlite (WAL), accessed through helpers.
+This is the supported default; OpenViking is not required or probed at startup.
+For an explicitly selected context backend, see
+[optional context storage](optional-context-storage.md). That reference defines
+an integration boundary, not a completed migration or new helper capability.
 paths.json remains a schema_version 2 file: POSIX roots relative to the selected
 state anchor. resolved_roots() derives absolute skill/state/repos roots; never infer
 the anchor from cwd/profile. Missing SQLite records use defaults, never loose JSON.
