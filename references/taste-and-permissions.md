@@ -80,12 +80,14 @@ Use one actionable problem, affected version/environment, expected/actual behavi
 minimal reproduction and honest impact. Redact secrets; suggestions stay labeled.
 
 Follow repository templates and voice; otherwise state change, reason and actual
-validation briefly. Preserve material caveats. Never add provider, tool, model,
-agent, bot, AI or generated-by attribution to public issues, comments, commits,
-branches, trailers, PRs or email. Mandatory disclosure must be truthful. If a
-repository template or contribution rule mandates prohibited attribution (for
-example an `Assisted-by` trailer), retain the item as blocked; no packet can
-authorize a false or noncompliant statement.
+validation briefly. Preserve material caveats. Do not add unnecessary provider,
+tool, model, agent, bot, AI or generated-by attribution to public issues,
+comments, commits, branches, trailers, PRs or email. If repository rules,
+templates or submission tooling explicitly require truthful AI/model disclosure,
+include only the required wording. Name a provider/model only when specifically
+required and independently verified; never invent an identity or use a false
+human-only disclosure. If the requirement cannot be met truthfully, retain the
+item as blocked.
 Use closing keywords only for fully resolved issues when conventions permit.
 Do not comment merely to advertise a PR.
 

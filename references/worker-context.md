@@ -20,11 +20,14 @@ history. Read target-repository rules and verify GitHub state live.
 - Use only root-created jobs. Evidence must survive disposal. After push/submission,
   persist URLs/heads and suspend workspace access for root release; resume after
   restoration with current bindings. Same-repo deltas only; new repo means new leaf.
-- No merge/close/remote deletion or invented endorsement. Never add coauthor,
-  generation trailer, worker/model attribution, agent/bot email, provider/tool,
-  AI/generated-by or fabricated sign-off to public content. If target rules
-  explicitly mandate any such attribution, retain the item as blocked; no packet
-  can authorize an exception.
+- No merge/close/remote deletion or invented endorsement. Do not add unnecessary
+  coauthor, generation trailer, worker/model attribution, agent/bot email,
+  provider/tool, AI/generated-by or fabricated sign-off to public content. If
+  target rules, a template or submission tooling explicitly require truthful
+  AI/model attribution, include only what is required. Name a provider/model
+  only when specifically required and independently verified; never invent an
+  identity or use a false human-only disclosure. If the requirement cannot be
+  met truthfully, retain the item as blocked.
   Inspect all new messages, author/committer metadata and trailers before push;
   amend only own unpublished offending commits.
 - History rewrite requires explicit own-fork branch, old/replacement heads and

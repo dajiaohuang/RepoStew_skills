@@ -11,7 +11,7 @@ same existing SQLite queue and its helpers.
 - Read applicable AGENTS/CLAUDE/GEMINI/copilot instructions, contribution/build/security/disclosure rules, templates and validation configuration before acting.
 - Require maintainer approval for new dependencies, services, APIs, CI actions, permissions or architecture. Do not use paid/privileged resources without authority.
 - Preserve unrelated, dirty and unknown data. Keep skill and target-repository changes separate.
-- Never add provider, tool, model, agent, bot, AI or generated-by attribution to public issues, comments, commits, branches, trailers, PRs or email. If target rules or a template require any such attribution, retain the item as blocked; packet wording cannot authorize an exception.
+- Do not add unnecessary provider, tool, model, agent, bot, AI or generated-by attribution to public content. If the target's rules, template or submission tooling explicitly require truthful AI/model attribution, include only what is required. Name a provider or model only when specifically required and independently verified; never invent an identity or use a false human-only disclosure. If the requirement cannot be met truthfully, retain the item as blocked.
 - When separate campaign conversations share this state home, do not message, poll, or inspect the peer conversation. The existing SQLite queue, updated through helpers, is the sole coordination channel; use atomic claims and update only claims owned by the current root.
 - Exclude archived repositories and forks from discovery; never exclude an organization by name.
 - Complexity changes execution planning, never eligibility. Create visible tasks only on explicit request; do not substitute hidden delegation for requested handover.
