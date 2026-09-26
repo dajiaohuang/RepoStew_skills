@@ -33,7 +33,7 @@ Use new absolute workspace-owned output paths outside disposable jobs. The compi
 never overwrites files or touches state. Verify the artifact and send its contents,
 not its path. Prefix-only output is not an assignment.
 
-Common sources: SKILL.md, worker-context, worker-contract, full-workflow and
+Common sources: SKILL.md, repo, legacy-workflow, worker-context, worker-contract, full-workflow and
 taste-and-permissions. Add discovery-campaign for discovery, repository-audit for
 audit, or pr-maintenance for review; implement needs only the common sources.
 Only `repostew-repository` is accepted. Full text, fixed order within each phase,

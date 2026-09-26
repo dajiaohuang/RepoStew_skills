@@ -9,6 +9,8 @@ from pathlib import Path
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
     "SKILL.md",
+    "references/repo.md",
+    "references/legacy-workflow.md",
     "references/worker-context.md",
     "references/worker-contract.md",
     "references/full-workflow.md",
