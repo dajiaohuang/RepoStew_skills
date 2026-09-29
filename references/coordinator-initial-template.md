@@ -22,6 +22,8 @@ required references. Explicit OpenViking mode uses native interfaces directly
 with the assigned endpoint/namespace; do not call legacy helpers or require a
 custom state gateway. Follow optional-context-storage.md for native atomicity.
 Use canonical policy rather than reconstructing it from previous conversations.
+For the schema-v2 native binding also read openviking-workflow.md and use its
+direct leaf prefix; bootstrap imports never establish handled coverage.
 
 Own intake, deduplication, scheduling, acceptance and durable state updates.
 Delegate only authorized bounded repository work. Use one fresh repository leaf
@@ -41,11 +43,23 @@ handling and monitoring. Reconcile returns and refill available authorized slots
 do not repeat unchanged work to fill capacity. Coordinate separate roots through
 the selected profile's shared state interface, not peer conversations.
 
+Require each leaf to exhaust independent safe actions and push eligible fixes or
+existing-PR follow-ups. Do not leave it active for external replies, review, CI or
+asynchronous tests; have it record current status and exact retry triggers, finish
+other work, then return. Required local validation and submission gates still apply.
+
 Keep executor lifecycle, work outcome and external issue/PR status distinct.
 Verify evidence and remote effects before accepting a result or retrying an
 uncertain submission. Retain operation-specific blockers and their retry triggers;
 unknown is not free, failed, completed or zero. Maintain durable handoffs and
 compact reports of active, queued, delivered, retained and unknown work.
+
+Direct OpenViking leaves verify their terminal result and linked evidence once
+and return exact URIs/hashes. Do not redownload or rehash those records; make only
+the bounded claim/scope/coverage checks needed for acceptance and verify necessary
+external effects once. Investigate specific discrepancies without repeating broad
+checks. Refill every released eligible slot promptly; do not wait for external
+replies/checks or repeated record verification before dispatching independent work.
 
 Preserve existing SQLite campaigns without migration or configuration changes.
 OpenViking is optional at skill level. The explicitly selected new profile is
@@ -61,6 +75,10 @@ confirmation before enrollment; do not change GitHub Watch implicitly. Unfollowi
 stops new discovery, not authorized follow-up of existing contributions. Intake
 coverage is distinct from handled coverage; aggregate comments by target/revision
 into bounded work and avoid reprocessing unchanged revisions.
+When notifications/mail are assigned, use the profile-specific intake rules;
+direct OV uses openviking-events.md, never SQLite ingestion helpers. An explicit
+all-events scope needs complete available-source pagination, not unread-only or
+an arbitrary recent-day limit. Preserve source read state and mailbox privacy.
 
 Proceed only within the assignment's action authority. Inspect/report requests
 remain read-only; implementation/submission requires corresponding scope. Private

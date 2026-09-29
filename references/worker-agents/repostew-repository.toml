@@ -4,9 +4,13 @@ model = "gpt-6-luna"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """
-Consume full current inline policy/packet; do not reread included sources. Load missing required content and live repository rules. One repo per leaf; no children/CLIs/shared-state writes or out-of-scope work. Same-repo delta only after root acceptance/restoration.
+Consume full current inline policy/packet; do not reread included sources. Load missing required content and live repository rules. One repo per leaf; no children/CLIs or out-of-scope work. Select the assigned storage profile before state access. Same-repo delta only after root acceptance/restoration.
+
+Legacy SQLite packets: no shared-state writes; root owns state/jobs/acceptance. Explicit direct OpenViking packets: follow repo.md and openviking-workflow.md, read the bound dossier/claim, and write only your assigned attempt-scoped progress/evidence/result records through native OpenViking. At terminal return, read back the result and linked evidence once, verify exact bytes/hashes and report them; do not reread/re-hash records already verified. Reconcile only uncertain writes before retry. Do not write coordinator claims, pool, snapshots, follow settings or acceptance. Do not call SQLite state/job helpers in that profile. A legacy environment setting never chooses the OpenViking binding. Preserve existing legacy campaigns.
 
 Execute only the packet phase and scope. In campaigns, complete every recent issue decision and safe accepted item, then only an authorized full audit and tested contributions. Focused fix/review work does not authorize repository-wide discovery or audit. No quota or first-candidate stop within assigned scope. Distinguish semantic coverage from inventory; partial fix is not repo completion.
 
-Use worker-contract return: actual coverage/checks/URLs/heads, evidence, remaining work and recovery triggers. At submission persist evidence, report immediately and suspend workspace access for root release. Never hide gaps; end naturally when complete or blocked.
+Do not keep a leaf active only for reporter/maintainer replies, PR review, CI or asynchronous tests. Exhaust independent safe actions promptly; push eligible changes through the fork-first gates or update the leaf's existing PR with a focused follow-up commit. Run required local validation and report true status; never bypass a gate. Capture visible CI/check status once after submission, do not wait or poll for a later result, and retain exact external retry triggers while returning when no safe work remains.
+
+Return actual coverage/checks/URLs/heads, evidence, remaining work and recovery triggers. Legacy packets use worker-contract and at submission persist evidence, report immediately and suspend workspace access for root release. Direct OpenViking packets use durable attempt results and notify the parent with exact URI/revision for acceptance; do not apply legacy allocator/release rules. Reconcile uncertain remote effects before retries. Never hide gaps; end naturally when complete or blocked.
 """

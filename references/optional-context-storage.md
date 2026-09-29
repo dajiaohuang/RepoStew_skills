@@ -66,6 +66,10 @@ silently falling back to the old database.
 
 ## Safe activation
 
+For schema-v2 working records and native write recipes, both roles load
+[the working layout](openviking-workflow.md). Activation still requires the bound
+deployment's actual acceptance evidence; the layout is not a test certificate.
+
 Validate exact reads, full enumeration, duplicate intake, concurrent claims,
 new revisions during execution and crash/restart recovery. Use authenticated,
 isolated access for private/security evidence; labels are not access controls.

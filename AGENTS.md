@@ -5,6 +5,9 @@ Canonical backend-neutral skill with Chinese-first bilingual public docs.
 - Read SKILL.md and phase references; complete current inline content satisfies reads.
 - Keep policy single-sourced; remove duplicate rules, preserve authority/evidence gates.
 - Preserve user scope, unrelated changes, credentials and selected SQLite roots.
+- Workspace-entry and native-role templates must select the assigned storage
+  profile first. Preserve legacy SQLite behavior; direct OpenViking leaves may
+  write their assigned attempt records without adopting legacy state/job helpers.
 - Keep all RepoStew configuration/state workspace-local; no implicit reset/import.
 - Keep target-repository work separate. Validate syntax/tests/links/skill before
   authorized commits; public docs stay platform-neutral with labeled examples.

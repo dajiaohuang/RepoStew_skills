@@ -31,6 +31,30 @@ and fresh authority; new repositories get new leaves. Replacement requires stopp
 writer and reconciled effects, new attempt/evidence and root ownership transfer.
 Never overwrite prior evidence or reuse stale workspace/permissions.
 
+## Finish without external waits
+
+Exhaust the packet's safe, authorized actions instead of keeping a leaf open for
+reporter or maintainer replies, PR review, CI, or asynchronous tests. A blocked
+target does not block independent targets in the same packet.
+
+For eligible code work, finish the focused change and push it through the
+fork-first gates, or address review feedback on the leaf's existing PR and push a
+follow-up commit. Run mandatory local validation and report its actual outcome;
+never skip a required gate or claim a pending check passed. After submission,
+capture the currently visible CI/check state once and continue or return without
+waiting or polling for a later result. If a required check or external answer
+prevents safe submission, record the exact blocker and retry trigger, finish other
+independent work, then return.
+
+Ask only a necessary, focused clarification and record its URL. When only external
+input or asynchronous checks remain, write the attempt result with those items
+retained and exit; do not leave the attempt running until someone responds.
+
+For direct OpenViking work, the leaf verifies the terminal result and its linked
+evidence by one exact readback/hash check, then returns those values. Avoid rereading
+or rehashing records already verified by the leaf; investigate only a specific
+integrity discrepancy.
+
 ## Return
 
 Return labeled data:
