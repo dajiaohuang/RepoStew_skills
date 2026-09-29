@@ -110,7 +110,7 @@ def main():
         changed = subprocess.run(['git', '-C', str(root), 'diff', '--cached', '--quiet']).returncode
         if changed not in (0, 1): raise RuntimeError('Git index check failed')
         if changed == 1:
-            subprocess.run(['git', '-C', str(root), 'commit', '-m', 'Update repository state'], check=True)
+            subprocess.run(['git', '-C', str(root), 'commit', '--quiet', '-m', 'Update repository state'], check=True)
         if args.push:
             # Never force, pull, reset or resolve divergence automatically.
             subprocess.run(['git', '-C', str(root), 'push', '-u', 'origin', 'HEAD:refs/heads/' + branch], check=True)
