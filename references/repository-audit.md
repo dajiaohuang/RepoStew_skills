@@ -8,8 +8,8 @@ Audit alone is read-only; edits/issues/PRs need explicit scope. Apply
 
 Record canonical repo, default branch, frozen audit SHA, timestamp/activity,
 archived/fork status, language/homepage, contributor/permission, applicable
-instructions, job/remotes/submodules and generated/large-content boundaries.
-Use an isolated registered job, never a dirty user checkout. Revalidate current
+instructions, workspace/remotes/submodules and generated/large-content boundaries.
+Use an isolated host-managed checkout, never a dirty user checkout. Revalidate current
 upstream/policy/ownership/duplicates before implementing or reporting findings.
 
 Inventory every tracked path, then review by risk; every path remains in a ledger:

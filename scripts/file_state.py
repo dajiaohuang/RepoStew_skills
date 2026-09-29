@@ -31,6 +31,8 @@ def version(data):
 
 class Store:
     def __init__(self, root):
+        if not Path(root).is_absolute():
+            raise ValueError('explicit absolute state root required')
         self.root = Path(root).resolve(strict=True)
 
     def path(self, relative):
@@ -38,9 +40,11 @@ class Store:
             raise ValueError('use a relative POSIX path')
         p = Path(relative)
         if (p.is_absolute() or not p.parts or any(x in ('.', '..', '') for x in relative.split('/'))
-                or any(x.startswith('.') or x.endswith((' ', '.')) or
+                or any((x.startswith('.') and not (i == 2 and p.parts[0] in ('repos', 'pool')
+                                                   and x == ('.github' if p.parts[0] == 'repos' else '.github.json')))
+                       or x.endswith((' ', '.')) or
                        re.fullmatch(r'(?i:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?', x)
-                       for x in p.parts)):
+                       for i, x in enumerate(p.parts))):
             raise ValueError('invalid state path')
         unresolved = self.root.joinpath(p)
         self._no_links(unresolved)

@@ -50,7 +50,7 @@ class PolicyTests(unittest.TestCase):
     def test_batched_iteration_releases_jobs_before_next_batch_gate(self):
         skill = self.policy("SKILL.md")
         batched = self.policy("references/batched-iteration.md")
-        self.assertIn("references/legacy-workflow.md", skill)
+        self.assertNotIn("references/legacy-workflow.md", skill)
         self.assertIn("batched-iteration.md", self.policy("references/legacy-workflow.md"))
         for requirement in (
             "one repository leaf, root-registered standalone job, branch and PR per batch",
@@ -65,10 +65,10 @@ class PolicyTests(unittest.TestCase):
         ):
             with self.subTest(requirement=requirement):
                 self.assertIn(requirement, batched)
-        self.assertIn("references/legacy-workflow.md", self.policy("README.en.md"))
-        self.assertIn("references/legacy-workflow.md", self.policy("README.md"))
+        self.assertNotIn("references/legacy-workflow.md", self.policy("README.en.md"))
+        self.assertNotIn("references/legacy-workflow.md", self.policy("README.md"))
 
-    def test_scheduled_tasks_bootstrap_only_from_verified_path_record(self):
+    def test_scheduled_tasks_use_current_shared_pool_not_legacy_bootstrap(self):
         skill = self.policy("references/legacy-workflow.md")
         scheduled = self.policy("references/scheduled-maintenance.md")
         for requirement in (
@@ -78,10 +78,10 @@ class PolicyTests(unittest.TestCase):
         ):
             self.assertIn(requirement, skill)
         for requirement in (
-            "<selected-state-home>/paths.json",
-            "Initialize missing process environment from that verified record",
-            "Missing inherited variables alone are not failure",
-            "mismatch, unreadable record, missing root or placeholder stops writes",
+            "repository-pool.md",
+            "Source runs only prepare and publish",
+            "three persistent coordinator conversations",
+            "Profile/site: one separate automation",
         ):
             self.assertIn(requirement, scheduled)
 

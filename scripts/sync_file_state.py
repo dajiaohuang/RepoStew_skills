@@ -22,7 +22,9 @@ def approved_path(name):
     p = Path(name)
     return (not p.is_absolute() and '\\' not in name and ':' not in name
             and p.parts and p.parts[0] in ALLOWED
-            and not any(x.startswith('.') or x in ('private', 'credentials', 'mail') for x in p.parts)
+            and not any((x.startswith('.') and not (i == 2 and p.parts[0] in ('repos', 'pool')
+                         and x == ('.github' if p.parts[0] == 'repos' else '.github.json')))
+                        or x in ('private', 'credentials', 'mail') for i, x in enumerate(p.parts))
             and p.suffix in ('.json', '.md', '.txt', '.log'))
 
 
@@ -49,13 +51,25 @@ def inspect(root, names):
 
 
 def verify_index(root, hashes):
-    names = run(root, 'ls-files', '-z').split('\0')
-    names = [x for x in names if x]
-    if set(names) != set(hashes):
+    rows = subprocess.check_output(['git','-C',str(root),'ls-files','--stage','-z']).split(b'\0')
+    entries={}
+    for row in filter(None,rows):
+        meta,name=row.split(b'\t',1); mode,oid,stage=meta.split()
+        if stage != b'0': raise ValueError('unmerged index is not a backup')
+        entries[name.decode('utf-8')]=oid
+    if set(entries) != set(hashes):
         raise ValueError('Git tracked paths must exactly match reviewed manifest')
+    ids=list(dict.fromkeys(entries.values()))
+    output=subprocess.check_output(['git','-C',str(root),'cat-file','--batch'],input=b'\n'.join(ids)+b'\n')
+    digests={}; cursor=0
+    for requested in ids:
+        end=output.index(b'\n',cursor); oid,kind,size=output[cursor:end].split()
+        if oid!=requested or kind!=b'blob': raise ValueError('unexpected staged object')
+        length=int(size); cursor=end+1
+        content=output[cursor:cursor+length]; cursor+=length+1
+        digests[oid]=hashlib.sha256(content).hexdigest()
     for name, digest in hashes.items():
-        content = subprocess.check_output(['git', '-C', str(root), 'show', ':' + name])
-        if hashlib.sha256(content).hexdigest() != digest:
+        if digests[entries[name]] != digest:
             raise ValueError('staged bytes differ from review: ' + name)
 
 
@@ -89,8 +103,8 @@ def main():
         tracked = set(filter(None, run(root, 'ls-files', '-z').split('\0')))
         if tracked - set(hashes):
             raise ValueError('unreviewed tracked paths; do not upload')
-        for name in hashes:
-            subprocess.run(['git', '-C', str(root), 'add', '--', name], check=True, capture_output=True)
+        subprocess.run(['git','-C',str(root),'--literal-pathspecs','add','--pathspec-from-file=-','--pathspec-file-nul'],
+                       input=b'\0'.join(name.encode('utf-8') for name in hashes)+b'\0',check=True,capture_output=True)
         verify_index(root, hashes)
         # Stage from exactly reviewed bytes; writers changing afterwards stay unstaged.
         changed = subprocess.run(['git', '-C', str(root), 'diff', '--cached', '--quiet']).returncode

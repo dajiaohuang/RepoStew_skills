@@ -14,14 +14,17 @@ GitHub discovery, issue fixes, code audits and PR follow-up.
 - One hot `repos/owner/repo/state.json` per repository.
 - Native issue/PR/comment identities, no extra job/attempt naming system.
 - [Coordinator](references/coordinator.md) owns pool/acceptance; [repo](references/repo.md) owns bounded targets.
-- Native and CLI executors share [stable prefixes](references/repo-leaf-template.md) and independent authorized capacity targets.
+- Three coordinators share the [pool](references/repository-pool.md), with three Luna leaves each; initially no DeepSeek/CLI.
+- [Stable prefixes](references/repo-leaf-template.md) precede task packets; agents do not routinely revalidate state/access/history.
 - [Intake](references/source-intake.md) separates fetched and handled; unchanged content is not repeated work.
 - [Git sync](references/state-sync.md) is reviewed private backup, not distributed execution locking.
 - [Experience](references/experience-maintenance.md) becomes focused references/tested scripts in coherent batches.
 
-Use scripts/file_state.py and scripts/sync_file_state.py. Python standard library
-plus Git/gh; no state service or vector index required. Existing SQLite helpers
-are [legacy-only](references/legacy-workflow.md), never automatically invoked or migrated.
+Use scripts/repository_pool.py take/bind/finish for normal dispatch and acceptance.
+Low-level intake/repair uses scripts/file_state.py; backup uses scripts/sync_file_state.py. Python standard library
+plus Git/gh; no state service or vector index required. Runtime accepts only the
+current file schema. Historical databases/exports are read-only recovery evidence,
+not an alternative execution mode or an implicit field adapter.
 
 ## Boundaries
 Follow [submission](references/taste-and-permissions.md), [audit](references/repository-audit.md)
@@ -33,6 +36,7 @@ truthful disclosure. Preserve unknown/dirty work and independent projects.
 ## Verification
 ```bash
 python -m unittest discover -s tests -p 'test_file*.py' -v
+python -m unittest discover -s tests -p 'test_repository_pool.py' -v
 python -m compileall -q scripts
 ```
 Run legacy tests separately when relevant; new file mode does not alter old instances.

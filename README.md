@@ -16,15 +16,17 @@
 - 每个仓库一个热状态：`repos/owner/repo/state.json`。
 - Issue、PR、评论按真实名称和编号保存；没有额外 job/attempt 命名层。
 - [协调者](references/coordinator.md)管理池子和验收；[仓库执行者](references/repo.md)处理限定对象。
-- 原生 subagent 与 CLI 使用[稳定模板](references/repo-leaf-template.md)，各自补充授权槽位。
+- 初版三个协调者共享[池子](references/repository-pool.md)，各带三个 Luna leaf，暂不使用 DeepSeek/CLI。
+- 使用[稳定模板](references/repo-leaf-template.md)，任务包放在末尾；正常流程不重复检查状态、权限和历史。
 - [来源采集](references/source-intake.md)区分获取与处理；不反复扫描未变化内容。
 - [Git 同步](references/state-sync.md)为经过审阅的私有备份，不是跨机器执行锁。
 - [经验维护](references/experience-maintenance.md)定期将已验证方法提炼进 references/scripts。
 
-状态读写使用 `scripts/file_state.py`，同步使用 `scripts/sync_file_state.py`。
+正常调度使用 `scripts/repository_pool.py` 的 take/bind/finish；工具负责去重、互斥、结果落盘和恢复。
+底层采集/修复使用 `scripts/file_state.py`，同步使用 `scripts/sync_file_state.py`。
 只依赖 Python 标准库和 Git/gh，不需要状态服务或向量索引。
-原有 SQLite 工具仅供已存在的旧 campaign 使用，见[旧流程](references/legacy-workflow.md)；
-不会在新工作区自动调用或迁移它们。
+运行时只接受当前文件协议；历史数据库和导出仅作为只读恢复/迁移证据，
+不再提供旧模式入口或字段兼容层。
 
 ## 工程边界
 
@@ -38,6 +40,7 @@
 
 ```bash
 python -m unittest discover -s tests -p 'test_file*.py' -v
+python -m unittest discover -s tests -p 'test_repository_pool.py' -v
 python -m compileall -q scripts
 ```
 

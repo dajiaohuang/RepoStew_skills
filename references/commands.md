@@ -1,31 +1,21 @@
-# Command index
+# Current command index
 
-File mode uses the explicit absolute state root; legacy commands below require
-their already-selected paths.json. Honor host wrappers such as rtk.
+Run from the canonical skill directory; use the explicit absolute state root and
+host wrapper (rtk here). Initialization/source runs publish; coordinators consume.
 
 | Purpose | Command |
 |---|---|
-| File state read/write/claim/pool | python scripts/file_state.py --help |
-| Reviewed private Git backup | python scripts/sync_file_state.py --help |
-| File protocol | [file state](file-state.md), [sync](state-sync.md) |
-| Roots/auth | python scripts/repostew_state.py roots; gh auth status; git --version; python --version |
-| Initialize/verify continuous maintenance | python scripts/maintenance_setup.py --help; [setup contract](maintenance-initialization.md) |
-| Repo metadata | gh repo view owner/repo --json isArchived,isFork,viewerPermission,owner |
-| Issue/closing PRs | gh issue view N --repo owner/repo --json state,assignees,comments,closedByPullRequestsReferences |
-| Duplicate PRs | gh pr list --repo owner/repo --state all --search '#N' |
-| Leads | python scripts/discover.py --repos-only --min-stars 100 --max-days 30 --focus TERM |
-| Keyword leads | python scripts/discover.py --direct --keyword --kw-min-stars 100 --max-days 120 --max-candidates 5 |
-| Inline prompt | python scripts/compile_leaf_prompt.py --packet /absolute/packet.json --output /absolute/new-prompt.txt |
-| Track PR/issue | python scripts/pr_tracker.py add PR_URL ISSUE_URL |
-| Track contribution | python scripts/contribution_tracker.py add URL |
-| Shared queue rework | python scripts/maintenance_queue.py --state-home STATE rework --prior-work-item-id ID --candidate-file CANDIDATE.json --stopped-writer-proof-file STOPPED.json --remote-reconciliation-proof-file REMOTE.json --supersession-reason REASON |
-| Issue scan | python scripts/scan_known_repos.py --repo owner/repo --include-decisions |
-| Inbox/replies | [PR maintenance commands/schema](pr-maintenance.md) |
-| Job create/release/reconcile-reappeared/restore/list | [disposable storage](ephemeral-storage.md) |
-| Shared worktree operations | [cleanup](workspace-cleanup.md) |
-| State/export/reset | [state](state.md) |
+| Prepare ready tasks | python scripts/repository_pool.py --root ROOT publish --input PACKET.json |
+| Take one bounded repo packet | python scripts/repository_pool.py --root ROOT take --coordinator SESSION |
+| Register actual executor | python scripts/repository_pool.py --root ROOT bind --repo OWNER/REPO --coordinator SESSION --leaf LEAF |
+| Accept natural terminal result | python scripts/repository_pool.py --root ROOT finish --repo OWNER/REPO --coordinator SESSION --leaf LEAF --input RESULT.json |
+| Retained trigger or diagnostics | python scripts/repository_pool.py --help |
+| Low-level intake/repair | python scripts/file_state.py --help |
+| Reviewed private backup | python scripts/sync_file_state.py --help |
+| Current GitHub facts when needed | gh issue view N --repo OWNER/REPO; gh pr view N --repo OWNER/REPO |
+| Fork contribution | gh repo fork OWNER/REPO; gh pr create (only authorized real work) |
 
-All SQLite trackers, job allocators and packet compiler commands above are legacy-only.
-File mode reads/writes target objects and uses repo-leaf-template.md instead.
-Repeat --repo for explicit active scope. Lead limits do not establish campaign or
-window coverage; failed/truncated scans cannot advance checkpoints.
+Read repository-pool.md, source-intake.md, state-sync.md and the applicable phase.
+Historical allocators/trackers/compilers are not runtime commands. No paths.json,
+old database/environment selector or automatic schema compatibility. Missing source
+pages are gaps, not permission denial or completed coverage.

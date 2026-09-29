@@ -47,6 +47,13 @@ class FileStateTests(unittest.TestCase):
                      'repos/a/b./state.json', 'repos/a/con/state.json', 'repos/./a']:
             with self.assertRaises(ValueError): self.store.read(path)
 
+    def test_native_dotgithub_repository(self):
+        self.store.claim('org/.github', 'session')
+        self.store.write('repos/org/.github/state.json', {}, 'missing', 'session')
+        self.store.write('pool/org/.github.json', {}, 'missing')
+        for path in ['repos/org/.git/config', 'repos/org/.github/.git/config', 'sources/.github/x']:
+            with self.assertRaises(ValueError): self.store.read(path)
+
     def test_no_network_required_and_ownership_survives_reopen(self):
         with mock.patch('socket.socket', side_effect=AssertionError('network forbidden')):
             self.store.claim('a/b', 'session')

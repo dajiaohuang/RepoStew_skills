@@ -16,16 +16,12 @@ Keep latest source/topic/backend/model/concurrency/stop scope explicit.
    work. Revisit history only for a new window/evidence/retry trigger; preserve pauses.
 4. Persist every selected repo before dispatch; retain overflow, never arbitrary
    top-N quotas. Source failure/truncation is incomplete intake, not empty success.
-   For GitHub Trending, root may use `scripts/trending_intake.py` with the already
-   selected absolute state home and a date-scoped batch id. It unions daily,
-   weekly and monthly pages, follows only actual next-page controls, records each
-   page/metadata/filter result, and uses the queue helper for atomic global
-   deduplication. Without `--apply`, it saves an evidence-only intake; with
-   `--apply`, the verified candidates from that same capture are atomically
-   appended. Set the user's current minimum-star threshold explicitly.
-5. Use [scheduling](worker-scheduling.md), [inline dispatch](leaf-dispatch.md) and
-   [packet contract](worker-contract.md). Each new repo gets a fresh leaf; same-repo
-   follow-up may revisit its recorded executor. Root-only execution uses the same gates.
+   Save source coverage under state/sources and publish complete tasks through
+   repository_pool.py. Minimum stars default to the user's 100-star scope; an
+   explicitly named repository is not rejected just because of that discovery filter.
+5. Use [repository pool](repository-pool.md) and [leaf template](repo-leaf-template.md).
+   Each bounded repository assignment gets a fresh leaf. Do not use old allocators
+   or packet compilers; root-only execution follows the same authority boundaries.
 
 ## Leaf lifecycle
 
@@ -44,14 +40,13 @@ findings against current upstream; distinguish defects, suggestions and limitati
 
 C. Complete permitted findings-to-issue/PR work through [submission gates](taste-and-permissions.md).
 No issue/PR quota. Human-only submission remains pending_user_submission, not submitted.
-After each push/submission and validation, persist evidence, send exact URLs/heads,
-suspend workspace access and let root track/release; continue after restoration.
+Return exact URLs/heads and evidence in structured outcomes after bounded work.
 
 ## Acceptance and stop
 
-Root verifies identity, coverage, validation, live URLs/heads, public text/metadata,
-durable evidence and release/recovery. A final message/process exit is not completion.
-Separate execution status from per-candidate classification; map to existing schema.
+Root passes the natural terminal result to pool finish; no repeated test/remote/hash
+checks. The pool validates target identity and result completeness. Separate execution
+status from candidate disposition; retained blockers are not completed contributions.
 Advance checkpoints only after every partition is completed or durably retained.
 Keep blocked/failed/pending counts and exact owners/retry triggers; retention is not
 delivery completion. Investigate discrepancies, not every accepted audit again.

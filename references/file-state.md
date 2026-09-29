@@ -1,6 +1,8 @@
 # File state
 
 Ordinary UTF-8 JSON/Markdown at one explicit absolute root. No service needed.
+Current managed records use schema_version=2 and a single vocabulary: handling
+observed/handled/status/next_action/retry_when. No old field aliases at runtime.
 GitHub is the remote fact source; local policy/handling/coverage are local facts.
 Never infer handled state from remote artifact existence.
 
@@ -8,7 +10,7 @@ Never infer handled state from remote artifact existence.
 | Path | Meaning |
 |---|---|
 | settings.json | Defaults, separate executor targets; no secrets |
-| pool/owner/repo.json | Rebuildable priority/due/ready/reason index |
+| pool/owner/repo.json | Authoritative prepared work, priority/due and target dispositions |
 | repos/owner/repo/state.json | Compact hot entry |
 | repos/owner/repo/overview.md | Stable context, not live status authority |
 | repos/owner/repo/issues/N/state.json | Issue facts and handling |
@@ -17,6 +19,7 @@ Never infer handled state from remote artifact existence.
 | target/comments/ID.json, reviews/ID.json, review-comments/ID.json | Native interaction identities |
 | target/checks/ID.json | Native check and tested SHA |
 | repos/owner/repo/audits/SHA/state.json, findings.md | Scope/coverage, findings by source path/title |
+| repos/owner/repo/scans/issues/state.json | Bounded recent-issue scan and frozen cutoff |
 | target/evidence/, repos/owner/repo/history/ | Necessary proof/cold history |
 | sources/github/login/, sources/trending/ | Coverage/native deliveries/routing |
 | reports/date.md | Human reports, not another live registry |
@@ -44,13 +47,20 @@ before contiguous triaged advancement. Pending fixes do not hold back fresh scan
 Interaction completion lives per target revision, not a single global timestamp.
 
 Object remote facts differ from handling: observed/handled, status
-ready/running/waiting_external/needs_user/completed/dismissed, next action/reason/
+pending_intake/ready/running/waiting_external/needs_user/uncertain/completed/dismissed, next action/reason/
 retry trigger. Link multiple issues/PRs. Checks bind to head SHA; audits separate
 inventory and semantic review. Execution records actual session/branch/workspace,
 result and acceptance. Submission intent/confirmed/uncertain/rejected is attached
 to its source and real target/head/base; reconcile uncertainty before retry.
 
 ## Safe updates
+Normal coordinators and leaves use [repository pool](repository-pool.md), not
+manual state validation/CAS. The pool returns complete tasks and accepts natural
+terminal outcomes. It owns prepared work and managed outcome writes; leaves write
+code/evidence, not these JSON records. Do not rebuild the pool from hot summaries:
+pending packet context exists once, in pool records, and must be backed up.
+
+The following low-level interface is for intake, repair and non-pool work only.
 Use scripts/file_state.py --root. Reads return content versions (integrity values,
 not business IDs); writes require --expected. Atomic replacement avoids partial JSON;
 OS locks plus expected-version checks prevent cooperating lost updates.
@@ -60,15 +70,17 @@ old execution cannot mutate and accounting for uncertain remote effects.
 No clock-based takeover; never reuse a released session for a replacement executor.
 Stale update means reread/merge, never blind overwrite.
 
-Coordinator owns repo/pool, leaf owns assigned targets; role scoping is cooperative,
-not an ACL. Source writers use their own CAS records; new observations may remain
-in sources until safe merge. Evidence/object result precede repo summary, then pool.
-Cross-file writes are not transactions; recovery reconciles in that order.
+Role scoping is cooperative, not an ACL. Source writers use their own CAS records.
+Managed pool publish/finish use a local write-ahead journal and recover it before
+further dispatch; accepted object result precedes hot summary and pool. Low-level
+CAS alone has no multi-file transaction. Do not bypass the pool for managed files.
 
 Same-host local filesystem only. Network shares/copied sessions do not inherit
 concurrency guarantees. Locks cannot prevent bypassing code from calling GitHub:
 stop old writers before transfer. Git sync is not distributed execution locking.
 Runtime local paths/handles stay local where possible. See state-sync.md.
+Native `.github` repositories are stored verbatim in the repository-name position;
+hidden control paths elsewhere remain forbidden. No invented path alias is needed.
 
 ## Minimization
 Private mail/security bodies/credentials stay outside synchronized state in a

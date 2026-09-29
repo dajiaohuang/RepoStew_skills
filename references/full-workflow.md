@@ -1,18 +1,17 @@
 # Contribution execution
 
 Apply SKILL.md and [submission gates](taste-and-permissions.md).
-For file-backed work, use file-state.md and record real URLs/heads in target objects.
-Legacy tracker/job commands below are only for explicitly existing SQLite campaigns.
-In file mode use assigned isolated workspaces and host-managed worktree tools;
-never run the legacy allocator/tracker merely because a phase mentions it.
+Use file-state.md and repository-pool.md. Trust the assigned packet; return real
+URLs/heads as structured outcomes. Use assigned isolated workspaces and host-managed
+worktree tools. There is one current state protocol, not a selectable legacy mode.
 
-1. Verify live repo metadata, default branch/SHA, policy, contributor identity and
-   permission. Read the complete issue/discussion, assignees and linked closing PRs;
-   search all PR states and relevant commits. Confirm availability and no existing fix.
+1. Read target contribution rules, relevant source code and missing task facts.
+   Reuse packet metadata/access/context. No routine permission probes or rereading
+   state. Check current target/duplicates/head once when needed before public action.
 2. Classify ACCEPT/ASK_MAINTAINER/SKIP before edits. Discovery uses
    [campaign ordering](discovery-campaign.md); full audits use [audit](repository-audit.md).
-3. For local work, root creates a [registered disposable job](ephemeral-storage.md).
-   For every external-contributor attempt, first verify and, when permitted,
+3. For local work, use the assigned workspace and host-managed isolated checkout.
+   For external-contributor work, when needed and permitted,
    create/use an authenticated fork; record the fork remote and live capability
    before editing. Fetch upstream and use a focused branch from the permitted
    current base. If fork creation is unavailable, retain the exact blocker and
@@ -24,9 +23,9 @@ never run the legacy allocator/tracker merely because a phase mentions it.
 5. Before submission recheck issue availability, duplicates, policy, base/head,
    complete diff/commit range, git diff --check, untracked files, artifact contents,
    secrets and commit identity/trailers. Apply the regular/Draft/blocked gate.
-6. Submit only authorized actions. Root records real issue/PR URLs and heads through
-   contribution_tracker.py/pr_tracker.py. Immediately persist evidence and release
-   the job after each submission/follow-up validation; do not wait for CI/review.
+6. Submit only authorized actions. Return actual issue/PR URLs, heads and evidence
+   in the target outcome. Pool finish records them and releases ownership after
+   the natural terminal event. Do not wait for CI/review or repeat validation at root.
 7. Follow [PR maintenance](pr-maintenance.md). Uncertain writes require remote
    reconciliation before retry. Return every remaining blocker/recovery trigger.
 
