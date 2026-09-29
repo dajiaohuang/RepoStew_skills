@@ -51,6 +51,27 @@ maintainer authority; use [verified authority](maintaining-owned-repositories.md
 Do not label, assign, prioritize, issue blocking reviews, release or speak for
 maintainers without delegated authority.
 
+## Independent issue and pull-request routes
+
+Treat write capability as action-specific, not as a single repository role. An
+upstream `viewerPermission=READ`, lack of upstream push/triage rights, or the
+fork setting alone does not prove that issue creation is unavailable or that a
+fork-based PR cannot be submitted.
+
+- For a concrete, supported, nonduplicate issue, if the issue tracker is enabled
+  and repository policy permits reports, attempt the actual issue submission.
+  Do not create dummy permission-probe issues. Record the resulting URL or the
+  exact rejection; do not mark issue creation unavailable solely from
+  `viewerPermission`.
+- For a code contribution, use the fork-first route: verify or create the
+  authenticated fork, verify its push capability, then attempt a PR from the
+  pushed branch after rechecking base, duplicates, policy and public text. Do
+  not require upstream push/admin rights for a fork PR. `allow_forking=true`
+  only indicates that forking is allowed; it does not prove a PR was created or
+  accepted.
+- Issue creation and PR submission are independent outcomes. A failure on one
+  route does not suppress a valid attempt on the other.
+
 ## Issue and writing standard
 
 File only authorized, supported-version/default-branch defects with reproduction
@@ -59,13 +80,12 @@ Use one actionable problem, affected version/environment, expected/actual behavi
 minimal reproduction and honest impact. Redact secrets; suggestions stay labeled.
 
 Follow repository templates and voice; otherwise state change, reason and actual
-validation briefly. Preserve material caveats. No provenance advertising,
-fabricated coauthors/sign-offs/endorsement or unsolicited attribution. If a
-repository template or contribution rule explicitly mandates a model/agent
-attribution (for example an `Assisted-by` trailer) that conflicts with the active
-public-text prohibition, retain the item as blocked; do not add the attribution
-without explicit packet authorization. Mandatory disclosure must be truthful,
-but repository requirements do not override the active public-text prohibition.
+validation briefly. Preserve material caveats. Never add provider, tool, model,
+agent, bot, AI or generated-by attribution to public issues, comments, commits,
+branches, trailers, PRs or email. Mandatory disclosure must be truthful. If a
+repository template or contribution rule mandates prohibited attribution (for
+example an `Assisted-by` trailer), retain the item as blocked; no packet can
+authorize a false or noncompliant statement.
 Use closing keywords only for fully resolved issues when conventions permit.
 Do not comment merely to advertise a PR.
 

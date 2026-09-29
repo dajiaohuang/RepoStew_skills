@@ -16,6 +16,13 @@ Keep latest source/topic/backend/model/concurrency/stop scope explicit.
    work. Revisit history only for a new window/evidence/retry trigger; preserve pauses.
 4. Persist every selected repo before dispatch; retain overflow, never arbitrary
    top-N quotas. Source failure/truncation is incomplete intake, not empty success.
+   For GitHub Trending, root may use `scripts/trending_intake.py` with the already
+   selected absolute state home and a date-scoped batch id. It unions daily,
+   weekly and monthly pages, follows only actual next-page controls, records each
+   page/metadata/filter result, and uses the queue helper for atomic global
+   deduplication. Without `--apply`, it saves an evidence-only intake; with
+   `--apply`, the verified candidates from that same capture are atomically
+   appended. Set the user's current minimum-star threshold explicitly.
 5. Use [scheduling](worker-scheduling.md), [inline dispatch](leaf-dispatch.md) and
    [packet contract](worker-contract.md). Each new repo gets a fresh leaf; same-repo
    follow-up may revisit its recorded executor. Root-only execution uses the same gates.

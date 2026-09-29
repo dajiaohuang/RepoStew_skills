@@ -71,6 +71,82 @@ class WorkspaceTests(unittest.TestCase):
     def job(self, root):
         return {"id": "a" * 32, "path": str(root / ("job-" + "a" * 32)), "repo": "owner/repo", "status": "active"}
 
+    def failed_job(self, root):
+        job = self.job(root)
+        job["status"] = "release_failed"
+        path = Path(job["path"])
+        path.mkdir()
+        (path / ".git").mkdir()
+        marker = path / "tracked.txt"
+        marker.write_text("already submitted")
+        os.utime(marker, (1577836800, 1577836800))
+        job["recovery"] = {
+            "pr_url": "https://github.com/owner/repo/pull/1",
+            "repo": "owner/repo",
+            "branch": "fix/storage-retry",
+            "head": "a" * 40,
+            "verified_at": "2024-01-01T00:00:00+00:00",
+            "delete_path": str(path),
+            "directory_manifest": [],
+            "includes": "entire registered clone, ignored dependencies and build outputs",
+        }
+        return job
+
+    def reappeared_job(self, root):
+        job = self.job(root)
+        job["status"] = "released"
+        path = Path(job["path"])
+        path.mkdir()
+        (path / ".git").mkdir()
+        marker = path / "tracked.txt"
+        marker.write_text("already submitted")
+        old_time = 1577836800
+        os.utime(marker, (old_time, old_time))
+        os.utime(path / ".git", (old_time, old_time))
+        os.utime(path, (old_time, old_time))
+        job["released_at"] = "2030-01-02T00:00:00+00:00"
+        job["recovery"] = {
+            "pr_url": "https://github.com/owner/repo/pull/1",
+            "repo": "owner/repo",
+            "branch": "fix/storage-retry",
+            "head": "a" * 40,
+            "verified_at": "2030-01-01T00:00:00+00:00",
+            "delete_path": str(path),
+            "includes": "entire registered clone, ignored dependencies and build outputs",
+        }
+        return job
+
+    def current_reappearance_proof(self, roots, job, pr_url):
+        self.assertEqual(job["status"], "active")
+        return {
+            "pr_url": pr_url,
+            "repo": "owner/repo",
+            "branch": "fix/storage-retry",
+            "head": "a" * 40,
+            "verified_at": "2030-01-03T00:00:00+00:00",
+            "delete_path": job["path"],
+            "directory_manifest": [],
+            "includes": "entire registered clone, ignored dependencies and build outputs",
+        }
+
+    def remote_proof(self, *args, cwd=None):
+        if args[:3] == ("gh", "pr", "view"):
+            return json.dumps({
+                "url": "https://github.com/owner/repo/pull/1",
+                "state": "MERGED",
+                "headRefOid": "a" * 40,
+                "headRefName": "fix/storage-retry",
+                "headRepository": {"nameWithOwner": "owner/repo"},
+                "author": {"login": "owner"},
+            })
+        if args == ("gh", "api", "user"):
+            return json.dumps({"login": "owner"})
+        if args == ("git", "check-ref-format", "--branch", "fix/storage-retry"):
+            return "fix/storage-retry"
+        if args == ("git", "ls-remote", "--exit-code", "https://github.com/owner/repo.git", "refs/heads/fix/storage-retry"):
+            return "a" * 40 + "\trefs/heads/fix/storage-retry"
+        raise AssertionError(args)
+
     def test_rejects_arbitrary_paths(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
@@ -96,6 +172,122 @@ class WorkspaceTests(unittest.TestCase):
                 result = jobs.release(self.roots(root), job, "url", True)
             self.assertFalse(path.exists())
             self.assertEqual(result["status"], "released")
+
+    def test_failed_release_revalidates_saved_proof_before_retry(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.failed_job(root)
+            path = Path(job["path"])
+            with patch.object(jobs, "run", side_effect=self.remote_proof):
+                preview = jobs.release(self.roots(root), job, job["recovery"]["pr_url"])
+            self.assertEqual(preview["retry_inventory"], {
+                "directory_count": 0,
+                "file_count": 1,
+                "logical_bytes": len("already submitted"),
+            })
+            self.assertIn("retry_verified_at", preview)
+            self.assertTrue(path.exists())
+
+            actual_remove = jobs.shutil.rmtree
+            def inspect_then_remove(target, **kwargs):
+                saved = store.load_document(root / "state", jobs.NAME, [])[0]
+                self.assertEqual(saved["status"], "release_pending")
+                self.assertIn("retry_inventory", saved["recovery"])
+                actual_remove(target, **kwargs)
+            with patch.object(jobs, "run", side_effect=self.remote_proof), patch.object(jobs.shutil, "rmtree", side_effect=inspect_then_remove):
+                result = jobs.release(self.roots(root), job, job["recovery"]["pr_url"], True)
+            self.assertFalse(path.exists())
+            self.assertEqual(result["status"], "released")
+
+    def test_failed_release_preserves_residue_changed_after_saved_proof(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.failed_job(root)
+            marker = Path(job["path"]) / "tracked.txt"
+            os.utime(marker, (1893456000, 1893456000))
+            with patch.object(jobs, "run", side_effect=AssertionError("remote check must not run")):
+                with self.assertRaisesRegex(ValueError, "changed after its saved clean proof"):
+                    jobs.release(self.roots(root), job, job["recovery"]["pr_url"], True)
+            self.assertTrue(Path(job["path"]).exists())
+
+    def test_failed_release_requires_live_saved_head_and_remote_branch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.failed_job(root)
+            def changed_head(*args, cwd=None):
+                if args[:3] == ("gh", "pr", "view"):
+                    response = json.loads(self.remote_proof(*args, cwd=cwd))
+                    response["headRefOid"] = "b" * 40
+                    return json.dumps(response)
+                return self.remote_proof(*args, cwd=cwd)
+            with patch.object(jobs, "run", side_effect=changed_head):
+                with self.assertRaisesRegex(ValueError, "live PR head does not match"):
+                    jobs.release(self.roots(root), job, job["recovery"]["pr_url"], True)
+            self.assertTrue(Path(job["path"]).exists())
+
+    def test_failed_release_preserves_new_empty_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.failed_job(root)
+            added = Path(job["path"]) / "created-after-proof"
+            added.mkdir()
+            with patch.object(jobs, "run", side_effect=AssertionError("remote check must not run")):
+                with self.assertRaisesRegex(ValueError, "directory added after its saved clean proof"):
+                    jobs.release(self.roots(root), job, job["recovery"]["pr_url"], True)
+            self.assertTrue(added.exists())
+
+    def test_reappeared_release_requires_exact_saved_live_proof_and_preserves_history(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.reappeared_job(root)
+            path = Path(job["path"])
+            pr_url = job["recovery"]["pr_url"]
+            with patch.object(jobs, "proof", side_effect=self.current_reappearance_proof):
+                preview = jobs.reconcile_reappeared_release(self.roots(root), job, pr_url)
+            self.assertTrue(path.exists())
+            self.assertEqual(job["status"], "released")
+            self.assertEqual(preview["reappearance_inventory"]["logical_bytes"], len("already submitted"))
+            self.assertIn("reconciled_at", preview)
+
+            actual_remove = jobs.shutil.rmtree
+            def inspect_then_remove(target, **kwargs):
+                saved = store.load_document(root / "state", jobs.NAME, [])[0]
+                self.assertEqual(saved["status"], "release_pending")
+                self.assertEqual(saved["release_history"][0]["previous_recovery"]["head"], "a" * 40)
+                self.assertIn("directory_manifest", saved["recovery"])
+                actual_remove(target, **kwargs)
+            with patch.object(jobs, "proof", side_effect=self.current_reappearance_proof), patch.object(jobs.shutil, "rmtree", side_effect=inspect_then_remove):
+                result = jobs.reconcile_reappeared_release(self.roots(root), job, pr_url, True)
+            self.assertFalse(path.exists())
+            self.assertEqual(result["status"], "released")
+            self.assertEqual(result["release_history"][0]["previous_recovery"]["head"], "a" * 40)
+
+    def test_reappeared_release_preserves_workspace_changes_after_old_proof(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.reappeared_job(root)
+            path = Path(job["path"])
+            changed = path / "new-ignored-output.txt"
+            changed.write_text("must preserve")
+            os.utime(changed, (2051222400, 2051222400))
+            with patch.object(jobs, "proof", side_effect=AssertionError("live proof must not run")):
+                with self.assertRaisesRegex(ValueError, "changed after its saved proof"):
+                    jobs.reconcile_reappeared_release(self.roots(root), job, job["recovery"]["pr_url"], True)
+            self.assertTrue(changed.exists())
+
+    def test_reappeared_release_requires_same_live_repository_branch_and_head(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            job = self.reappeared_job(root)
+            path = Path(job["path"])
+            def changed_head(roots, probe, pr_url):
+                response = self.current_reappearance_proof(roots, probe, pr_url)
+                response["head"] = "b" * 40
+                return response
+            with patch.object(jobs, "proof", side_effect=changed_head):
+                with self.assertRaisesRegex(ValueError, "differs from the released job proof"):
+                    jobs.reconcile_reappeared_release(self.roots(root), job, job["recovery"]["pr_url"], True)
+            self.assertTrue(path.exists())
 
     def test_dry_run_and_failed_proof_never_delete(self):
         with tempfile.TemporaryDirectory() as temp:

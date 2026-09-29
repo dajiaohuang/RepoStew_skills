@@ -66,6 +66,50 @@ class MaintenanceQueueTests(unittest.TestCase):
     def records(self):
         return state_store.load_document(self.home, "maintenance_batches.json", [])
 
+    @classmethod
+    def candidate(cls, work_item_id, repo):
+        row = cls.task("fresh-batch", work_item_id, repo)
+        row.update({
+            "packet_id": work_item_id,
+            "role": "repostew-repository",
+            "mode": "autonomous_continuous",
+            "status": "queued",
+            "source": {"kind": "github-trending", "captured_at": "2026-09-24T00:00:00Z"},
+            "contract_path": "D:/skill/references/worker-contract.md",
+            "evidence_path": "D:/state/campaigns/fresh-batch/source.json",
+        })
+        return row
+
+    @staticmethod
+    def rework_proofs(repo="owner/repo"):
+        return {
+            "stopped_writer": {
+                "verified_at": "2026-09-24T01:00:00Z",
+                "owner_repo": repo,
+                "dispatch_token": "dispatch-old-attempt",
+                "completion_signal": "natural_completion",
+                "evidence_path": "D:/state/old-return.json",
+                "summary": "Old leaf returned and suspended workspace access.",
+            },
+            "remote_reconciliation": {
+                "verified_at": "2026-09-24T01:01:00Z",
+                "owner_repo": repo,
+                "repo_head": "abc123",
+                "evidence_path": "D:/state/remote-check.json",
+                "summary": "Current upstream and prior public effects were checked.",
+                "checks": ["default branch head verified", "all-state PR search completed"],
+            },
+        }
+
+    def append_rework(self, prior_id="old-work", candidate=None, repo="owner/repo"):
+        proofs = self.rework_proofs(repo)
+        return maintenance_queue.append_rework_candidate(
+            self.home, prior_id, candidate or self.candidate("rework-work", repo),
+            supersession_reason="Explicitly authorized retry with reconciled evidence.",
+            stopped_writer_proof=proofs["stopped_writer"],
+            remote_reconciliation_proof=proofs["remote_reconciliation"],
+        )
+
     def test_head_and_tail_share_one_deduplicated_backend_neutral_queue(self):
         records = [
             self.task("old-native", "work-a", "owner/a"),
@@ -141,6 +185,51 @@ class MaintenanceQueueTests(unittest.TestCase):
         self.assertEqual(len(successes), 1)
         self.assertEqual(len(failures), 1)
         self.assertEqual(len(self.records()), 2)
+
+    def test_atomic_candidate_append_deduplicates_by_repository_across_parallel_roots(self):
+        candidates = [
+            self.candidate("candidate-a", "Owner/Repo"),
+            self.candidate("candidate-b", "owner/repo"),
+        ]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(
+                lambda row: maintenance_queue.append_candidates(self.home, [row]), candidates,
+            ))
+
+        self.assertEqual(sum(result["added_count"] for result in results), 1)
+        self.assertEqual(sum(result["skipped_count"] for result in results), 1)
+        saved = self.records()
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]["role"], "repostew-repository")
+        self.assertEqual([row["owner_repo"].casefold() for row in maintenance_queue.list_items(self.home)],
+                         [saved[0]["owner_repo"].casefold()])
+
+    def test_candidate_append_suppresses_any_repository_already_in_history(self):
+        completed = self.with_window(self.task(
+            "old-batch", "old-work", "owner/repo", worker_status="completed", status="completed",
+        ))
+        self.save([completed])
+
+        result = maintenance_queue.append_candidates(
+            self.home, [self.candidate("fresh-work", "OWNER/REPO")],
+        )
+
+        self.assertEqual(result["added_count"], 0)
+        self.assertEqual(result["skipped"][0]["reason"], "repository_already_in_shared_queue")
+        self.assertEqual(len(self.records()), 1)
+
+    def test_candidate_append_rejects_incomplete_or_wrong_role_rows_without_writes(self):
+        invalid = self.candidate("bad-work", "owner/repo")
+        invalid["role"] = "repository lifecycle"
+        with self.assertRaisesRegex(ValueError, "role must be repostew-repository"):
+            maintenance_queue.append_candidates(self.home, [invalid])
+        self.assertEqual(self.records(), [])
+
+        invalid = self.candidate("bad-work", "owner/repo")
+        invalid["source"] = {"kind": "github-trending"}
+        with self.assertRaisesRegex(ValueError, "source.captured_at"):
+            maintenance_queue.append_candidates(self.home, [invalid])
+        self.assertEqual(self.records(), [])
 
     def test_one_active_repository_claim_blocks_other_work_items_for_that_repo(self):
         self.save([self.task("batch-a", "work-a", "owner/repo"),
@@ -292,6 +381,106 @@ class MaintenanceQueueTests(unittest.TestCase):
         rework["parent_rework_packet"] = "unrelated-packet"
         self.save([prior, rework])
         self.assertEqual(maintenance_queue.list_items(self.home), [])
+
+    def test_public_rework_api_appends_fresh_work_only_after_both_proofs(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="needs_attention", status="needs_attention")
+        prior.update({"packet_id": "old-packet", "evidence_path": "D:/state/old-evidence.json"})
+        self.save([prior])
+
+        rework = self.append_rework()
+
+        self.assertEqual(rework["worker_status"], "queued")
+        self.assertTrue(rework["rework_of_previous"])
+        self.assertEqual(rework["rework_pass"], 1)
+        self.assertEqual(rework["parent_rework_batch"], "old-batch")
+        self.assertEqual(rework["parent_rework_packet"], "old-work")
+        self.assertEqual(rework["prior_evidence_path"], "D:/state/old-evidence.json")
+        self.assertEqual(rework["rework_proof"]["stopped_writer"]["dispatch_token"],
+                         "dispatch-old-attempt")
+        self.assertEqual([item["work_item_id"] for item in maintenance_queue.list_items(self.home)],
+                         ["rework-work"])
+
+    def test_public_rework_api_accepts_a_terminal_blocked_item_with_both_proofs(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="blocked", status="blocked")
+        prior.update({"packet_id": "old-packet", "evidence_path": "D:/state/old-evidence.json"})
+        self.save([prior])
+
+        rework = self.append_rework()
+
+        self.assertEqual(rework["worker_status"], "queued")
+        self.assertEqual(rework["parent_rework_packet"], "old-work")
+
+    def test_public_rework_api_accepts_superseded_item_when_it_is_latest_for_repo(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="superseded_by_new_rework_queue",
+                          status="superseded_by_new_rework_queue")
+        prior.update({"packet_id": "old-packet", "evidence_path": "D:/state/old-evidence.json"})
+        self.save([prior])
+
+        rework = self.append_rework()
+
+        self.assertEqual(rework["worker_status"], "queued")
+        self.assertEqual(rework["parent_rework_packet"], "old-work")
+        self.assertEqual(self.records()[0], prior)
+
+    def test_public_rework_api_rejects_missing_proofs_and_wrong_prior_repo(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="completed", status="completed")
+        prior["evidence_path"] = "D:/state/old-evidence.json"
+        self.save([prior])
+        candidate = self.candidate("rework-work", "owner/repo")
+        proofs = self.rework_proofs()
+        del proofs["stopped_writer"]["dispatch_token"]
+
+        with self.assertRaisesRegex(maintenance_queue.QueueError, "executor_id or dispatch_token"):
+            maintenance_queue.append_rework_candidate(
+                self.home, "old-work", candidate,
+                supersession_reason="Explicitly authorized retry.",
+                stopped_writer_proof=proofs["stopped_writer"],
+                remote_reconciliation_proof=proofs["remote_reconciliation"],
+            )
+        with self.assertRaisesRegex(maintenance_queue.QueueError, "does not match prior"):
+            self.append_rework(candidate=self.candidate("rework-work", "other/repo"),
+                               repo="other/repo")
+        self.assertEqual(len(self.records()), 1)
+
+    def test_public_rework_api_rejects_active_or_queued_same_repo_ownership(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="completed", status="completed")
+        prior["evidence_path"] = "D:/state/old-evidence.json"
+        active = self.task("active-batch", "active-work", "owner/repo",
+                           worker_status="running", status="running")
+        active["evidence_path"] = "D:/state/active-evidence.json"
+        self.save([prior, active])
+        with self.assertRaisesRegex(maintenance_queue.QueueError, "active mutation claim"):
+            self.append_rework()
+
+        queued = self.task("queued-batch", "queued-work", "owner/repo")
+        self.save([prior, queued])
+        with self.assertRaisesRegex(maintenance_queue.QueueError, "has queued work"):
+            self.append_rework()
+
+    def test_parallel_rework_roots_cannot_append_duplicate_repository_work(self):
+        prior = self.task("old-batch", "old-work", "owner/repo",
+                          worker_status="needs_attention", status="needs_attention")
+        prior["evidence_path"] = "D:/state/old-evidence.json"
+        self.save([prior])
+
+        def append(_):
+            try:
+                return self.append_rework()
+            except maintenance_queue.QueueError as error:
+                return error
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(append, (1, 2)))
+        successes = [row for row in results if isinstance(row, dict)]
+        failures = [row for row in results if isinstance(row, maintenance_queue.QueueError)]
+        self.assertEqual(len(successes), 1)
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(len(self.records()), 2)
 
     def test_batch_scoped_tail_filters_only_after_repository_queue_deduplication(self):
         older = self.task("older-batch", "old-work", "owner/repo")

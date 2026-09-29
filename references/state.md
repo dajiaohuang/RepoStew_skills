@@ -1,6 +1,10 @@
 # State
 
 One live REPOSTEW_HOME/repostew.sqlite (WAL), accessed through helpers.
+This is the supported default; OpenViking is not required or probed at startup.
+For an explicitly selected context backend, see
+[optional context storage](optional-context-storage.md). That reference defines
+an integration boundary, not a completed migration or new helper capability.
 paths.json remains a schema_version 2 file: POSIX roots relative to the selected
 state anchor. resolved_roots() derives absolute skill/state/repos roots; never infer
 the anchor from cwd/profile. Missing SQLite records use defaults, never loose JSON.
@@ -29,7 +33,9 @@ Legacy-artifact quarantine records retain exact source/destination/hash/size and
 per-file result; quarantined payloads never become live state or replay inputs.
 
 load_json/save_json use SQLite; intake merges transactionally and jobs update
-atomically. Only root writes shared state. Keep compact routing/outcome evidence,
+atomically. Only an authorized campaign root writes shared state, through helpers
+and only for its own claims; multiple roots sharing this database coordinate only
+through the queue. Keep compact routing/outcome evidence,
 not mail/attachments/source/build exports. Durable leaf evidence must survive jobs;
 bulk temporary inputs/build logs stay disposable. Never hand-edit ownership.
 

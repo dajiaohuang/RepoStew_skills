@@ -23,6 +23,7 @@
 | 审计 | [覆盖标准](references/repository-audit.md)：全部 tracked 文件、文档、翻译及网站，记录证据和限制 |
 | 后续维护 | [双轨通知](references/pr-maintenance.md)：GitHub Notifications 与 Email 独立收集、共用 inbox、按实时事件去重 |
 | 权限 | [维护仓库](references/maintaining-owned-repositories.md)：关注范围与实际能力分开 |
+| 协调与上下文 | [协调模板](references/coordinator-initial-template.md)：记录授权范围、状态锚点和执行器设置；[可选上下文存储](references/optional-context-storage.md)：OpenViking 保持显式 opt-in，直到适配器经过验证 |
 | 分批持续迭代 | [批次](references/batched-iteration.md)：一个 repo leaf、一次性 job 和 PR；提交验证后释放，PR 终态及清理完成后开始下一批 |
 | 存储 | [一次性 job](references/ephemeral-storage.md)：提交后释放，编辑时恢复 |
 | 共享工作树/清扫 | [清理](references/workspace-cleanup.md)：精确所有权及恢复校验，广泛清扫需明确授权 |
