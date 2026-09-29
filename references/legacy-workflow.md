@@ -21,7 +21,6 @@ same existing SQLite queue and its helpers.
 
 1. Validate the selected absolute REPOSTEW_HOME against paths.json; resolve all three roots with scripts/repostew_state.py roots. Never infer roots from cwd/profile/history.
 2. Use the existing SQLite through helpers. No implicit reset/import or fallback to old JSON. Separate campaign roots may share it, but coordinate only through queue records. See [state](state.md); missing installation uses [cold start](cold-start.md).
-   OpenViking is optional, never a startup dependency. Read [optional context storage](optional-context-storage.md) only when selected; a configured context service does not replace the existing queue or activate an unimplemented adapter.
 3. Check gh authentication, Git and Python; use an available connector/API if gh is absent without weakening verification.
 4. Confirm mode: investigate → approve edits → implement/test → approve submission. Explicit autonomous/continuous/no-confirmation scope permits these steps without intermediate approval.
 5. Both modes retain the standing clarification/Draft exceptions in [submission gates](taste-and-permissions.md). Autonomy never bypasses repository policy.
@@ -45,7 +44,6 @@ Scheduled runs carry the absolute path to the already-selected paths.json and st
 | Event queue / notification trigger / cutover | [event maintenance](event-maintenance.md) |
 | Command syntax | [commands](commands.md) |
 | Start a coordinator conversation/session | [coordinator initial template](coordinator-initial-template.md) |
-| Explicit optional OpenViking storage design/integration | [optional context storage](optional-context-storage.md) |
 
 ## Repository leaf
 

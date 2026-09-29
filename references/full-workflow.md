@@ -1,7 +1,10 @@
 # Contribution execution
 
 Apply SKILL.md and [submission gates](taste-and-permissions.md).
-For delegation, tracker/job commands below belong to the root only.
+For file-backed work, use file-state.md and record real URLs/heads in target objects.
+Legacy tracker/job commands below are only for explicitly existing SQLite campaigns.
+In file mode use assigned isolated workspaces and host-managed worktree tools;
+never run the legacy allocator/tracker merely because a phase mentions it.
 
 1. Verify live repo metadata, default branch/SHA, policy, contributor identity and
    permission. Read the complete issue/discussion, assignees and linked closing PRs;

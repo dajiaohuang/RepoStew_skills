@@ -172,12 +172,12 @@
           <article class="capability-card">
             <span class="card-code">INBOX</span>
             <h3 data-i18n="cap4Title">PR 持续维护</h3>
-            <p data-i18n="cap4Copy">GitHub Notifications 与 Email 双轨独立采集到同一 SQLite inbox，按 GitHub 事件版本去重；只报告监控不自动执行。</p>
+            <p data-i18n="cap4Copy">通知与邮件独立采集，按真实 issue、PR 和评论归并；文件记录获取与处理进度，私密邮件不进入同步。</p>
           </article>
           <article class="capability-card card-wide">
             <span class="card-code">RECOVERY</span>
             <h3 data-i18n="cap5Title">可恢复状态与清理</h3>
-            <p data-i18n="cap5Copy">一次性克隆在 PR 提交后释放；SQLite 保存恢复证据，GitHub 可重建元数据，需要修改时才恢复本地环境。</p>
+            <p data-i18n="cap5Copy">每库一个热状态文件，证据按对象保存；私有 Git 备份经过审阅，清理须保留可恢复工作。</p>
             <ul>
               <li>pr_tracker.py</li><li>rebuild_github_state.py</li><li>workspace_job.py</li>
             </ul>
@@ -244,11 +244,9 @@
           <div class="terminal-bar"><span></span><span></span><span></span><small>repostew / quick start</small></div>
           <div class="terminal-body">
             <p><span class="prompt">$</span> git clone https://github.com/dajiaohuang/RepoStew_skills.git &lt;skill-home&gt;</p>
-            <p><span class="prompt">$</span> python &lt;skill-home&gt;/scripts/configure_paths.py \\</p>
-            <p class="indent">--skill-home &lt;skill-home&gt; \\</p>
-            <p class="indent">--state-home &lt;state-home&gt; \\</p>
-            <p class="indent">--repos-home &lt;repos-home&gt;</p>
-            <p class="terminal-note" data-i18n="terminalNote"># 选择三个明确、互不重叠的绝对路径；paths.json 会存成相对 state home 的路径。</p>
+            <p><span class="prompt">$</span> python &lt;skill-home&gt;/scripts/file_state.py \\</p>
+            <p class="indent">--root &lt;state-root&gt; pool</p>
+            <p class="terminal-note" data-i18n="terminalNote"># 指定独立的普通文件 state 根；读取已有状态，不隐式初始化或迁移。</p>
           </div>
           <button class="copy-button" type="button" data-copy-command data-i18n="copyButton">复制 clone 命令</button>
         </div>

@@ -50,7 +50,8 @@ class PolicyTests(unittest.TestCase):
     def test_batched_iteration_releases_jobs_before_next_batch_gate(self):
         skill = self.policy("SKILL.md")
         batched = self.policy("references/batched-iteration.md")
-        self.assertIn("references/batched-iteration.md", skill)
+        self.assertIn("references/legacy-workflow.md", skill)
+        self.assertIn("batched-iteration.md", self.policy("references/legacy-workflow.md"))
         for requirement in (
             "one repository leaf, root-registered standalone job, branch and PR per batch",
             "Do not spawn sibling roles", "Legacy worker recovery only",
@@ -64,11 +65,11 @@ class PolicyTests(unittest.TestCase):
         ):
             with self.subTest(requirement=requirement):
                 self.assertIn(requirement, batched)
-        self.assertIn("Batched continuous iteration", self.policy("README.en.md"))
-        self.assertIn("分批持续迭代", self.policy("README.md"))
+        self.assertIn("references/legacy-workflow.md", self.policy("README.en.md"))
+        self.assertIn("references/legacy-workflow.md", self.policy("README.md"))
 
     def test_scheduled_tasks_bootstrap_only_from_verified_path_record(self):
-        skill = self.policy("SKILL.md")
+        skill = self.policy("references/legacy-workflow.md")
         scheduled = self.policy("references/scheduled-maintenance.md")
         for requirement in (
             "absolute path to the already-selected paths.json",
@@ -88,7 +89,7 @@ class PolicyTests(unittest.TestCase):
         skill = self.policy("SKILL.md")
         taste = self.policy("references/taste-and-permissions.md")
         self.assertIn("references/taste-and-permissions.md", skill)
-        self.assertIn("Complexity changes execution planning, never eligibility", skill)
+        self.assertIn("Size, difficulty and duration are never SKIP reasons", taste)
         for requirement in (
             "Size, difficulty and duration are never SKIP reasons",
             "Standing authority permits one focused clarification comment",
@@ -100,7 +101,7 @@ class PolicyTests(unittest.TestCase):
             "No upstream PR, including Draft",
             "Solution uncertainty alone does not require design-only work",
             "Draft is review evidence, not approval",
-            "Mandatory disclosure must be truthful",
+            "never invent an identity or use a false human-only disclosure",
         ):
             with self.subTest(requirement=requirement):
                 self.assertIn(requirement, taste)

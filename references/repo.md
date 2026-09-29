@@ -1,41 +1,29 @@
 # Repo
 
-Own one repository's explicitly assigned work. This is the workflow role;
-`repostew-repository` remains the existing native packet/agent identifier.
+Own one repository's bounded assignment; solo work need not spawn a leaf.
+Read target rules, [file state](file-state.md), [full workflow](full-workflow.md)
+and [submission gates](taste-and-permissions.md). File state overrides legacy
+tracker/job commands in phase references; those commands are legacy-only.
 
-## Context and phases
-
-Read target-repository rules and verify live remote state before acting.
-Use [full workflow](full-workflow.md) and [submission gates](taste-and-permissions.md).
-Load only the additional reference needed:
-
-| Assignment | Reference |
+| Phase | Reference |
 |---|---|
-| Recent issue window / discovery | [Campaign](discovery-campaign.md) |
-| Authorized full audit | [Audit](repository-audit.md) |
-| PR comments, review or CI | [Maintenance](pr-maintenance.md) |
-| Verified maintainer scope | [Authority](maintaining-owned-repositories.md) |
+| Recent issues | [Discovery](discovery-campaign.md) |
+| Authorized audit | [Audit](repository-audit.md) |
+| PR comments/review/CI | [Maintenance](pr-maintenance.md) |
+| Verified maintainer work | [Authority](maintaining-owned-repositories.md) |
 
-A focused issue/comment does not authorize a full audit or unrelated fixes.
-An explicit repository/issue/PR ID routes directly to its records; retrieval can
-recover prior context, but current source and GitHub state determine the action.
+Read repository state.json then assigned objects. Use actual owner/repo, native
+numbers, commit and host session. Write only assigned objects through file_state.py
+expected-version updates under assigned repository ownership. Do not edit settings,
+pool, follow authority or other executors' records. Return exact changed paths,
+coverage, validation, URLs/heads, remaining work and evidence for acceptance.
 
-## Execution binding
-
-For current SQLite packets or standalone work using current helpers, also read
-[legacy workflow](legacy-workflow.md), [worker context](worker-context.md) and
-[return contract](worker-contract.md). Current inline content satisfies these reads.
-Preserve existing workspace, branch, evidence and submission handoff bindings.
-
-For explicit OpenViking use, read [direct context storage](optional-context-storage.md).
-Use its native interfaces with the assigned endpoint, namespace, repository and
-attempt binding. Read the project dossier and assignment directly; write your own
-progress, analysis, validation, submission links, evidence and remaining work to
-the attempt records. Notify the coordinator with exact URIs and revisions for
-acceptance. No SQLite, legacy storage helpers or custom gateway is required.
-
-A delegated leaf has no children and does not edit coordinator-owned assignments,
-claims, pool membership, follow settings or acceptance records. Direct writes to
-its assigned OpenViking attempt records are permitted in that profile.
-Return durable evidence, exact URLs/heads, validation and unresolved work to its
-coordinator. Direct solo work has no requirement to spawn an agent.
+Preserve newer observations and private material. Capability evidence is
+action-specific; unknown is not denied, upstream READ does not prohibit a fork PR.
+Never create permission-probe artifacts. Check live targets before public mutations.
+No children/agent CLIs unless separately authorized; focused work is not full audit.
+Never fabricate changes just to produce PRs. Exhaust safe actions and required
+validation, capture external checks once, retain retry triggers and return when
+only external waits remain. Reconcile uncertain submissions before replay.
+Preserve dirty/unpushed work; cleanup requires recovery and host worktree safeguards.
+Explicit legacy SQLite packets retain legacy-workflow.md/worker-contract.md only.

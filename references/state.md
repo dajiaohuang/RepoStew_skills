@@ -1,10 +1,8 @@
 # State
 
-One live REPOSTEW_HOME/repostew.sqlite (WAL), accessed through helpers.
-This is the supported default; OpenViking is not required or probed at startup.
-For an explicitly selected context backend, see
-[optional context storage](optional-context-storage.md). That reference defines
-an integration boundary, not a completed migration or new helper capability.
+This reference documents existing SQLite campaigns only. New file-backed work
+uses [file state](file-state.md) and never calls these helpers. Existing databases,
+jobs and coordinators remain unchanged.
 paths.json remains a schema_version 2 file: POSIX roots relative to the selected
 state anchor. resolved_roots() derives absolute skill/state/repos roots; never infer
 the anchor from cwd/profile. Missing SQLite records use defaults, never loose JSON.
@@ -38,6 +36,8 @@ and only for its own claims; multiple roots sharing this database coordinate onl
 through the queue. Keep compact routing/outcome evidence,
 not mail/attachments/source/build exports. Durable leaf evidence must survive jobs;
 bulk temporary inputs/build logs stay disposable. Never hand-edit ownership.
+
+Legacy-only commands (never use in file-backed mode):
 
 ```bash
 python scripts/repostew_state.py roots

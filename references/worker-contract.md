@@ -50,10 +50,9 @@ Ask only a necessary, focused clarification and record its URL. When only extern
 input or asynchronous checks remain, write the attempt result with those items
 retained and exit; do not leave the attempt running until someone responds.
 
-For direct OpenViking work, the leaf verifies the terminal result and its linked
-evidence by one exact readback/hash check, then returns those values. Avoid rereading
-or rehashing records already verified by the leaf; investigate only a specific
-integrity discrepancy.
+File-backed assignments use [repo leaf template](repo-leaf-template.md) instead
+of the legacy packet ID table. Return exact paths, actual session and target
+versions; verify changed records once and investigate only specific discrepancies.
 
 ## Return
 

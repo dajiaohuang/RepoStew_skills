@@ -1,10 +1,13 @@
 # Command index
 
-Run from selected skill home after paths.json/root validation. Honor host wrappers
-(e.g. rtk). Use --help for flags; commands do not grant action authority.
+File mode uses the explicit absolute state root; legacy commands below require
+their already-selected paths.json. Honor host wrappers such as rtk.
 
 | Purpose | Command |
 |---|---|
+| File state read/write/claim/pool | python scripts/file_state.py --help |
+| Reviewed private Git backup | python scripts/sync_file_state.py --help |
+| File protocol | [file state](file-state.md), [sync](state-sync.md) |
 | Roots/auth | python scripts/repostew_state.py roots; gh auth status; git --version; python --version |
 | Initialize/verify continuous maintenance | python scripts/maintenance_setup.py --help; [setup contract](maintenance-initialization.md) |
 | Repo metadata | gh repo view owner/repo --json isArchived,isFork,viewerPermission,owner |
@@ -22,5 +25,7 @@ Run from selected skill home after paths.json/root validation. Honor host wrappe
 | Shared worktree operations | [cleanup](workspace-cleanup.md) |
 | State/export/reset | [state](state.md) |
 
+All SQLite trackers, job allocators and packet compiler commands above are legacy-only.
+File mode reads/writes target objects and uses repo-leaf-template.md instead.
 Repeat --repo for explicit active scope. Lead limits do not establish campaign or
 window coverage; failed/truncated scans cannot advance checkpoints.

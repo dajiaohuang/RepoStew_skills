@@ -2,73 +2,41 @@
 
 [简体中文](README.md) · [Project site](https://dajiaohuang.github.io/RepoStew_skills/)
 
-A portable skill for GitHub discovery, issue fixes, audits and PR maintenance.
-[SKILL.md](SKILL.md) is canonical; Python helpers use the standard library plus Git/gh.
+GitHub discovery, issue fixes, code audits and PR follow-up.
+[SKILL.md](SKILL.md) routes to coordinator or repo.
 
 ## Start
+1. Supply absolute workspace, skill and ordinary-file state roots; no implicit fallback.
+2. Read [file state](references/file-state.md); verify Python 3.11+, Git and gh identity.
+3. Define authority: investigation is not submission, submission is not merge/delete.
 
-1. Select distinct absolute skill/state/repos roots; keep the canonical checkout and
-   configuration workspace-local. Follow [cold start](references/cold-start.md).
-2. Validate paths.json, Python 3.11+, Git and authenticated gh.
-3. Ask for a specific issue, repository audit, discovery scope or tracked-PR follow-up.
-   Default: approve edits and submission separately. Explicit autonomy stays within scope.
+## Workflow
+- One hot `repos/owner/repo/state.json` per repository.
+- Native issue/PR/comment identities, no extra job/attempt naming system.
+- [Coordinator](references/coordinator.md) owns pool/acceptance; [repo](references/repo.md) owns bounded targets.
+- Native and CLI executors share [stable prefixes](references/repo-leaf-template.md) and independent authorized capacity targets.
+- [Intake](references/source-intake.md) separates fetched and handled; unchanged content is not repeated work.
+- [Git sync](references/state-sync.md) is reviewed private backup, not distributed execution locking.
+- [Experience](references/experience-maintenance.md) becomes focused references/tested scripts in coherent batches.
 
-## Workflows
-
-| Work | Contract |
-|---|---|
-| Discovery | [Complete queue](references/discovery-campaign.md): deduplicate all authorized sources, issues before audits, no quota |
-| Leaf | [Inline dispatch](references/leaf-dispatch.md): only `repostew-repository`, full phase-specific policy before variables; fresh leaf per repo, same-repo revisit by executor ID |
-| Contributions | [Submission gates](references/taste-and-permissions.md): ACCEPT / ASK_MAINTAINER / SKIP; direct regular PR when qualified, policy-compliant Draft otherwise |
-| Audit | [Coverage](references/repository-audit.md): all tracked files/docs/locales/sites; evidence and limitations |
-| Follow-up | [Maintenance](references/pr-maintenance.md): independent GitHub Notifications + Email, shared inbox, live event deduplication |
-| Authority | [Maintained repos](references/maintaining-owned-repositories.md): follow scope differs from verified capability |
-| Coordination and context | [Coordinator template](references/coordinator-initial-template.md): authorized scope, state anchors and executor settings; [optional context storage](references/optional-context-storage.md): OpenViking stays opt-in until an adapter is verified |
-| Batched continuous iteration | [Batches](references/batched-iteration.md): one repo leaf, disposable job and PR; release after validation/submission, terminal and cleanup gate before next batch |
-| Storage | [Disposable jobs](references/ephemeral-storage.md): release after submission, restore for edits |
-| Shared worktrees/sweep | [Cleanup](references/workspace-cleanup.md): exact ownership/recovery checks; broad sweeps require explicit scope |
-
-The root owns queue, SQLite state, jobs and acceptance. Leaves consume complete
-inline policy without rereading it. Same-repo continuation refreshes authority/job;
-new repositories never inherit earlier repository context. See [Luna profile](references/luna-xhigh.md)
-only when that model/effort is selected.
+Use scripts/file_state.py and scripts/sync_file_state.py. Python standard library
+plus Git/gh; no state service or vector index required. Existing SQLite helpers
+are [legacy-only](references/legacy-workflow.md), never automatically invoked or migrated.
 
 ## Boundaries
+Follow [submission](references/taste-and-permissions.md), [audit](references/repository-audit.md)
+and [maintenance](references/pr-maintenance.md) rules. Capability, user authority
+and project rules differ. Unknown is not denied; upstream READ does not forbid
+fork PRs. Keep security private and results/identity honest; provide required
+truthful disclosure. Preserve unknown/dirty work and independent projects.
 
-Read target rules and live issue/PR state. Reproduce and deduplicate before submitting.
-Keep changes small, tests honest, security private and public contributions free
-of provider, tool, model, agent, bot, AI and generated-by attribution.
-No inferred merge/close/delete/release/governance authority; dependencies/services/
-permissions/API/architecture changes need approval. Report-only monitors stay read-only.
-Preserve dirty/unknown data and credentials. Historical contribution is not active follow.
-
-One selected [SQLite state](references/state.md); no implicit reset/import or old-JSON
-fallback. Explicit rebuild requires full pagination, backup and atomic replacement;
-local handling/authority cannot be reconstructed from GitHub metadata.
-
-## Commands and validation
-
-Event-driven maintenance separates lightweight GitHub intake, claimed PR execution,
-six-hour reconciliation, six-hour issue discovery and daily portfolio updates.
-Mailbox intake remains independent. See [event maintenance](references/event-maintenance.md).
-Luna deployments enforce `gpt-6-luna` / `xhigh` in actual launch settings. Intake
-cursors mean durable queuing, never a claim that all feedback was read or handled.
-
-Use [maintenance initialization](references/maintenance-initialization.md) to bind
-the installation, plan idempotent schedules, validate/cut over and recoverably clean
-legacy artifacts. Reinitialization repairs tasks without resetting the inbox or
-duplicating schedules; scheduled executions run only their own lane.
-
-See [command index](references/commands.md), [scheduled lanes](references/scheduled-maintenance.md)
-and [workspace entry](references/maintenance-workspace-agents.md).
-
+## Verification
 ```bash
-python scripts/compile_leaf_prompt.py --packet /absolute/packet.json --output /absolute/new-prompt.txt
+python -m unittest discover -s tests -p 'test_file*.py' -v
 python -m compileall -q scripts
-python -m unittest discover -s tests -v
 ```
-
-Validate skill metadata with the host validator. Keep skill and target-repository
-changes in separate commits.
+Run legacy tests separately when relevant; new file mode does not alter old instances.
+[Commands](references/commands.md) · [Coordinator template](references/coordinator-initial-template.md)
+· [Workspace template](references/maintenance-workspace-agents.md)
 
 [MIT](LICENSE) © 2026 dajiaohuang
