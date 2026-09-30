@@ -13,9 +13,12 @@ against the actual target checkout. Count repository bullets, not header/blank l
 
 ## New repository
 
-1. Read the first bullet in state/new-repositories.md. Inspect target instructions,
-   contribution rules and current issue/PR activity. Use the requested recent-issue
-   window; ask once if its lower bound is missing.
+1. Read the first bullet in state/new-repositories.md. Before reading the README,
+   source files, issues or discussion bodies, inspect the repository's AGENTS.md,
+   contribution guidance and security policy one at a time. Stop or adapt at the first
+   policy restriction; if a file is absent, continue to the next. Do not start broad
+   content reads in the same batch as this policy check. Then inspect current issue/PR
+   activity and use the requested recent-issue window; ask once if its lower bound is missing.
 2. Fetch all issue pages and discussions, check duplicates/fixes/competing claims,
    investigate and resolve eligible work with validation and authorized submissions.
 3. Audit actual code at the current base, not filenames. Resolve eligible findings
