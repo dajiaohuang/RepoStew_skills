@@ -36,6 +36,10 @@ Use fresh context for every new repository and a delta for same-repository conti
 Honor the configured/requested model and effort; report unavailable host capacity or
 model support without silent substitution.
 
+Report active leaves from actual start/completion events or a current host snapshot,
+not requested slot counts or stale assignments. A rejected spawn is not an active
+leaf; distinguish the requested count, actual active count and concrete host limit.
+
 Maintain the requested number of active leaves while independent work remains. When
 a leaf finishes, process its result and immediately fill the vacant slot with a fresh
 repository leaf; do not wait for the slowest sibling. Wait on completion/attention
