@@ -76,7 +76,7 @@ button { font: inherit; }
   top: 0;
   z-index: 50;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto;
   align-items: center;
   min-height: 74px;
   padding: 0 max(24px, calc((100vw - var(--max)) / 2));
@@ -149,7 +149,7 @@ button { font: inherit; }
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.04fr) minmax(430px, 0.96fr);
+  grid-template-columns: 1fr;
   gap: clamp(48px, 7vw, 110px);
   align-items: center;
   min-height: calc(100vh - 74px);
@@ -259,7 +259,7 @@ button { font: inherit; }
 .output-prefix { color: var(--mint); font-weight: 900; }
 
 .section-shell { border-top: 1px solid var(--line-strong); }
-.manifesto { display: grid; grid-template-columns: minmax(130px, 0.3fr) 1.7fr; gap: 30px; padding-block: 112px; }
+.manifesto { display: grid; grid-template-columns: 1fr; gap: 30px; padding-block: 112px; }
 .section-marker { color: var(--blue-deep); }
 .manifesto h2, .section-heading h2, .start h2, .boundary h2 {
   margin: 0;
@@ -271,12 +271,12 @@ button { font: inherit; }
 .manifesto p:not(.section-marker) { max-width: 820px; margin: 30px 0 0; color: var(--ink-soft); font-size: 1.12rem; }
 
 .capabilities, .modes, .decision-section { padding-block: 106px; }
-.section-heading { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 42px; align-items: end; margin-bottom: 52px; }
+.section-heading { display: grid; grid-template-columns: 1fr; gap: 42px; align-items: end; margin-bottom: 52px; }
 .section-heading .section-marker { margin-bottom: 16px; }
 .section-heading > p { max-width: 440px; margin: 0; color: var(--ink-soft); }
 .section-heading.compact { grid-template-columns: 1fr; margin-bottom: 38px; }
 
-.capability-grid { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
+.capability-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
 .capability-card { min-height: 300px; padding: 26px; border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); background: color-mix(in srgb, var(--paper-raised) 82%, transparent); }
 .capability-card.card-wide { grid-column: span 2; }
 .capability-card h3 { margin: 54px 0 15px; font-size: 1.38rem; }
@@ -335,6 +335,9 @@ button { font: inherit; }
 .site-footer p { margin: 0; font-family: var(--mono); }
 
 :focus-visible { outline: 3px solid var(--amber); outline-offset: 4px; }
+
+#english { padding-block: 80px; }
+#english h2 { font-family: var(--display); font-size: clamp(1.8rem, 4vw, 3rem); }
 
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(34, 184, 138, 0.5); } 50% { box-shadow: 0 0 0 7px rgba(34, 184, 138, 0); } }
 
