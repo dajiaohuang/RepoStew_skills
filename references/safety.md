@@ -6,7 +6,11 @@
   Difficulty alone is not a blocker. No fabricated issue, PR or quota.
 - Check existing issue/PR/discussion/fix and policy before submission. Respect
   invitation/assignment/security gates; no dummy permission probes. A legitimate
-  fork PR does not require upstream push permission.
+  fork PR does not require upstream push permission. Upstream `permissions.push=false`
+  or read-only access is not a contribution blocker: evaluate the authorized fork/PR
+  route before withholding delivery. If that route is unavailable, name its actual
+  policy or host error separately from missing native validation; never infer a fork
+  prohibition from upstream write access or broaden contributor authority.
 - Preserve dirty/unpushed/unknown work. No reset or cleanup of independent projects,
   Go caches/toolchains/build output. Use isolated work when needed.
 - Security findings/mail/credentials stay private. Without an authorized disclosure
