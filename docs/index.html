@@ -13,7 +13,7 @@
   <header class="site-header">
     <a class="brand" href="#main">RepoStew</a>
     <nav class="site-nav" aria-label="导航">
-      <a href="#state">三个名单</a><a href="#workflow">工作流程</a><a href="#english" lang="en">English</a>
+      <a href="#state">四个名单</a><a href="#workflow">工作流程</a><a href="#english" lang="en">English</a>
     </nav>
   </header>
   <main id="main">
@@ -30,7 +30,7 @@
       </div>
     </section>
     <section class="capabilities section-shell" id="state">
-      <div class="section-heading"><h2>三个名单，三个读取位置。</h2></div>
+      <div class="section-heading"><h2>四个名单，三个读取位置。</h2></div>
       <div class="capability-grid">
         <article class="capability-card"><h3>待做新库</h3>
           <p>new-repositories.md：一行一个仓库。处理近期 issue，再审计实际代码；真正完成后移除。</p></article>
@@ -38,6 +38,8 @@
           <p>followed-repositories.md：标题下放子列表，允许重合。扫描合并去重，从上次时间接续，不重复全审计。</p></article>
         <article class="capability-card"><h3>未完成事项</h3>
           <p>unfinished.md：公开链接和一句原因。真正解决后移除；评论、review 和 CI 实时读取。</p></article>
+        <article class="capability-card"><h3>旧库全表</h3>
+          <p>old-repositories.md：完整历史旧库，不是关注子集。逐库保留上次巡检时间、范围和覆盖边界；缺失明确标为未知。</p></article>
       </div>
       <p>read-positions.md 保留 GitHub 通知位置和关注库扫描时间；邮箱位置单独保存在私密的 mail-position.md。
         时间、原生 ID、修订值和边界 ID 精确保留。读到不等于解决。</p>
@@ -46,14 +48,14 @@
       <div><h2>处理真实工作，不复制交互数据库。</h2>
         <p>完整分页获取实际 issue、PR 和讨论，遵守目标仓库规则，调查、修复、验证并完成获授权的提交。
           未完成事项先保留链接和原因，再推进读取位置；部分抓取失败保留原位置。</p>
-        <p>通知、邮箱和开放工程巡检保持各自已有边界。一个执行者串行写入，不自动创建协调者、子任务或调度层。</p>
+        <p>通知、邮箱和开放工程巡检保持各自已有边界。默认串行；明确请求并行时，协调者单独写共享状态，独立仓库 leaf 完成即补位。不自动创建协调者、子任务或调度层。</p>
         <p>关注和历史贡献不代表维护权限。私密邮箱、安全材料和凭据不进入公开状态；
           未获授权不合并、关闭、发布、删除或推送上游。未知和未提交数据保持原样。</p>
       </div>
     </section>
     <section class="section-shell" id="english" lang="en">
       <div><h2>Direct Markdown state. No custom runtime scripts.</h2>
-        <p>Three lists: new repositories, named overlapping followed groups, and unfinished links with one-line reasons.
+        <p>Four lists: new repositories, the full old-repository table with evidenced patrol times, named overlapping followed groups, and unfinished links with one-line reasons.
           Three read positions: GitHub Notifications, followed-issue time, and a private mailbox position.</p>
         <p>Use existing provider and file tools directly. Scan the deduplicated followed union once.
           Advance only after complete capture and handling or retention; a partial failure preserves the position.

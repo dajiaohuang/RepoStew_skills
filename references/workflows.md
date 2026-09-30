@@ -19,7 +19,53 @@ CLI commands for live data; no RepoStew script is required. Prefix shell command
 
 Completion does not automatically admit a repository to the followed list.
 
+## Explicitly requested coordinator and leaves
+
+The coordinator alone edits shared state; leaves own distinct target repositories and
+return findings, validation and unresolved links without editing the lists. Keep live
+assignments in the conversation, not a new owner/claim protocol or hidden queue.
+Use fresh context for every new repository and a delta for same-repository continuation.
+Honor the configured/requested model and effort; report unavailable host capacity or
+model support without silent substitution.
+
+Maintain the requested number of active leaves while independent work remains. When
+a leaf finishes, process its result and immediately fill the vacant slot with a fresh
+repository leaf; do not wait for the slowest sibling. Wait on completion/attention
+events and inspect concrete inactivity or failures instead of repeatedly polling.
+Blocked or partially audited repositories stay listed; continue other repositories
+without reassigning the same blocker repeatedly during this pass. Distinguish a pass
+over retained repositories from actual completion of all engineering work.
+
+After eligible submissions, check current PR/ref state and retained changes before
+releasing this run's clean registered worktree through host recovery tools. Preserve
+dirty, unpushed, locked, in-use and unknown paths and name the reason. No blanket
+workspace cleanup or Go-cache cleanup. Observe replenishment, blocked-work handling
+and safe resource release in real runs; correct demonstrated instruction defects,
+not merely the wording of a successful transcript.
+
 ## Followed old repositories
+
+The followed sublists are a selection, never the full old-repository table.
+
+## Old-repository full table and explicit recovery
+
+Read old-repositories.md for the entire historical old-repository inventory. When the
+user requests archive recovery, enumerate the complete old-state inventory, not just
+the current followed groups. Preserve names/native IDs and traceable patrol times.
+Use actual executed scan/follow-up records; registration, migration, provider updates
+and file modification times do not establish a patrol. Keep the record time, scope,
+outcome and covered boundary distinct; missing evidence is explicitly unknown.
+Do not execute archived code or resume old state protocols during recovery.
+
+For a requested contribution-based reclassification, count the user's authored issues
+or submitted PRs across all states and dates; comments alone do not count. Fully capture
+history, splitting capped searches. Check renamed identities by native repository ID
+and current canonical name. Source failure, unavailable repositories and missing identity
+are not zero submissions: retain them as awaiting verification. Move confirmed no-history
+repositories into the new list without duplicates, preserving recovery history and times.
+The full old table does not grant follow membership or maintainer authority.
+
+## Followed-issue execution
 
 Read state/followed-repositories.md. Each heading defines a sublist of repository
 bullets; names may overlap. Form the deduplicated union and visit each repository once.
