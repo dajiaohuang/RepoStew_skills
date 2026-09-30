@@ -3,6 +3,14 @@
 Read and edit the Markdown files directly. Use available GitHub/mail connectors or
 CLI commands for live data; no RepoStew script is required. Prefix shell commands with rtk.
 
+On Windows, rtk wraps executables, not PowerShell cmdlets or expressions. Use
+`rtk proxy powershell -NoProfile -Command "Get-Content -Encoding UTF8 <path>"`
+for cmdlets, and `rtk proxy rg <pattern> <path>` for search; do not pass Get-Content,
+an evaluated expression, or unavailable Unix ls/grep directly to rtk. Read the small
+current instruction files separately instead of dumping the memory registry or a
+whole workspace first. D:/repo/repostew itself is not a Git checkout: run Git checks
+against the actual target checkout. Count repository bullets, not header/blank lines.
+
 ## New repository
 
 1. Read the first bullet in state/new-repositories.md. Inspect target instructions,
