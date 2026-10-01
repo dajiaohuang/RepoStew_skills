@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="RepoStew: directly edited Markdown lists for responsible repository work and contribution follow-up." />
-  <title>RepoStew · 直接读写 Markdown</title>
+  <meta name="description" content="RepoStew：直接读写 Markdown 的可移植仓库维护 Skill，从发现与修复到 PR 交付和持续巡检。" />
+  <title>RepoStew · 从贡献到持续维护</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -13,72 +13,63 @@
   <header class="site-header">
     <a class="brand" href="#main">RepoStew</a>
     <nav class="site-nav" aria-label="导航">
-      <a href="#state">名单与每库记录</a><a href="#workflow">工作流程</a><a href="#english" lang="en">English</a>
+      <a href="#state">状态</a><a href="#workflow">交付</a><a href="#patrols">巡检</a><a href="#english" lang="en">English</a>
     </nav>
   </header>
   <main id="main">
     <section class="hero" id="top">
       <div class="hero-copy">
-        <p class="kicker">Repository stewardship · Agent Skill</p>
-        <h1>直接读写 Markdown。<br /><em>贡献之后，继续维护。</em></h1>
-        <p class="hero-lede">执行者使用可用的仓库、邮箱和文件工具，直接处理真实工作并修改名单。
-          不绑定执行客户端、模型供应商或操作系统，没有自定义运行脚本、任务注册表或协调系统。</p>
+        <p class="kicker">Portable repository stewardship</p>
+        <h1>把贡献做完。<br /><em>把维护接起来。</em></h1>
+        <p class="hero-lede">一套直接读写 Markdown 的仓库维护 Skill：发现、处理 issue、审计、修复、验证、交付 PR，再持续跟进评审、CI 和未完成事项。不绑定执行器、模型供应商或操作系统，不需要额外运行脚本、数据库或协调服务。</p>
         <div class="hero-actions">
-          <a class="button button-primary" href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/SKILL.md">读取 Skill</a>
-          <a class="button button-secondary" href="https://github.com/dajiaohuang/RepoStew_skills">查看源码</a>
+          <a class="button button-primary" href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/README.md">从 README 开始</a>
+          <a class="button button-secondary" href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/SKILL.md">读取 Skill</a>
         </div>
       </div>
     </section>
     <section class="capabilities section-shell" id="state">
-      <div class="section-heading"><h2>三个成员名单，每库保存工作状态。</h2></div>
+      <div class="section-heading"><h2>名单选范围。<br />每库记录存事实。</h2></div>
       <div class="capability-grid">
-        <article class="capability-card"><h3>待做新库</h3>
-          <p>new-repositories.md：一行一个仓库。处理近期 issue，再审计实际代码；真正完成后移除。</p></article>
-        <article class="capability-card"><h3>关注旧库</h3>
-          <p>followed-repositories.md：标题下放子列表，允许重合。扫描合并去重，从上次时间接续，不重复全审计。</p></article>
-        <article class="capability-card"><h3>每库状态与贡献</h3>
-          <p>state.md：巡检、覆盖边界、未完成链接和原因；work.md：实际处理了什么 issue、提交或跟进了什么 PR。中央 unfinished.md 仅为导航视图。</p></article>
-        <article class="capability-card"><h3>旧库全表</h3>
-          <p>old-repositories.md：完整历史旧库成员名单，不是关注子集；只存仓库名，不重复维护每库状态。</p></article>
+        <article class="capability-card"><h3>三个成员名单</h3><p>新库待处理、旧库历史全表、分组关注名单。名单只保存成员；关注组允许重合，扫描去重并集。</p></article>
+        <article class="capability-card"><h3>每库两个记录</h3><p>state.md 保存覆盖、未完成链接与原因、资源结果；work.md 简记实际 issue/PR 贡献。中央 unfinished.md 仅导航。</p></article>
+        <article class="capability-card"><h3>相对目录，源码可处置</h3><p>工作区保留 RepoStew_skills/、state/ 和 work/owner/repo/。源码在 checkout/，释放源码不删除记录。</p></article>
+        <article class="capability-card"><h3>来源独立，隐私隔离</h3><p>通知与关注扫描位置在 read-positions.md，邮箱位置在 private/。保留原生边界，正文实时读，不复制交互数据库。</p></article>
       </div>
-      <p>工作区使用相对目录 RepoStew_skills/、state/ 和 work/owner/repo/。记录在仓库容器内，源码在 checkout/；释放源码不删除记录。执行路径以工作区根目录为基准，文档链接以所在文件为基准。</p>
-      <p>state/read-positions.md 保留仓库通知位置和关注库扫描时间；邮箱位置单独保存在私密的 state/private/mail-position.md。
-        时间、原生 ID、修订值和边界 ID 精确保留。读到不等于解决。</p>
     </section>
     <section class="manifesto section-shell" id="workflow">
-      <div><h2>处理真实工作，不复制交互数据库。</h2>
-        <p>获授权的新库发现直接入池：确认真实身份、应用既定筛选并去重，批量追加新名单末尾。不读简介另判相关性，不提前调查 issue、审计源码或判断能否发 PR。已有库接续原范围，不重置进度、不自动关注；有活跃协调者时安排单写入者，用户指定发现者直接追加则约定短暂写入窗口，协调者期间不改同一名单。不重复搜索或回读验收，不新增锁、队列或调度。</p>
-        <p>启用 Trending/awesome 来源时，榜单项目、awesome 清单库及清单内 GitHub 项目均为候选；已收录清单仍用于发现。远程提取链接，清单之间有界扩展并防循环，不递归扫描普通项目依赖；来源启用不等于恢复暂停调度。</p>
-        <p>完整分页获取实际 issue、PR 和讨论，遵守目标仓库规则，调查、修复、验证并完成获授权的提交。
-          未完成事项先保留链接和原因，再推进读取位置；部分抓取失败保留原位置。</p>
-        <p>完整未完成巡检枚举每库 state.md，不依赖可能滞后的中央视图。外部贡献库每次工作结束都处理源码释放，包括无改动和阻塞；自有库不适用。依据已确认的交付与占用事实通过门槛后直接删除授权目录，记录操作结果；不盘点独有/未知数据，不新建恢复副本，不做恢复解包/哈希校验、删后复核或磁盘空间检测。仍保护精确授权范围、已知未交付改动和其他任务占用；未过门槛保留，现有归档不动。</p>
-        <p>通知、邮箱和开放工程巡检保持各自已有边界。默认串行；明确请求并行时，leaf 直接写自己的 state.md/work.md，协调者只写共享名单、导航和跨库位置，完成即补位。不自动创建协调者、子任务或调度层。</p>
-        <p>可配置轻量周期：每小时通知与选定邮箱文件夹增量，两个平级来源各自保留位置，重复对象合并，不读其他文件夹、不发邮件或改已读。每 6 小时关注库新 issue，按库合并，有事项才派 leaf，复用新库协调者与 leaf，只查相关代码，不重复全审计或改名单。每 24 小时兜底全量找本人创建/评论的开放 issue、创建的开放 PR 和所有每库未完成链接；轻量查状态/head/CI，仅变化、未知处理或仍可推进事项深入处理，不仅依赖 updated_at 判断 CI。</p>
-        <p>三个巡检入口优先共用现有对话，上一轮未结束就继续，不叠加；跨任务同库不双写。无变化复用结果，不重读、重测或重克隆，不新增交互状态库。仅重要变化、真实交付、失败或需用户操作时通知；周期不保证完成时限，配置不代表巡检证据，规则更新不自动恢复暂停任务。具体周期、来源供应商与执行设置属于工作区配置。</p>
-        <p>每个 leaf 完成投稿与释放闭环：遵守目标库规定，满足直接投稿门槛优先普通 open PR；草稿需有具体剩余门槛。缺本机原生工具不自动降为草稿，必需格式、邀请或投稿条件不能跳过。核对发布结果、通过释放门槛并删除授权源码后，leaf 直接写每库记录，不要求恢复副本，不再复核删除或磁盘容量。投稿、代码验证、全库完成和删除结果分别记录。</p>
-        <p>同库复用未变规则与 fork/分支信息，首次完整检查，投稿前查相关增量。测试限受影响范围及目标库强制项；完整 diff、格式和公开文本审阅合为投稿前一次。leaf 确认发布结果，协调者默认信任返回及报告写入，不回读验收。名单计数入口读取一次，导航仅更新受影响库，接收与共享更新及补位一次完成。明确报错、无结果、矛盾或冲突才局部介入，优先原 leaf 修正；不盲重试，不同库双写，连续三次失败保留门槛。一次等待超时不算失败，不加常态心跳或成功抽检；静默错误不能保证被发现。缺陷证明、完整 issue 覆盖和实际代码审计保留，不默认等待 CI 或合并。</p>
-        <p>缺少 issue/PR 返回时先与原 leaf 交流：已发但漏报就补链接与记录；确实没有则说明原因；原授权内仍能推进就继续。确认后直接接受，不重复搜索、不强造投稿；未答复或写入歧义不算完成，独立库继续。</p>
-        <p>关注和历史贡献不代表维护权限。私密邮箱、安全材料和凭据不进入公开状态；
-          未获授权不合并、关闭、发布、删除或推送上游。未知和未提交数据保持原样。</p>
+      <div>
+        <h2>一套交付流程。<br />两种指派范围。</h2>
+        <p>获授权的 Trending、awesome 清单库及清单内项目，确认真实身份、既定筛选并去重后直接追加新库名单末尾，不提前克隆或审计。已有库接续原范围，不重置进度或自动关注。</p>
+        <p>新库处理完整近期 issue 并审计实际全代码，全部完成才移出新名单。关注旧库只处理本批新 issue 和相关代码，不重复全审计、不改成员名单；没有新 issue 就不开 leaf。</p>
+        <p>默认串行，明确授权后才并行。轻量协调者抓取、去重、按库分派和补位；leaf 自行调查、修复、验证、投稿、释放，并直接写本库记录。协调者只更新共享名单、导航和位置，信任返回及已报告写入，不重复验收。同库单写入者；发现者直接追加时约定短暂写入窗口。</p>
+        <p>先读目标政策，证明缺陷，聚焦受影响检查与强制项，合并最终审阅。符合门槛优先普通 open PR，确认实际发布结果；不强造投稿、不默认等 CI 或合并。缺少 issue/PR 结果就问原 leaf，仍可推进则继续；明确失败、矛盾或冲突才局部恢复。</p>
+        <p>外部贡献源码通过精确授权、交付和非占用门槛后，删除指定 checkout/temp 并记录操作结果。不新建恢复副本，不盘点独有或未知数据，不做删后核验或磁盘检测；保留已知未交付、占用及无关材料、永久记录和现有归档。自有库不适用，不清 Go 缓存或工具链。</p>
+      </div>
+    </section>
+    <section class="manifesto section-shell" id="patrols">
+      <div>
+        <h2>及时接续。<br />低频兜底。</h2>
+        <p>可配置 1／6／24 小时基线：每小时通知与选定邮件文件夹平级增量，各自位置、合并重复对象；每 6 小时完整抓取关注库新 issue，按库分派；每 24 小时全量找本人创建/评论的开放 issue、创建的开放 PR 和全部每库未完成链接。</p>
+        <p>优先共用现有巡检对话，上轮未结束就继续，不叠加。兜底先看状态、head 与 CI 概况，仅变化、未知处理或仍可推进事项深入处理；不重读整段讨论、重测或重克隆，也不只靠 updated_at 判断 CI 没变化。</p>
+        <p>只读选定邮件文件夹，不读其他文件夹、不发邮件、不改已读或订阅；实质回复在工程对象完成。完整抓取且处理或可靠保留才推进位置，失败不当空结果。无变化安静，仅进展、失败或需用户决定时通知。</p>
+        <p>周期与启停由工作区调度配置；Skill 不自动启动任务或恢复暂停计划，周期也不是完成时限。关注和历史贡献不授予维护权限。私密邮件、安全正文、凭据、源码及恢复材料不进入公开状态或备份。</p>
       </div>
     </section>
     <section class="section-shell" id="english" lang="en">
-      <div><h2>Direct Markdown state. No custom runtime scripts.</h2>
-        <p>Three membership lists: new repositories, the full old-repository inventory and named overlapping followed groups.
-          Per-repository state.md holds patrol facts and unfinished links; work.md records actual issue/PR work. The central unfinished view is navigation only.
-          Three read positions: repository notifications, followed-issue time, and a private mailbox position.</p>
-        <p>Keep RepoStew_skills/, state/ and work/owner/repo/ relative to the workspace root. Source lives in checkout/, outside persistent records. Document links resolve from their containing file.
-          No execution client, model vendor, operating system or fixed model settings are required.</p>
-        <p>Use available repository, mailbox and file tools directly. Scan the deduplicated followed union once.
-          Advance only after complete capture and handling or retention; a partial failure preserves the position.
-          Read discussions, reviews and CI live. Historical contributions never imply maintainer authority.</p>
-        <p>See the <a href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/README.en.md">English README</a>.</p>
+      <div>
+        <h2>Finish contributions. Continue stewardship.</h2>
+        <p>A portable Skill with direct Markdown state, three membership lists and persistent per-repository records. No extra runtime service, database or required client/vendor.</p>
+        <p>One lightweight coordinator/leaf delivery flow: new repositories require recent issues and a full code audit; followed batches cover new issues and related code only. Leaves own delivery and records; coordinators trust reported outcomes and react to concrete faults.</p>
+        <p>Configurable hourly notifications/selected-folder mail, six-hour followed new issues and daily open-object fallback. Independent positions, deduplicated action, unchanged-work reuse and quiet runs. Schedules need explicit authorization; configured is not active or complete.</p>
+        <p>Authorized external source release keeps records and known undelivered/active material safe, without new recovery copies or post-delete disk checks. Self-owned repositories are excluded. Private sources and credentials stay private.</p>
+        <p><a href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/README.en.md">Read the English README</a> · <a href="https://github.com/dajiaohuang/RepoStew_skills">Source and detailed rules</a></p>
       </div>
     </section>
   </main>
-  <footer class="site-footer"><div><strong>RepoStew</strong><span>直接执行，直接修改名单。</span></div>
-    <nav aria-label="页脚"><a href="https://github.com/dajiaohuang/RepoStew_skills">源码</a>
-      <a href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/LICENSE">MIT</a></nav>
+  <footer class="site-footer">
+    <div><strong>RepoStew</strong><span>直接记录事实，持续处理真实工作。</span></div>
+    <nav aria-label="页脚"><a href="https://github.com/dajiaohuang/RepoStew_skills">源码</a><a href="https://github.com/dajiaohuang/RepoStew_skills/blob/main/LICENSE">MIT</a></nav>
     <p>© 2026 dajiaohuang</p>
   </footer>
 </body>
