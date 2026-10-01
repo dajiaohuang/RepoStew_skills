@@ -21,3 +21,11 @@ pr_tracker.json
 seen_issues.json
 contributions.json
 .repostew/
+/.history/
+
+# Workspace records, private sources and recovery material belong outside the skill
+/state/
+/work/
+/private/
+/archives/
+/migration-staging/

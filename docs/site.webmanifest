@@ -2,7 +2,7 @@
   "name": "RepoStew",
   "short_name": "RepoStew",
   "description": "Responsible repository stewardship for coding agents.",
-  "start_url": "/RepoStew_skills/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f4f7fb",
   "theme_color": "#f4f7fb",
